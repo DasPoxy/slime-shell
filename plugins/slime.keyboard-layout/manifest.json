@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "slime.keyboard-layout",
+  "name": "Slime Keyboard layout",
+  "version": "1.0.0",
+  "author": "Slime Shell",
+  "description": "Current xkb layout, click cycles",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "KeyboardLayout.qml"
+  },
+  "barWidget": {
+    "displayName": "Slime Keyboard layout",
+    "description": "Current xkb layout, click cycles",
+    "category": "Compositor",
+    "allowMultiple": false
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.keyboard-layout"
+  }
+}

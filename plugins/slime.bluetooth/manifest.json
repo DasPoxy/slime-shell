@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "slime.bluetooth",
+  "name": "Slime Bluetooth",
+  "version": "1.0.0",
+  "author": "Slime Shell",
+  "description": "Bluetooth device list with connect/disconnect",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Slime Bluetooth",
+    "description": "Bluetooth device list with connect/disconnect",
+    "category": "Network",
+    "allowMultiple": false
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.bluetooth"
+  }
+}

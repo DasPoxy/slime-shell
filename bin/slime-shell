@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Install Slime Shell's plugins into Omarchy and switch the bar to/from it.
+#
+#   slime-shell install   symlink plugins/slime.* into ~/.config/omarchy/plugins
+#   slime-shell use       back up the current bar config, switch to slime.bar
+#   slime-shell restore   put the backed-up bar config back
+#   slime-shell status    show which bar is active
+#
+# The Omarchy shell only loads third-party widgets that are in the bar layout,
+# so switching swaps the whole `bar` subtree of shell.json. Overlays that other
+# bars draw over the top edge (Ruixen's notch) are disabled while Slime is
+# active. Both are kept in ~/.config/omarchy/slime-shell/previous-bar.json
+# until restored.
+set -euo pipefail
+
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+plugins_dir="$HOME/.config/omarchy/plugins"
+shell_json="$HOME/.config/omarchy/shell.json"
+state_dir="$HOME/.config/omarchy/slime-shell"
+backup="$state_dir/previous-bar.json"
+# Other bars' companions that paint over the top edge where Slime drips.
+companions='["ruixen.notch"]'
+
+current_bar() { jq -r '.bar.id // "omarchy.bar"' "$shell_json"; }
+
+edit_shell_json() {
+  local tmp
+  tmp="$(mktemp "$shell_json.XXXXXX")"
+  jq "$@" "$shell_json" > "$tmp"
+  mv "$tmp" "$shell_json"
+}
+
+install_plugins() {
+  mkdir -p "$plugins_dir"
+  for dir in "$repo"/plugins/slime.*; do
+    local link="$plugins_dir/${dir##*/}"
+    if [[ -L $link ]]; then
+      ln -sfn "$dir" "$link"
+    elif [[ -e $link ]]; then
+      echo "skipping ${dir##*/}: $link exists and is not a symlink" >&2
+    else
+      ln -s "$dir" "$link"
+    fi
+  done
+  omarchy-shell -q shell rescanPlugins
+  echo "installed $(find "$repo"/plugins -maxdepth 1 -name 'slime.*' | wc -l) plugins"
+}
+
+case "${1:-status}" in
+  install)
+    install_plugins
+    ;;
+  use)
+    install_plugins
+    mkdir -p "$state_dir"
+    if [[ $(current_bar) != slime.bar ]]; then
+      jq '{bar: .bar, disabledPlugins: (.disabledPlugins // [])}' "$shell_json" > "$backup"
+      echo "backed up $(current_bar) config to $backup"
+    fi
+    # shellcheck disable=SC2016  # $bar/$companions are jq variables
+    edit_shell_json --slurpfile bar "$repo/layouts/default.json" --argjson companions "$companions" \
+      '.bar = $bar[0] | .disabledPlugins = ((.disabledPlugins // []) + $companions | unique)'
+    omarchy restart shell
+    echo "switched to slime.bar (undo with: slime-shell restore)"
+    ;;
+  restore)
+    [[ -f $backup ]] || { echo "no backup at $backup" >&2; exit 1; }
+    # shellcheck disable=SC2016  # $saved is a jq variable
+    edit_shell_json --slurpfile saved "$backup" '.bar = $saved[0].bar | .disabledPlugins = $saved[0].disabledPlugins'
+    omarchy restart shell
+    echo "restored $(current_bar)"
+    ;;
+  status)
+    echo "active bar: $(current_bar)"
+    [[ -f $backup ]] && echo "backup: $backup ($(jq -r '.bar.id // "omarchy.bar"' "$backup"))"
+    ;;
+  *)
+    sed -n '2,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    exit 1
+    ;;
+esac

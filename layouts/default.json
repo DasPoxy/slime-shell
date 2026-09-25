@@ -1,0 +1,53 @@
+{
+  "id": "slime.bar",
+  "position": "top",
+  "transparent": false,
+  "centerAnchor": "slime.clock-weather",
+  "layout": {
+    "left": [
+      {
+        "id": "slime.menu"
+      },
+      {
+        "id": "slime.workspaces"
+      },
+      {
+        "id": "slime.agents"
+      }
+    ],
+    "center": [
+      {
+        "id": "slime.indicators"
+      },
+      {
+        "id": "slime.clock-weather"
+      },
+      {
+        "id": "slime.keyboard-layout"
+      },
+      {
+        "id": "slime.system-update"
+      }
+    ],
+    "right": [
+      {
+        "id": "slime.tray"
+      },
+      {
+        "id": "slime.bluetooth"
+      },
+      {
+        "id": "slime.network"
+      },
+      {
+        "id": "slime.audio"
+      },
+      {
+        "id": "slime.monitor"
+      },
+      {
+        "id": "slime.power"
+      }
+    ]
+  }
+}

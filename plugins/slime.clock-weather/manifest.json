@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "slime.clock-weather",
+  "name": "Slime Clock & Weather",
+  "version": "1.0.0",
+  "author": "Slime Shell",
+  "description": "Clock and weather in one widget; opens the Slime command centre",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Slime Clock & Weather",
+    "description": "Clock and weather in one widget; opens the Slime command centre",
+    "category": "Time",
+    "allowMultiple": false,
+    "settingsForm": "weatherSettings"
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.weather"
+  }
+}

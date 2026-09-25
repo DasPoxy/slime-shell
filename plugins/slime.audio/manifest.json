@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "slime.audio",
+  "name": "Slime Audio",
+  "version": "1.0.0",
+  "author": "Slime Shell",
+  "description": "Volume slider, output picker, per-app mixer",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Slime Audio",
+    "description": "Volume slider, output picker, per-app mixer",
+    "category": "Audio",
+    "allowMultiple": false
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.audio"
+  }
+}

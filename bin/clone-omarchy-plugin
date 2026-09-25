@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Copy a built-in Omarchy shell plugin into this repo as slime.<name>.
+#
+# Mirrors `omarchy plugin clone` (same copy rules, clonedFrom metadata so the
+# built-in IPC ids keep routing to the clone) but writes into the repo and
+# does NOT enable anything or touch shell.json — `slime-shell use` does that.
+set -euo pipefail
+
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source_id="${1:?usage: clone-omarchy-plugin <omarchy.id> [slime.id]}"
+new_id="${2:-slime.${source_id#omarchy.}}"
+target_dir="$repo/plugins/$new_id"
+
+[[ ! -e $target_dir ]] || { echo "$target_dir already exists" >&2; exit 1; }
+
+IFS=$'\t' read -r source_dir manifest name < <(omarchy-plugin-catalog | jq -r --arg id "$source_id" '
+  .[] | select(.firstParty and .id == $id) | [.sourceDir, .manifestPath, (.name // .id)] | @tsv')
+[[ -n ${source_dir:-} ]] || { echo "unknown built-in plugin: $source_id" >&2; exit 1; }
+
+stage="$(mktemp -d)"
+trap 'rm -rf "$stage"' EXIT
+
+if [[ ${manifest##*/} == "manifest.json" ]]; then
+  cp -aL "$source_dir/." "$stage/"
+else
+  # Shared-folder widgets (bar/widgets/*) list their own files.
+  cp -aL "$manifest" "$stage/manifest.json"
+  while IFS=$'\t' read -r src dst; do
+    mkdir -p "$(dirname "$stage/$dst")"
+    cp -aL "$source_dir/$src" "$stage/$dst"
+    if [[ $src != "$dst" ]]; then
+      grep -rlF --null "$src" "$stage" | xargs -0r sed -i "s|${src//./\\.}|$dst|g"
+    fi
+  done < <(jq -r '[(.entryPoints[] | {source: ., target: .}),
+                   (.omarchy.clonePaths[]? | {source: .source, target: .target})]
+                  | unique_by(.target)[] | [.source, .target] | @tsv' "$manifest")
+fi
+
+jq --arg id "$new_id" --arg name "Slime $name" --arg src "$source_id" '
+  .id = $id | .name = $name | .author = "Slime Shell" |
+  (if (.barWidget | type) == "object" then .barWidget.displayName = $name else . end) |
+  .omarchy = ((if (.omarchy | type) == "object" then .omarchy else {} end) + {clonedFrom: $src}) |
+  del(.omarchy.clonePaths)' "$stage/manifest.json" > "$stage/manifest.tmp"
+mv "$stage/manifest.tmp" "$stage/manifest.json"
+
+mv "$stage" "$target_dir"
+trap - EXIT
+echo "cloned $source_id -> $new_id"

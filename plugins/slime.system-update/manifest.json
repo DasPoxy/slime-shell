@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "slime.system-update",
+  "name": "Slime Omarchy update",
+  "version": "1.0.0",
+  "author": "Slime Shell",
+  "description": "Indicates available Omarchy updates",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "SystemUpdate.qml"
+  },
+  "barWidget": {
+    "displayName": "Slime Omarchy update",
+    "description": "Indicates available Omarchy updates",
+    "category": "System",
+    "allowMultiple": false
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.system-update"
+  }
+}
