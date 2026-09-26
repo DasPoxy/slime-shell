@@ -48,6 +48,13 @@ install_plugins() {
     fi
   done
   omarchy-shell -q shell rescanPlugins
+  # Discovery is asynchronous; wait until every slime plugin is listed.
+  local want
+  want=$(find "$repo"/plugins -maxdepth 1 -name 'slime.*' | wc -l)
+  for _ in $(seq 40); do
+    (( $(omarchy-plugin-list --json 2>/dev/null | jq '[.[] | select(.id | startswith("slime."))] | length') >= want )) && break
+    sleep 0.1
+  done
   echo "installed $(find "$repo"/plugins -maxdepth 1 -name 'slime.*' | wc -l) plugins"
 }
 

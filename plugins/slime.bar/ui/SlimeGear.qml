@@ -24,6 +24,9 @@ import QtQuick.Shapes
 //        "cottage" home · "shield" system · "painting" wallpapers ·
 //        "scroll" tasks · "anvil" settings · "arrow" (flip = points left) ·
 //        "broom" clear
+//
+//   widgets:
+//        "chest"      plugin picker (lit = lid open, glowing loot)
 Item {
   id: root
 
@@ -431,6 +434,36 @@ Item {
       GearPath { d: "M8 13.8 L12.4 16.2 Q10.6 21.4 5 22.2 Q3 19.8 4.2 18.4 Q6 16.4 8 13.8 Z"; fill: root.flame }
       GearPath { d: "M8.6 16 L5.6 20.2 M10 16.8 L7.8 21 M7.4 15.2 L4.6 18.8"; line: 0.7 }
       GearPath { visible: root.lit; d: "M16 18.4 L17 17.4 M18.4 20.6 L19.8 20.2 M17.4 21.8 L17.8 23"; line: 1; opacity: root.pulse }   // dust
+    }
+
+
+    // =================================================================== chest
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "chest"
+
+      // glow spilling out when open
+      Rectangle {
+        visible: root.lit
+        x: 5; y: 5; width: 14; height: 6; radius: 3
+        color: root.flame
+        opacity: 0.5 * root.pulse
+      }
+      GearPath { d: "M3.6 11 L20.4 11 L19.6 20.6 Q19.5 21.4 18.6 21.4 L5.4 21.4 Q4.5 21.4 4.4 20.6 Z"; fill: root.leather }   // box
+      GearPath { d: "M3.9 15 L20.1 15"; stroke: root.gold; line: 1.6 }                                                          // band
+      GearPath { d: "M8 11.2 L8 21.2 M16 11.2 L16 21.2"; stroke: root.gold; line: 1.2 }
+      // lid: closed arches over the box; open tips back
+      GearPath {
+        d: root.lit ? "M4.2 10.6 L6.6 3.2 Q12 1.6 17.4 3.2 L19.8 10.6 Z"
+                    : "M3.6 11 Q3.6 5.2 12 5.2 Q20.4 5.2 20.4 11 Z"
+        fill: root.leatherLight
+      }
+      GearPath { visible: !root.lit; d: "M8 5.8 L8 11 M16 5.8 L16 11"; stroke: root.gold; line: 1.2 }
+      // loot: coins and a gem peeking over the rim
+      Rectangle { visible: root.lit; x: 7.2; y: 8.6; width: 3.4; height: 3.4; radius: 1.7; color: root.gold; border.color: root.ink; border.width: 0.7 }
+      Rectangle { visible: root.lit; x: 10.2; y: 7.6; width: 3.2; height: 3.2; rotation: 45; color: root.crystal; border.color: root.ink; border.width: 0.7 }
+      Rectangle { visible: root.lit; x: 13.4; y: 8.8; width: 3.4; height: 3.4; radius: 1.7; color: root.gold; border.color: root.ink; border.width: 0.7 }
+      Rectangle { x: 10.6; y: root.lit ? 11.6 : 9.6; width: 2.8; height: 3.2; radius: 0.6; color: root.gold; border.color: root.ink; border.width: 0.8 }   // lock
     }
 
   }

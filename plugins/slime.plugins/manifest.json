@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "slime.plugins",
+  "name": "Slime Treasure Chest",
+  "version": "1.0.0",
+  "author": "Slime Shell",
+  "description": "Pick which installed bar widgets are on the bar",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Slime Treasure Chest",
+    "description": "Pick which installed bar widgets are on the bar",
+    "category": "System",
+    "allowMultiple": false
+  }
+}

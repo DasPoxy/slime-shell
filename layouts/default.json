@@ -31,6 +31,9 @@
     ],
     "right": [
       {
+        "id": "slime.plugins"
+      },
+      {
         "id": "slime.tray"
       },
       {
