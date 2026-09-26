@@ -152,7 +152,7 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
     // ---- mitosis / lava lamp: a blob buds off the edge, pinches its neck
     // shut, splits away and sinks slowly, wobbling, then dissolves
     if (dripExtra.x > 1.5) {
-        float r = (8.0 + 7.0 * hash(seed + 5.0)) * dripStyle.y * (0.6 + 0.4 * scale) * clamp(dripAmount, 0.5, 1.6);
+        float r = (6.0 + 11.0 * hash(seed + 5.0)) * dripStyle.y * (0.6 + 0.4 * scale) * clamp(dripAmount, 0.5, 1.6);
         float bud = smoothstep(0.0, 0.45, s);                     // swelling
         float pinch = smoothstep(0.35, 0.62, s);                  // neck closing
         float sink = max(0.0, s - 0.62) / 0.38;                   // after the split
@@ -161,8 +161,21 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
         float br = r * (0.35 + 0.65 * bud) * (1.0 - 0.3 * sink);
         // stretched tall while it pinches, rounding off once it floats free
         float stretch = 1.0 + 0.35 * pinch * (1.0 - sink);
+        // every glob its own shape: squat or tall, lumpy edges that roll
+        // slowly, and sometimes a smaller lobe riding on its side
+        float asp = 0.72 + 0.62 * hash(seed + 21.0);
         vec2 q = p - c;
-        float d = (length(vec2(q.x * stretch, q.y / stretch)) - br) / stretch;
+        vec2 qs = vec2(q.x * stretch / asp, q.y * asp / stretch);
+        float ang = atan(qs.y, qs.x);
+        float lump = 1.0 + 0.16 * hash(seed + 22.0) * sin(2.0 * ang + seed * 3.0 + time * 0.6)
+                         + 0.11 * hash(seed + 23.0) * sin(3.0 * ang + seed * 7.0 - time * 0.9)
+                         + 0.06 * hash(seed + 24.0) * sin(5.0 * ang + time * 1.3);
+        float d = (length(qs) - br * lump) / max(stretch / asp, asp / stretch);
+        if (hash(seed + 25.0) < 0.55) {
+            float la = seed * 2.4 + time * 0.35 * (hash(seed + 26.0) - 0.5);
+            vec2 lc = c + vec2(cos(la), sin(la)) * br * (0.7 + 0.25 * hash(seed + 27.0));
+            d = smin(d, length(p - lc) - br * (0.3 + 0.25 * hash(seed + 28.0)), br * 0.5);
+        }
         // the neck: a waist that thins to nothing, pulling into two lobes
         if (pinch < 1.0) {
             float waist = mix(br * 0.9, 0.0, pinch);
@@ -414,6 +427,33 @@ float webStrand(vec2 p, vec2 a, vec2 b, float sag, float w) {
     return min(sdSegment(p, a, mid, w), sdSegment(p, mid, b, w));
 }
 
+// A web strung between two hanging drips (each given as its top and tip):
+// usually a lattice of 2-4 sagging rungs at staggered heights crossed by
+// diagonals, sometimes just a lone strand. `live` thins it as a drip lets go.
+float webLattice(vec2 p, vec2 aTop, vec2 aTip, vec2 bTop, vec2 bTip, float seed, float live) {
+    float x0 = min(aTop.x, bTop.x), x1 = max(aTop.x, bTop.x);
+    if (p.x < x0 - 4.0 || p.x > x1 + 4.0) return 1e5;
+    float d = 1e5;
+    bool lattice = hash(seed + 31.0) < 0.8;
+    int levels = lattice ? 2 + int(hash(seed + 32.0) > 0.35) + int(hash(seed + 33.0) > 0.7) : 1;
+    vec2 A[4], B[4];
+    for (int j = 0; j < 4; j++) {
+        if (j >= levels) break;
+        float fj = float(j);
+        float t = lattice ? (fj + 0.55) / float(levels) * 0.9 : 0.45;
+        A[j] = mix(aTop, aTip, clamp(t + (hash(seed + fj * 3.1) - 0.5) * 0.18, 0.1, 0.95));
+        B[j] = mix(bTop, bTip, clamp(t + (hash(seed + fj * 5.7) - 0.5) * 0.18, 0.1, 0.95));
+        float w = (lattice ? 0.9 + 0.5 * hash(seed + fj * 4.2) : 1.3 + 0.6 * hash(seed + fj)) * live;
+        d = min(d, webStrand(p, A[j], B[j], (5.0 + 8.0 * hash(seed + fj * 2.2)) * live, w));
+        if (j > 0) {
+            float wd = (0.8 + 0.4 * hash(seed + fj * 6.6)) * live;
+            if (hash(seed + fj * 7.7) < 0.8) d = min(d, webStrand(p, A[j - 1], B[j], 3.0 * live, wd));
+            if (hash(seed + fj * 8.8) < 0.8) d = min(d, webStrand(p, A[j], B[j - 1], 3.0 * live, wd));
+        }
+    }
+    return d;
+}
+
 vec2 bulb(vec2 p, vec4 b, float seed) {
     bool stringy = dripExtra.x > 0.5 && dripExtra.x < 1.5;
     // stringy webs reach out to the neighbouring bar drips, so look further
@@ -444,9 +484,7 @@ vec2 bulb(vec2 p, vec4 b, float seed) {
     if (n == 2 && dripExtra.x > 0.5 && dripExtra.x < 1.5 && abs(tips[0].x - tips[1].x) > 8.0) {
         float live = min(tips[0].z, tips[1].z) * smoothstep(2.0, 10.0, max(tips[0].y, tips[1].y) - bottom);
         if (live > 0.05) {
-            vec2 a0 = vec2(tips[0].x, mix(bottom, tips[0].y, 0.5)), b0 = vec2(tips[1].x, mix(bottom, tips[1].y, 0.6));
-            float w = (1.1 + 0.6 * hash(seed + 9.0)) * live;
-            d = smin(d, webStrand(p, a0, b0, (6.0 + 6.0 * hash(seed + 8.0)) * live, w), 3.0);
+            d = smin(d, webLattice(p, vec2(tips[0].x, bottom), tips[0].xy, vec2(tips[1].x, bottom), tips[1].xy, seed + 8.0, live), 2.5);
         }
     }
     // stringy: web the belly's drips out to the nearest bar-edge drip on
@@ -469,9 +507,7 @@ vec2 bulb(vec2 p, vec4 b, float seed) {
                 vec3 et = dripTip(ex, ee, i, 1.0);
                 float live = min(t.z, et.z) * smoothstep(2.0, 10.0, max(t.y - bottom, et.y - ee));
                 if (live > 0.05) {
-                    vec2 a0 = vec2(t.x, mix(bottom, t.y, 0.45)), b0 = vec2(ex, mix(ee, et.y, 0.5));
-                    float w = (1.1 + 0.7 * hash(sk + 3.9)) * live;
-                    d = smin(d, webStrand(p, a0, b0, (8.0 + 10.0 * hash(sk + 2.2)) * live, w), 3.0);
+                    d = smin(d, webLattice(p, vec2(t.x, bottom), t.xy, vec2(ex, ee), et.xy, sk + 2.2, live), 2.5);
                 }
                 break;
             }
@@ -588,18 +624,9 @@ vec2 mapScene(vec2 p) {
             float ea = dripEdge(xa), eb = dripEdge(xb);
             if (ea < 0.0 || eb < 0.0) continue;
             vec3 ta = dripTip(xa, ea, i, 1.0), tb = dripTip(xb, eb, n, 1.0);
-            // one or two strands per pair, anchored at different heights
-            for (int j = 0; j < 2; j++) {
-                float fj = float(j);
-                if (j == 1 && hash(i * 9.1 + 4.0) < 0.5) continue;
-                float fa = 0.35 + 0.4 * hash(i * 2.9 + fj), fb = 0.35 + 0.4 * hash(i * 6.1 + fj);
-                vec2 a0 = vec2(xa, mix(ea, ta.y, fa)), b0 = vec2(xb, mix(eb, tb.y, fb));
-                float live = min(ta.z, tb.z) * smoothstep(2.0, 12.0, max(ta.y - ea, tb.y - eb));
-                if (live < 0.05) continue;
-                vec2 mid = mix(a0, b0, 0.5) + vec2(0.0, (8.0 + 10.0 * hash(i + fj * 3.3)) * live);
-                float w = (1.1 + 0.7 * hash(i * 4.2 + fj)) * live;
-                d = smin(d, min(sdSegment(p, a0, mid, w), sdSegment(p, mid, b0, w)), 3.0);
-            }
+            float live = min(ta.z, tb.z) * smoothstep(2.0, 12.0, max(ta.y - ea, tb.y - eb));
+            if (live < 0.05) continue;
+            d = smin(d, webLattice(p, vec2(xa, ea), ta.xy, vec2(xb, eb), tb.xy, i * 9.1 + 4.0, live), 2.5);
         }
     }
 
