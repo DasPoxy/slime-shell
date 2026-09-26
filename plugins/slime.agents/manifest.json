@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "slime.agents",
-  "name": "Slime Agents",
+  "name": "SlimeS-Agents",
   "version": "1.0.0",
   "author": "Slime Shell",
   "license": "MIT",
@@ -14,7 +14,7 @@
     "barWidget": "Panel.qml"
   },
   "barWidget": {
-    "displayName": "Slime Agents",
+    "displayName": "SlimeS-Agents",
     "description": "One bar icon and one panel: rate-limit meters with pace, today, the last week, and the all-time model breakdown for every subscription.",
     "category": "AI",
     "aliases": [

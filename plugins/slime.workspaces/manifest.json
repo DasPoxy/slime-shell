@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "slime.workspaces",
-  "name": "Slime Workspaces",
+  "name": "SlimeS-Workspaces",
   "version": "1.0.0",
   "author": "Slime Shell",
   "description": "Workspace number indicators",
@@ -12,7 +12,7 @@
     "barWidget": "Workspaces.qml"
   },
   "barWidget": {
-    "displayName": "Slime Workspaces",
+    "displayName": "SlimeS-Workspaces",
     "description": "Workspace number indicators",
     "category": "Compositor",
     "allowMultiple": false

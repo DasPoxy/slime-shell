@@ -36,7 +36,7 @@ else
                   | unique_by(.target)[] | [.source, .target] | @tsv' "$manifest")
 fi
 
-jq --arg id "$new_id" --arg name "Slime $name" --arg src "$source_id" '
+jq --arg id "$new_id" --arg name "SlimeS-$name" --arg src "$source_id" '
   .id = $id | .name = $name | .author = "Slime Shell" |
   (if (.barWidget | type) == "object" then .barWidget.displayName = $name else . end) |
   .omarchy = ((if (.omarchy | type) == "object" then .omarchy else {} end) + {clonedFrom: $src}) |

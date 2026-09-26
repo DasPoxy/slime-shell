@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "slime.bar",
-  "name": "Slime Bar",
+  "name": "SlimeS-Bar",
   "version": "1.0.0",
   "author": "Slime Shell",
   "description": "Status bar with widgets",

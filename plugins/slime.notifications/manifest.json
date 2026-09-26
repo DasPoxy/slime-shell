@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "slime.notifications",
-  "name": "Slime Notifications",
+  "name": "SlimeS-Notifications",
   "version": "1.0.0",
   "author": "Slime Shell",
   "description": "Notification daemon, popups, DND, and history",

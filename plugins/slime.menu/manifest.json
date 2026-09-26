@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "slime.menu",
-  "name": "Slime Omarchy menu",
+  "name": "SlimeS-Launcher",
   "version": "1.0.0",
   "author": "Slime Shell",
   "description": "Quickshell-powered Omarchy command menu",
@@ -15,7 +15,7 @@
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {
-    "displayName": "Slime Omarchy menu",
+    "displayName": "SlimeS-Launcher",
     "description": "Launches the Omarchy menu",
     "category": "Compositor",
     "allowMultiple": false

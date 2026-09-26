@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "slime.audio",
-  "name": "Slime Audio",
+  "name": "SlimeS-Audio",
   "version": "1.0.0",
   "author": "Slime Shell",
   "description": "Volume slider, output picker, per-app mixer",
@@ -12,7 +12,7 @@
     "barWidget": "Panel.qml"
   },
   "barWidget": {
-    "displayName": "Slime Audio",
+    "displayName": "SlimeS-Audio",
     "description": "Volume slider, output picker, per-app mixer",
     "category": "Audio",
     "allowMultiple": false

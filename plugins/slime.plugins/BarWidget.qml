@@ -47,7 +47,7 @@ BarWidget {
           if (!p.kinds || p.kinds.indexOf("bar-widget") === -1 || p.id === root.moduleName) continue
           out.push({
             id: p.id,
-            name: String(p.name || p.id).replace(/^Slime /, ""),
+            name: String(p.name || p.id),
             on: p.enabled === true,
             group: p.id.indexOf("slime.") === 0 ? "Slime" : (p.firstParty ? "Omarchy" : "Community"),
             clone: String(p.clonedFrom || "")

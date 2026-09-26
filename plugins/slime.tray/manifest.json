@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "slime.tray",
-  "name": "Slime System tray",
+  "name": "SlimeS-System Tray",
   "version": "1.0.0",
   "author": "Slime Shell",
   "description": "Status notifier items",
@@ -12,7 +12,7 @@
     "barWidget": "Tray.qml"
   },
   "barWidget": {
-    "displayName": "Slime System tray",
+    "displayName": "SlimeS-System Tray",
     "description": "Status notifier items",
     "category": "Status",
     "allowMultiple": false
