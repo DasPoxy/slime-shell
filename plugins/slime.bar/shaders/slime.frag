@@ -733,6 +733,8 @@ vec2 mapScene(vec2 p) {
     pickBulb(bulb21, 22.0, p.x, b1, s1, e1, b2, s2, e2);
     pickBulb(bulb22, 23.0, p.x, b1, s1, e1, b2, s2, e2);
     pickBulb(bulb23, 24.0, p.x, b1, s1, e1, b2, s2, e2);
+    // blend them in their original order (smooth-min isn't order-free)
+    if (s2 < s1 && s2 > 0.0) { vec4 tb = b1; b1 = b2; b2 = tb; float ts = s1; s1 = s2; s2 = ts; }
     vec2 bs = bulb(p, b1, s1); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
     bs = bulb(p, b2, s2); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
 
@@ -938,6 +940,9 @@ vec3 toneShift(vec3 c, float target, float amt, float sat, float val) {
 vec4 printShade(vec2 p, vec2 scene, vec3 base) {
     float d = scene.x;
     float dc = mapScene(p + MISREG).x;   // colour plate, printed slightly off the ink
+    // neither the ink nor the colour plate covers this pixel: it'd come out
+    // fully transparent, so skip the shadow-shape passes below
+    if (d >= 0.5 && dc >= 0.5) return vec4(0.0);
 
     // Cut-paper shadow shapes: offset copies of the body with ragged edges.
     float jag = (fbm(p / 16.0) - 0.5) * 18.0 + (vnoise(p / 3.5) - 0.5) * 2.5;
@@ -1101,16 +1106,17 @@ void main() {
     // materials start from the theme colour and push it toward their stuff
     if (material > 0.5 && material < 1.5) base = toneShift(base, 0.985, 0.75, 1.05, 0.95);          // flesh
     else if (material > 1.5 && material < 2.5) base = mix(paperColor.rgb, base, 0.14);               // ivory
-    vec3 col;
+    vec3 col = vec3(0.0);
     if (shadingStyle > 2.5) {
         vec4 printed = printShade(p, scene, base);
         col = printed.rgb;
         alpha = printed.a;
-    } else {
+    } else if (alpha > 0.0) {
         col = shadingStyle < 0.5 ? softShade(p, d, base) : celShade(p, scene, base, shadingStyle > 1.5);
     }
 
-    col = materialSurface(p, d, col, base);
+    // (colour only matters where something is drawn; skip it where nothing is)
+    if (alpha > 0.0) col = materialSurface(p, d, col, base);
 
     if (poolDepth > 0.0 && openProgress > 0.0) {
         float inBox = step(panelRect.x + 12.0, p.x) * step(p.x, panelRect.x + panelRect.z - 12.0)
@@ -1122,8 +1128,13 @@ void main() {
     }
 
     // Drop shadow so the ooze sits above whatever is underneath.
-    float ds = mapScene(p - vec2(0.0, 4.0)).x;
-    float shadow = (1.0 - smoothstep(-2.0, 12.0, ds)) * 0.35;
+    // (it only shows through where the goo isn't solid: skip the extra scene
+    // pass under opaque goo, where it'd be multiplied by zero)
+    float shadow = 0.0;
+    if (alpha < 1.0) {
+        float ds = mapScene(p - vec2(0.0, 4.0)).x;
+        shadow = (1.0 - smoothstep(-2.0, 12.0, ds)) * 0.35;
+    }
 
     vec4 slime = vec4(col * alpha, alpha);
     fragColor = (slime + vec4(0.0, 0.0, 0.0, shadow) * (1.0 - alpha)) * qt_Opacity;
