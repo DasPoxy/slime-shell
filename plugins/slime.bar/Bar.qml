@@ -357,6 +357,9 @@ Item {
   onCcTabChanged: skinSaveTimer.restart()
   onCcSectionsChanged: skinSaveTimer.restart()
   property bool commandCenterOpen: false
+  // The window a hovered media widget has borrowed the keyboard for (space
+  // to play/pause, m to mute: SlimeMediaKeys), or null.
+  property var hoverKeysWindow: null
   // Latest widget bulb rects, for overlays drawn outside the bar window
   // (notification toasts) so their slime lines up with the bar's.
   property var sharedBulbRects: []
@@ -1939,7 +1942,8 @@ Item {
     // windows (the exclusive zone still keeps tiled windows off the bar). It
     // comes back to Top while the command centre is open so that stays usable.
     // keyboard input for the command centre's text fields, only while it's open
-    WlrLayershell.keyboardFocus: ccShown ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: root.hoverKeysWindow === barWindow ? WlrKeyboardFocus.Exclusive
+      : ccShown ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     WlrLayershell.layer: root.slimeSkin && root.layerReady && root.slimeLayer === "behind" && !ccShown ? WlrLayer.Bottom : WlrLayer.Top
 
     // ---- Slime skin ----
@@ -2158,7 +2162,8 @@ Item {
       surfaceFormat.opaque: false
       exclusionMode: ExclusionMode.Ignore
       WlrLayershell.namespace: "omarchy-bar-skin"
-      WlrLayershell.keyboardFocus: barWindow.ccShown ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+      WlrLayershell.keyboardFocus: root.hoverKeysWindow === skinWindow ? WlrKeyboardFocus.Exclusive
+        : barWindow.ccShown ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
       WlrLayershell.layer: barWindow.WlrLayershell.layer
 
       readonly property real depth: barWindow.skinRoom
@@ -2188,7 +2193,23 @@ Item {
         return root.position === "bottom" ? height - d : root.position === "right" ? width - d : d
       }
 
-      mask: Region { item: ccHit }
+      // Click-through, except the command centre while it's open. While it's
+      // open the whole window takes clicks, and a click anywhere off the
+      // panel closes it (Hyprland's focus grab won't take in this second
+      // window, so the grab can't do this: it would swallow the panel's own
+      // input). The bar window above still works as normal.
+      mask: root.commandCenterOpen ? null : ccRegion
+      property Region ccRegion: Region { item: ccHit }
+      MouseArea {
+        anchors.fill: parent
+        enabled: root.commandCenterOpen
+        acceptedButtons: Qt.AllButtons
+        onPressed: mouse => {
+          var p = mapToItem(ccHit, mouse.x, mouse.y)
+          if (p.x < 0 || p.y < 0 || p.x > ccHit.width || p.y > ccHit.height) root.commandCenterOpen = false
+          else mouse.accepted = false
+        }
+      }
 
       Item {
         id: ccHit
@@ -2258,12 +2279,6 @@ Item {
       }
     }
 
-    // Clicking anywhere outside the bar or the command centre closes it.
-    HyprlandFocusGrab {
-      windows: [barWindow, skinWindow]
-      active: root.commandCenterOpen
-      onCleared: root.commandCenterOpen = false
-    }
 
     PopupWindow {
       id: tooltipWindow

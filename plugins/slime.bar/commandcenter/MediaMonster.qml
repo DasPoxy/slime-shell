@@ -308,4 +308,11 @@ Item {
       opacity: 0.7
     }
   }
+
+  // rest the pointer on the monster: space plays/pauses, m mutes
+  SlimeMediaKeys {
+    anchors.fill: parent
+    bar: monster.cc.bar
+    player: monster.player
+  }
 }

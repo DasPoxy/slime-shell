@@ -61,7 +61,8 @@ The system font, or a display face for clocks, temperatures and headings
 
 The slimes on the workspaces, the agents robot and the launcher can be pale
 **paper** (they pop off the ooze), the theme's **colours** (each workspace a
-different hue), or shaded with the **bar gradient**:
+different hue), or shaded with the **bar gradient** (Settings → Slime, or the
+workspaces' right-click menu):
 
 ![Slime icon colours](docs/images/slime-icons.png)
 
@@ -92,7 +93,9 @@ falls off with it, or turns up trapped in a panel's ooze.
   for what every click does.
 - **Media** — a lich, wizard or priest (right-click to choose) casting the
   visualizer. Hover for a drip card with the album art, track, progress and
-  which player to follow (whatever's playing, or stick to one):
+  which player to follow (whatever's playing, or stick to one). While
+  hovering it — or the media slime in the command centre — **Space**
+  plays/pauses and **M** mutes; a middle click plays/pauses too:
 
   ![Media hover card, with each caster](docs/images/media-casters.png)
 - **Spacers** — as many as you like, each holding plain ooze, a sagging lump

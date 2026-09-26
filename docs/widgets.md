@@ -41,7 +41,7 @@ one per line) to `~/.config/omarchy/slime-shell/file-search-ignore`.
 | | |
 |---|---|
 | Left click | go to that workspace |
-| Right click | menu: show **5**, **10** or **populated**; indicators **slimes**, **pips**, **numbers** or **stars** |
+| Right click | menu: show **5**, **10** or **populated**; indicators **slimes**, **pips**, **numbers** or **stars**; slime colours **paper**, **theme colours** or **bar gradient** (shared with every slime icon) |
 
 Slime monsters sleep on empty workspaces, blink on busy ones and cheer on the
 focused one. They follow the bar's material.
@@ -69,6 +69,11 @@ Hidden when nothing is playing.
 | Left click the caster | command centre (Home, with the full player) |
 | Right click the caster | settings: who casts the spell (lich, wizard, priest), visualizer on/off |
 | Scroll over the caster | previous / next track |
+| Middle click | play / pause |
+| Hover, then **Space** / **M** | play / pause, mute / unmute the output |
+
+The media slime in the command centre takes the same middle click and
+hover keys.
 
 ### Spacer — `slime.spacer`
 A gap in the bar holding plain ooze, a sagging lump, or any floating bit

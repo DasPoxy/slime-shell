@@ -261,6 +261,25 @@ BarWidget {
           }
         }
       }
+
+      // the same choice as Settings → Slime icons (the agents robot and the
+      // launcher slime follow it too)
+      CcHeading { cc: menuLook; text: "SLIME COLOURS (ALL SLIME ICONS)"; visible: root.indicator === "slime" }
+      Flow {
+        visible: root.indicator === "slime"
+        width: parent.width
+        spacing: 6
+        Repeater {
+          model: [["paper", "paper"], ["theme colours", "theme"], ["bar gradient", "gradient"]]
+          CcButton {
+            required property var modelData
+            cc: menuLook
+            text: modelData[0]
+            on: root.bar && root.bar.monsterColor === modelData[1]
+            onClicked: if (root.bar) root.bar.monsterColor = modelData[1]
+          }
+        }
+      }
     }
   }
 }

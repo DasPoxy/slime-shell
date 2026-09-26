@@ -272,13 +272,21 @@ BarWidget {
       Text {
         width: parent.width
         wrapMode: Text.Wrap
-        text: "Hover the " + root.caster + " for what's playing and which player to follow; left-click for the command centre; scroll to skip tracks."
+        text: "Hover the " + root.caster + " for what's playing and which player to follow (while hovering: space or middle-click plays/pauses, m mutes); left-click for the command centre; scroll to skip tracks."
         color: look.ink
         font.family: look.font
         font.pixelSize: 10
         opacity: 0.7
       }
     }
+  }
+
+  // rest the pointer on the widget: space plays/pauses, m mutes
+  SlimeMediaKeys {
+    anchors.fill: parent
+    bar: root.bar
+    player: root.player
+    enabledKeys: root.slime
   }
 
   // ---- now playing: a drip card on hover ----
