@@ -403,8 +403,21 @@ float boneKnobs(vec2 p) {
     return d;
 }
 
+// Is there a bar-edge drip in cell i? (the same test mapScene's drip loop uses)
+bool edgeDripIn(float i) {
+    return hash(i * 3.7 + 11.0) >= 1.0 - 0.7 * dripStyle.w * max(1.0, dripAmount * 0.55);
+}
+
+// One sagging web strand from a to b, slack by `sag`, `w` thick.
+float webStrand(vec2 p, vec2 a, vec2 b, float sag, float w) {
+    vec2 mid = mix(a, b, 0.5) + vec2(0.0, sag);
+    return min(sdSegment(p, a, mid, w), sdSegment(p, mid, b, w));
+}
+
 vec2 bulb(vec2 p, vec4 b, float seed) {
-    if (b.z <= 0.0 || abs(p.x - (b.x + b.z * 0.5)) > b.z * 0.5 + 70.0) return vec2(1e5);
+    bool stringy = dripExtra.x > 0.5 && dripExtra.x < 1.5;
+    // stringy webs reach out to the neighbouring bar drips, so look further
+    if (b.z <= 0.0 || abs(p.x - (b.x + b.z * 0.5)) > b.z * 0.5 + (stringy ? 2.6 * CELL : 70.0)) return vec2(1e5);
     float sag = 1.5 * sin(time * 0.8 + seed * 2.3);
     vec2 hs = vec2(b.z * 0.5, (b.w + BULB_HANG + sag) * 0.5);
     vec2 c = vec2(b.x + hs.x, b.y + hs.y);
@@ -432,9 +445,36 @@ vec2 bulb(vec2 p, vec4 b, float seed) {
         float live = min(tips[0].z, tips[1].z) * smoothstep(2.0, 10.0, max(tips[0].y, tips[1].y) - bottom);
         if (live > 0.05) {
             vec2 a0 = vec2(tips[0].x, mix(bottom, tips[0].y, 0.5)), b0 = vec2(tips[1].x, mix(bottom, tips[1].y, 0.6));
-            vec2 mid = mix(a0, b0, 0.5) + vec2(0.0, (6.0 + 6.0 * hash(seed + 8.0)) * live);
             float w = (1.1 + 0.6 * hash(seed + 9.0)) * live;
-            d = smin(d, min(sdSegment(p, a0, mid, w), sdSegment(p, mid, b0, w)), 3.0);
+            d = smin(d, webStrand(p, a0, b0, (6.0 + 6.0 * hash(seed + 8.0)) * live, w), 3.0);
+        }
+    }
+    // stringy: web the belly's drips out to the nearest bar-edge drip on
+    // their side, within a couple of cells of the widget
+    if (stringy) {
+        for (int k = 0; k < 2; k++) {
+            if (k >= n) break;
+            float sk = seed * 17.0 + float(k) * 5.0 + 200.0;
+            if (hash(sk + 6.1) < 0.2) continue;
+            vec3 t = tips[k];
+            float side = n == 2 ? (t.x < tips[1 - k].x ? -1.0 : 1.0) : (hash(sk + 7.3) < 0.5 ? -1.0 : 1.0);
+            float ci = floor((c.x + side * (hs.x + 6.0)) / CELL);
+            for (int m = 0; m < 3; m++) {
+                float i = ci + side * float(m);
+                if (!edgeDripIn(i)) continue;
+                float ex = (i + 0.5 + (hash(i) - 0.5) * 0.6) * CELL;
+                if (abs(ex - c.x) < hs.x + 4.0) continue;        // tucked under the widget
+                float ee = dripEdge(ex);
+                if (ee < 0.0) break;
+                vec3 et = dripTip(ex, ee, i, 1.0);
+                float live = min(t.z, et.z) * smoothstep(2.0, 10.0, max(t.y - bottom, et.y - ee));
+                if (live > 0.05) {
+                    vec2 a0 = vec2(t.x, mix(bottom, t.y, 0.45)), b0 = vec2(ex, mix(ee, et.y, 0.5));
+                    float w = (1.1 + 0.7 * hash(sk + 3.9)) * live;
+                    d = smin(d, webStrand(p, a0, b0, (8.0 + 10.0 * hash(sk + 2.2)) * live, w), 3.0);
+                }
+                break;
+            }
         }
     }
     return vec2(d, hl);

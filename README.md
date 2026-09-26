@@ -73,6 +73,7 @@ o.bind("SUPER + SHIFT + C", "Slime command centre", "omarchy-shell slime-shell t
 o.bind("SUPER + R",         "Slime launcher",       "omarchy-shell slime-launcher apps")
 o.bind("SUPER + ALT + S",   "Slime settings",       "omarchy-shell slime-shell toggleTab settings")
 o.bind("SUPER + ALT + M",   "Slime system monitor", "omarchy-shell slime-shell toggleTab system")
+o.bind("SUPER + ALT + X",   "Slime tasks",          "omarchy-shell slime-shell toggleTab tasks")
 ```
 
 Other IPC for binds or scripts:
