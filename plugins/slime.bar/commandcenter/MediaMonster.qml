@@ -70,10 +70,17 @@ Item {
 
       readonly property var bar: monster.cc.bar
       property real blobMode: 1
+      property real orient: 0
+      property vector2d screenSize: Qt.vector2d(0, 0)
+      property real barShape: 0
+      property real material: bar.materialId   // the monster is made of the same stuff as the bar
+      property vector4d group0: Qt.vector4d(0, 0, 0, 0)
+      property vector4d group1: Qt.vector4d(0, 0, 0, 0)
+      property vector4d group2: Qt.vector4d(0, 0, 0, 0)
       property real time: bar.animTime
       property real barHeight: 10
       property real openProgress: 1
-      property real dripAmount: bar.dripAmount
+      property real dripAmount: bar.dripLevel
       property real shadingStyle: bar.shadingStyle
       property vector2d resolution: Qt.vector2d(width, height)
       property vector4d panelRect: Qt.vector4d(20, 10, monster.width, monster.height - 4)

@@ -12,11 +12,23 @@ Item {
   required property var bar
   property var bits: []
   property var avoid: []
+  // when set, bits only show inside these rects (e.g. the islands of a
+  // shaped bar), so nothing floats in thin air
+  property var within: []
   property real bitOpacity: 0.8
 
   readonly property real t: bar ? bar.animTime : 0
   readonly property color ink: bar ? bar.slimeInk : "black"
   readonly property color paper: bar ? bar.paperColor : "white"
+
+  function inside(cx, cy) {
+    if (within.length === 0) return true
+    for (var i = 0; i < within.length; i++) {
+      var w = within[i]
+      if (w && w.z > 0 && cx > w.x - 2 && cx < w.x + w.z + 2 && cy > w.y - 6 && cy < w.y + w.w + 6) return true
+    }
+    return false
+  }
 
   function clearOf(cx, cy, r) {
     for (var i = 0; i < avoid.length; i++) {
@@ -41,7 +53,7 @@ Item {
       x: cx - width / 2
       y: cy - height / 2
       rotation: Math.sin(drift * 0.6) * 40
-      opacity: debris.clearOf(cx, cy, width / 2) ? debris.bitOpacity : 0
+      opacity: debris.clearOf(cx, cy, width / 2) && debris.inside(cx, cy) ? debris.bitOpacity : 0
       Behavior on opacity { NumberAnimation { duration: 400 } }
 
       Rectangle {   // spare eyeball, looking somewhere else

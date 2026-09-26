@@ -58,7 +58,8 @@ Item {
   // Services only see a restricted bar, so find the slime bar through the
   // hub it registers with (polled: a JS library value can't notify).
   property var hubBar: null
-  readonly property var slimeBar: hubBar && hubBar.slimeSkin === true ? hubBar : null
+  // toasts sit top-right, so they only hang from the bar when it's on top
+  readonly property var slimeBar: hubBar && hubBar.slimeSkin === true && hubBar.position === "top" ? hubBar : null
   Timer {
     interval: 1000
     repeat: true
@@ -1023,7 +1024,7 @@ Item {
         property real time: bar ? bar.animTime : 0
         property real barHeight: popupWindow.barHeight
         property real openProgress: 1
-        property real dripAmount: bar ? bar.dripAmount : 1
+        property real dripAmount: bar ? bar.dripLevel : 1
         property real shadingStyle: bar ? bar.shadingStyle : 3
         property vector2d resolution: Qt.vector2d(width, height)
         property vector4d panelRect: Qt.vector4d(blobX, 0, blobW, popupWindow.blobHeight)
@@ -1031,6 +1032,13 @@ Item {
         property color slimeColor2: bar ? bar.slimeColor2 : "black"
         property color paperColor: bar ? bar.paperColor : "white"
         property real clipTop: barHeight - 2
+        property real orient: 0
+        property vector2d screenSize: Qt.vector2d(0, 0)
+        property real barShape: bar ? bar.barShapeId : 0
+        property real material: bar ? bar.materialId : 0
+        property vector4d group0: bar && bar.sharedGroupRects[0] ? bar.sharedGroupRects[0] : noBulb
+        property vector4d group1: bar && bar.sharedGroupRects[1] ? bar.sharedGroupRects[1] : noBulb
+        property vector4d group2: bar && bar.sharedGroupRects[2] ? bar.sharedGroupRects[2] : noBulb
         property vector4d cullRect: Qt.vector4d(blobX - 60, width, barHeight + popupWindow.blobHeight + 160, 1)
         property vector4d bulb0: bulbs[0] || noBulb
         property vector4d bulb1: bulbs[1] || noBulb

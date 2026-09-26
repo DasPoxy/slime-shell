@@ -38,8 +38,8 @@ BarWidget {
     pal.bright_blue || "#6695ff", pal.bright_cyan || "#10ffd9", pal.bright_yellow || "#e4cc00"]
 
   visible: hasMedia
-  implicitWidth: hasMedia ? row.implicitWidth + 14 : 0
-  implicitHeight: barSize
+  implicitWidth: !hasMedia ? 0 : vertical ? barSize : row.implicitWidth + 14
+  implicitHeight: !hasMedia ? 0 : vertical ? row.implicitHeight + 12 : barSize
 
   IpcHandler {
     target: "slime-media"
@@ -48,16 +48,20 @@ BarWidget {
     function previous(): void { if (root.player) root.player.previous() }
   }
 
-  Row {
+  // a row on top/bottom bars, a column on side bars
+  Grid {
     id: row
     anchors.centerIn: parent
-    spacing: 2
+    columns: root.vertical ? 1 : 4
+    columnSpacing: 2
+    rowSpacing: 6
+    horizontalItemAlignment: Grid.AlignHCenter
+    verticalItemAlignment: Grid.AlignVCenter
 
     // the lich, and the spell coming off his hand
     Item {
       width: 30
       height: 30
-      anchors.verticalCenter: parent.verticalCenter
       SlimeGear {
         anchors.fill: parent
         size: 30
@@ -82,10 +86,8 @@ BarWidget {
     }
 
     SlimeCava {
-      visible: root.showViz && root.slime
+      visible: root.showViz && root.slime && !root.vertical
       active: root.playing
-      anchors.verticalCenter: parent.verticalCenter
-      anchors.verticalCenterOffset: -2
       width: 58
       height: 22
       bars: 10
@@ -96,12 +98,14 @@ BarWidget {
       outlineWidth: 0.8
     }
 
-    Item { width: 8; height: 1 }
+    Item { width: root.vertical ? 1 : 8; height: 1; visible: !root.vertical }
 
     // controls: cream bubbles with ink symbols, bobbing like the bar's gear
-    Row {
+    Grid {
+      columns: root.vertical ? 1 : 3
       spacing: 5
-      anchors.verticalCenter: parent.verticalCenter
+      horizontalItemAlignment: Grid.AlignHCenter
+      verticalItemAlignment: Grid.AlignVCenter
       Repeater {
         model: ["previous", "togglePlaying", "next"]
         Item {
@@ -111,7 +115,6 @@ BarWidget {
           readonly property bool main: modelData === "togglePlaying"
           width: main ? 22 : 18
           height: width
-          anchors.verticalCenter: parent.verticalCenter
           transform: Translate { y: Math.sin(root.t * 1.3 + control.index * 1.1) * 1.3 }
           scale: controlHover.hovered ? 1.15 : 1
           Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutBack } }

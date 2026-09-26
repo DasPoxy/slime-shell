@@ -31,8 +31,15 @@ layout(std140, binding = 0) uniform buf {
     vec4 cullRect;
     float clipTop;
     float poolDepth;
-    vec2 origin;      // this window's top-left in bar coordinates (popups)
+    vec2 origin;      // this window's top-left on the screen
     float blobMode;   // 1 = no bar: just a free-standing blob in panelRect
+    float barShape;   // 0 classic strip, 1 pills, 2 islands, 3 notch
+    float material;   // 0 slime, 1 sinew, 2 bone, 3 plain
+    float orient;     // which screen edge the bar is on: 0 top, 1 bottom, 2 left, 3 right
+    vec2 screenSize;  // for bottom / right bars
+    vec4 group0;      // left / centre / right section extents (x, y, w, h)
+    vec4 group1;
+    vec4 group2;
                       //     (x, y, w, h) with drips off its bottom edge
     vec4 bulb0;       // floating widgets: x, y, width, height (width 0 = unused)
     vec4 bulb1;
@@ -143,6 +150,118 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
 // rect), gently breathing, with a drip or two hanging from its belly.
 const float BULB_HANG = 20.0;
 
+// ---- bar shapes ----------------------------------------------------------
+const float PAD = 7.0;        // goo around a widget or section
+
+// A floating lozenge around rect b, breathing a little.
+float sdPod(vec2 p, vec4 b, float seed) {
+    if (b.z <= 0.0) return 1e5;
+    float wob = 1.2 * sin(time * 0.9 + seed * 1.7);
+    // pills sit inside their widget's slot (slots touch) so each stays apart
+    float padX = barShape > 0.5 && barShape < 1.5 ? -2.5 : PAD;
+    vec2 hs = b.zw * 0.5 + vec2(padX, PAD * 0.55 + wob * 0.3);
+    return sdRoundBox(p, b.xy + b.zw * 0.5, hs, hs.y);
+}
+
+float podsAll(vec2 p) {
+    float d = 1e5;
+    d = min(d, sdPod(p, bulb0, 1.0));  d = min(d, sdPod(p, bulb1, 2.0));
+    d = min(d, sdPod(p, bulb2, 3.0));  d = min(d, sdPod(p, bulb3, 4.0));
+    d = min(d, sdPod(p, bulb4, 5.0));  d = min(d, sdPod(p, bulb5, 6.0));
+    d = min(d, sdPod(p, bulb6, 7.0));  d = min(d, sdPod(p, bulb7, 8.0));
+    d = min(d, sdPod(p, bulb8, 9.0));  d = min(d, sdPod(p, bulb9, 10.0));
+    d = min(d, sdPod(p, bulb10, 11.0)); d = min(d, sdPod(p, bulb11, 12.0));
+    d = min(d, sdPod(p, bulb12, 13.0)); d = min(d, sdPod(p, bulb13, 14.0));
+    d = min(d, sdPod(p, bulb14, 15.0)); d = min(d, sdPod(p, bulb15, 16.0));
+    return d;
+}
+
+float islands(vec2 p) {
+    return min(min(sdPod(p, group0, 21.0), sdPod(p, group1, 22.0)), sdPod(p, group2, 23.0));
+}
+
+// The notch: the centre section in a lump of goo hanging from the screen
+// edge, flaring into the edge; the side sections float as islands.
+float notch(vec2 p) {
+    if (group1.z <= 0.0) return islands(p);
+    vec2 c = group1.xy + group1.zw * 0.5;
+    vec2 hs = vec2(group1.z * 0.5 + PAD * 2.0, (group1.y + group1.w + PAD + 12.0) * 0.5);
+    float body = sdRoundBox(p, vec2(c.x, hs.y - 12.0), hs, 18.0);
+    float lip = max(p.y - 4.0 - 1.5 * sin(p.x * 0.03 + time), abs(p.x - c.x) - hs.x - 36.0);   // thin edge strip
+    float d = smin(body, lip, 16.0);
+    return min(d, min(sdPod(p, group0, 21.0), sdPod(p, group2, 23.0)));
+}
+
+float baseShape(vec2 p) {
+    if (barShape < 0.5) return p.y - barEdge(p.x);
+    if (barShape < 1.5) return podsAll(p);
+    if (barShape < 2.5) return islands(p);
+    return notch(p);
+}
+
+// Bottom edge of the goo above x (for hanging drips), or -1 where there is
+// none. Classic always has the strip; the others only under their shapes.
+float podBottom(vec4 b, float x, float extra) {
+    float padX = barShape > 0.5 && barShape < 1.5 ? -2.5 : PAD;
+    if (b.z <= 0.0 || x < b.x - padX + 6.0 || x > b.x + b.z + padX - 6.0) return -1.0;
+    return b.y + b.w + PAD * 0.55 + extra;
+}
+float dripEdge(float x) {
+    if (barShape < 0.5) return barEdge(x);
+    float e = -1.0;
+    if (barShape < 1.5) {
+        e = max(e, podBottom(bulb0, x, 0.0));  e = max(e, podBottom(bulb1, x, 0.0));
+        e = max(e, podBottom(bulb2, x, 0.0));  e = max(e, podBottom(bulb3, x, 0.0));
+        e = max(e, podBottom(bulb4, x, 0.0));  e = max(e, podBottom(bulb5, x, 0.0));
+        e = max(e, podBottom(bulb6, x, 0.0));  e = max(e, podBottom(bulb7, x, 0.0));
+        e = max(e, podBottom(bulb8, x, 0.0));  e = max(e, podBottom(bulb9, x, 0.0));
+        e = max(e, podBottom(bulb10, x, 0.0)); e = max(e, podBottom(bulb11, x, 0.0));
+        e = max(e, podBottom(bulb12, x, 0.0)); e = max(e, podBottom(bulb13, x, 0.0));
+        e = max(e, podBottom(bulb14, x, 0.0)); e = max(e, podBottom(bulb15, x, 0.0));
+        return e;
+    }
+    e = max(podBottom(group0, x, 0.0), podBottom(group2, x, 0.0));
+    if (barShape < 2.5) return max(e, podBottom(group1, x, 0.0));
+    vec4 n = group1;   // notch: deeper, and wider by its flare
+    if (n.z > 0.0 && abs(x - (n.x + n.z * 0.5)) < n.z * 0.5 + PAD * 2.0 - 8.0) e = max(e, n.y + n.w + PAD);
+    return e;
+}
+
+// Sinew: a row of teeth hanging off the goo's lower edge (distance only).
+float teethRow(vec2 p) {
+    const float STEP = 13.0;
+    float i = floor(p.x / STEP);
+    float d = 1e5;
+    for (int k = -1; k <= 1; k++) {
+        float j = i + float(k);
+        float cx = (j + 0.5) * STEP;
+        float edge = dripEdge(cx);
+        if (edge < 0.0 || hash(j * 2.3 + 5.0) < 0.25) continue;
+        float len = 6.0 + 6.0 * hash(j * 7.1);
+        // triangle: base at the edge, point hanging down
+        vec2 q = p - vec2(cx, edge - 2.0);
+        float w = 4.2 * (1.0 - clamp(q.y / len, 0.0, 1.0));
+        float t = max(abs(q.x) - w, max(-q.y, q.y - len));
+        d = min(d, t);
+    }
+    return d;
+}
+
+// Bone: rounded knuckle knobs along the lower edge, like a spine.
+float boneKnobs(vec2 p) {
+    const float STEP = 46.0;
+    float i = floor(p.x / STEP);
+    float d = 1e5;
+    for (int k = -1; k <= 1; k++) {
+        float cx = (i + float(k) + 0.5) * STEP;
+        float edge = dripEdge(cx);
+        if (edge < 0.0) continue;
+        d = min(d, length(p - vec2(cx - 7.0, edge + 1.0)) - 6.5);
+        d = min(d, length(p - vec2(cx + 7.0, edge + 1.0)) - 6.5);
+    }
+    return d;
+}
+
 vec2 bulb(vec2 p, vec4 b, float seed) {
     if (b.z <= 0.0 || abs(p.x - (b.x + b.z * 0.5)) > b.z * 0.5 + 70.0) return vec2(1e5);
     float sag = 1.5 * sin(time * 0.8 + seed * 2.3);
@@ -191,9 +310,35 @@ vec2 mapBlob(vec2 p) {
     return vec2(d, hl);
 }
 
+// The command centre / panel blob: a fat drip that falls, then spreads.
+float openPanel(vec2 p, float ci, inout float hl) {
+    // Opens like a fat drip: a narrow bead falls first, then spreads
+    // sideways into the panel body.
+    float o = openProgress;
+    float h = max(panelRect.w * smoothstep(0.0, 0.75, o), 2.0);
+    float w = mix(40.0, panelRect.z, smoothstep(0.35, 1.0, o));
+    float cx = panelRect.x + panelRect.z * 0.5;
+    float r = min(min(w, h) * 0.5, 22.0);
+    float pd = sdRoundBox(p, vec2(cx, barHeight + h * 0.5), vec2(w * 0.5, h * 0.5), r);
+    float d = pd;
+
+    float bottom = barHeight + h;
+    float reach = w * 0.5 - r;
+    for (int k = -1; k <= 1; k++) {
+        float i = ci + float(k);
+        if (hash(i * 5.3 + 71.0) < 0.35) continue;
+        float dx = (i + 0.5 + (hash(i + 40.0) - 0.5) * 0.6) * CELL;
+        if (abs(dx - cx) > reach) continue;
+        vec2 dr = drip(p, dx, bottom, i + 100.0, smoothstep(0.6, 1.0, o) * 1.3);
+        d = smin(d, dr.x, 8.0);
+        hl = min(hl, dr.y);
+    }
+    return d;
+}
+
 vec2 mapScene(vec2 p) {
     if (blobMode > 0.5) return mapBlob(p);
-    float d = p.y - barEdge(p.x);
+    float d = baseShape(p);
     float hl = 1e5;
     float ci = floor(p.x / CELL);
 
@@ -201,9 +346,19 @@ vec2 mapScene(vec2 p) {
         float i = ci + float(k);
         if (hash(i * 3.7 + 11.0) < 0.3) continue;
         float cx = (i + 0.5 + (hash(i) - 0.5) * 0.6) * CELL;
-        vec2 dr = drip(p, cx, barEdge(cx), i, 1.0);
+        float edge = dripEdge(cx);
+        if (edge < 0.0) continue;
+        vec2 dr = drip(p, cx, edge, i, 1.0);
         d = smin(d, dr.x, 12.0);
         hl = min(hl, dr.y);
+    }
+
+    // pills are their own lumps; every other shape sags a bulb under widgets
+    if (barShape > 0.5 && barShape < 1.5) {
+        if (openProgress > 0.001) d = smin(d, openPanel(p, ci, hl), 26.0);
+        if (material > 0.5 && material < 1.5) d = min(d, teethRow(p));
+        if (material > 1.5 && material < 2.5) d = smin(d, boneKnobs(p), 5.0);
+        return vec2(d, hl);
     }
 
     vec2 bs;
@@ -224,29 +379,9 @@ vec2 mapScene(vec2 p) {
     bs = bulb(p, bulb14, 15.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
     bs = bulb(p, bulb15, 16.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
 
-    if (openProgress > 0.001) {
-        // Opens like a fat drip: a narrow bead falls first, then spreads
-        // sideways into the panel body.
-        float o = openProgress;
-        float h = max(panelRect.w * smoothstep(0.0, 0.75, o), 2.0);
-        float w = mix(40.0, panelRect.z, smoothstep(0.35, 1.0, o));
-        float cx = panelRect.x + panelRect.z * 0.5;
-        float r = min(min(w, h) * 0.5, 22.0);
-        float pd = sdRoundBox(p, vec2(cx, barHeight + h * 0.5), vec2(w * 0.5, h * 0.5), r);
-        d = smin(d, pd, 26.0);
-
-        float bottom = barHeight + h;
-        float reach = w * 0.5 - r;
-        for (int k = -1; k <= 1; k++) {
-            float i = ci + float(k);
-            if (hash(i * 5.3 + 71.0) < 0.35) continue;
-            float dx = (i + 0.5 + (hash(i + 40.0) - 0.5) * 0.6) * CELL;
-            if (abs(dx - cx) > reach) continue;
-            vec2 dr = drip(p, dx, bottom, i + 100.0, smoothstep(0.6, 1.0, o) * 1.3);
-            d = smin(d, dr.x, 8.0);
-            hl = min(hl, dr.y);
-        }
-    }
+    if (openProgress > 0.001) d = smin(d, openPanel(p, ci, hl), 26.0);
+    if (material > 0.5 && material < 1.5) d = min(d, teethRow(p));
+    if (material > 1.5 && material < 2.5) d = smin(d, boneKnobs(p), 5.0);
     return vec2(d, hl);
 }
 
@@ -509,8 +644,65 @@ vec4 printShade(vec2 p, vec2 scene, vec3 base) {
     return vec4(col, max(fill(d), fill(dc)));
 }
 
+// Texture laid over the shaded surface for the non-slime materials. Label
+// zones (behind widget text) and panel interiors are kept calm.
+vec3 materialSurface(vec2 p, float d, vec3 col, vec3 base) {
+    if (material < 0.5) return col;
+    vec3 ink = mix(base * 0.12, vec3(0.03, 0.02, 0.06), 0.7);
+    float calm = labelZone(p);
+    float inPanel = step(barHeight + 8.0, p.y) * step(panelRect.x, p.x) * step(p.x, panelRect.x + panelRect.z);
+    calm = max(calm, inPanel * smoothstep(-12.0, -22.0, d) * 0.7);
+    float rim = fill(d + 2.2);                              // 1 inside, 0 on the outline band
+
+    if (material > 2.5) {
+        // plain: flat theme colour and a clean ink edge
+        return mix(ink, base, rim);
+    }
+
+    if (material < 1.5) {
+        // ---- sinew ----
+        // stretched muscle fibres running along the bar
+        float warp = fbm(vec2(p.x / 70.0, p.y / 9.0)) * 6.0;
+        float fib = sin(p.y * 1.15 + warp + sin(p.x * 0.02) * 1.5);
+        vec3 c = col;
+        c = mix(c, c * 0.72, smoothstep(0.55, 0.95, fib) * 0.55 * (1.0 - calm));
+        c = mix(c, min(c * 1.25 + 0.05, vec3(1.0)), smoothstep(-0.95, -0.7, -fib) * 0.25 * (1.0 - calm));
+        // veins: thin dark branching ridges, throbbing faintly
+        float vn = abs(fbm(p / 26.0 + vec2(time * 0.02, 0.0)) - 0.5);
+        float vein = smoothstep(0.035, 0.012, vn) * (0.75 + 0.25 * sin(time * 2.2));
+        c = mix(c, toneShift(base, 0.8, 0.5, 1.1, 0.35), vein * 0.8 * (1.0 - calm));
+        // teeth: ivory with a dark gumline
+        c = mix(c, mix(paperColor.rgb, vec3(1.0, 0.96, 0.85), 0.4), step(teethRow(p), -0.8));
+        return c;
+    }
+
+    // ---- bone ----
+    vec3 c = col;
+    // vertebra segments: faint grooves across the bar with a shadowed seam
+    float seg = abs(fract(p.x / 46.0) - 0.5) * 46.0;
+    c = mix(c, c * 0.8, smoothstep(2.5, 0.6, seg) * step(-d, 40.0) * (1.0 - calm) * 0.8);
+    // cracks: thin dark ridges of noise
+    float cn = abs(fbm(p / 18.0 + 3.1) - 0.5);
+    c = mix(c, ink, smoothstep(0.011, 0.004, cn) * 0.6 * (1.0 - calm));
+    // pores: speckled pits
+    float pore = step(0.93, hash2(floor(p / 3.0))) * (0.5 + 0.5 * hash2(floor(p / 3.0) + 7.0));
+    c = mix(c, c * 0.62, pore * 0.5 * (1.0 - calm));
+    // aged staining toward the edges
+    c = mix(c, c * vec3(0.86, 0.8, 0.66), smoothstep(-2.0, -14.0, d) < 1.0 ? (1.0 - smoothstep(-2.0, -14.0, d)) * 0.6 : 0.0);
+    return c;
+}
+
+// Screen point -> "bar at the top" coordinates: x runs along the bar, y is the
+// distance from the bar's screen edge. Everything else is drawn in that frame.
+vec2 toBarSpace(vec2 g) {
+    if (orient < 0.5) return g;
+    if (orient < 1.5) return vec2(g.x, screenSize.y - g.y);
+    if (orient < 2.5) return vec2(g.y, g.x);
+    return vec2(g.y, screenSize.x - g.x);
+}
+
 void main() {
-    vec2 p = qt_TexCoord0 * resolution + origin;
+    vec2 p = toBarSpace(qt_TexCoord0 * resolution + origin);
     if (p.y < clipTop || (cullRect.w > 0.5 && (p.x < cullRect.x || p.x > cullRect.y || p.y > cullRect.z))) {
         fragColor = vec4(0.0);
         return;
@@ -530,6 +722,9 @@ void main() {
     // toward the partner colour as the ooze hangs lower.
     float gt = 0.45 + 0.35 * sin(p.x * 0.0022 + time * 0.12) + (p.y - barHeight) / 220.0;
     vec3 base = mix(slimeColor.rgb, slimeColor2.rgb, smoothstep(0.0, 1.0, gt));
+    // materials start from the theme colour and push it toward their stuff
+    if (material > 0.5 && material < 1.5) base = toneShift(base, 0.985, 0.75, 1.05, 0.95);          // flesh
+    else if (material > 1.5 && material < 2.5) base = mix(paperColor.rgb, base, 0.14);               // ivory
     vec3 col;
     if (shadingStyle > 2.5) {
         vec4 printed = printShade(p, scene, base);
@@ -538,6 +733,8 @@ void main() {
     } else {
         col = shadingStyle < 0.5 ? softShade(p, d, base) : celShade(p, scene, base, shadingStyle > 1.5);
     }
+
+    col = materialSurface(p, d, col, base);
 
     if (poolDepth > 0.0 && openProgress > 0.0) {
         float inBox = step(panelRect.x + 12.0, p.x) * step(p.x, panelRect.x + panelRect.z - 12.0)

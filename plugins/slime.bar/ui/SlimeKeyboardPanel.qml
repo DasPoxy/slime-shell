@@ -213,7 +213,7 @@ PanelWindow {
   // parallel axis (along the bar) the anchor item's reported position is
   // still consistent with the bar content origin, so it's accurate for
   // centering the card under the icon.
-  readonly property real barW: anchorWindow ? anchorWindow.width : screenW
+  readonly property real barW: slime ? bar.barSize : (anchorWindow ? anchorWindow.width : screenW)
   readonly property real barH: slime ? bar.barSize : (anchorWindow ? anchorWindow.height : 0)
   readonly property point cardOrigin: {
     if (!anchorItem || !bar) return Qt.point(margin, margin)
@@ -319,8 +319,12 @@ PanelWindow {
     }
 
     function barPoint(px, py) {
-      if (root.barPos === "bottom") return Qt.point(px, py - (root.screenH - root.barH))
-      if (root.barPos === "right") return Qt.point(px - (root.screenW - root.barW), py)
+      // the bar's window is thicker than the bar when skinned, so offset by
+      // the window's real size
+      var winH = root.anchorWindow ? root.anchorWindow.height : root.barH
+      var winW = root.anchorWindow ? root.anchorWindow.width : root.barW
+      if (root.barPos === "bottom") return Qt.point(px, py - (root.screenH - winH))
+      if (root.barPos === "right") return Qt.point(px - (root.screenW - winW), py)
       return Qt.point(px, py)
     }
 
@@ -407,7 +411,17 @@ PanelWindow {
     anchors.fill: parent
     fragmentShader: Qt.resolvedUrl("../shaders/slime.frag.qsb")
     // every shader uniform set explicitly: unset ones are not guaranteed to be 0
-    property vector2d origin: Qt.vector2d(0, 0)
+    property vector2d origin: Qt.vector2d(0, 0)          // full-screen window
+    property real orient: root.slime ? root.bar.orientId : 0
+    property vector2d screenSize: Qt.vector2d(root.screenW, root.screenH)
+    // the card in bar space: start and length along the bar, and how far it
+    // reaches out from the bar's edge
+    readonly property real along: orient >= 1.5 ? card.y : card.x
+    readonly property real alongLen: orient >= 1.5 ? card.height : card.width
+    readonly property real reach: orient < 0.5 ? card.y + card.height
+      : orient < 1.5 ? root.screenH - card.y
+      : orient < 2.5 ? card.x + card.width
+      : root.screenW - card.x
     property real blobMode: 0
 
     readonly property var bulbs: root.anchorWindow && root.anchorWindow.bulbRects ? root.anchorWindow.bulbRects : []
@@ -416,18 +430,24 @@ PanelWindow {
     property real time: root.slime ? root.bar.animTime : 0
     property real barHeight: root.slime ? root.bar.barSize : 0
     property real openProgress: root.dripProgress
-    property real dripAmount: root.slime ? root.bar.dripAmount : 1
+    property real dripAmount: root.slime ? root.bar.dripLevel : 1
     property real shadingStyle: root.slime ? root.bar.shadingStyle : 3
     property vector2d resolution: Qt.vector2d(width, height)
     // The blob hangs from the bar's edge down to the card's bottom.
-    property vector4d panelRect: Qt.vector4d(card.x, 0, card.width, card.y + card.height - barHeight)
+    property vector4d panelRect: Qt.vector4d(along, 0, alongLen, reach - barHeight)
     property color slimeColor: root.slime ? root.bar.slimeColor : "black"
     property color slimeColor2: root.slime ? root.bar.slimeColor2 : "black"
     property color paperColor: root.slime ? root.bar.paperColor : "white"
     // Only draw below the bar and around this panel; the bar paints the rest.
     property real clipTop: barHeight - 2
-    property vector4d cullRect: Qt.vector4d(card.x - 60, card.x + card.width + 60, card.y + card.height + 160, 1)
+    property vector4d cullRect: Qt.vector4d(along - 60, along + alongLen + 60, reach + 160, 1)
     property real poolDepth: 0     // fully slime, like the command centre
+    // the bar's physical shape, so this window's drips line up with it
+    property real barShape: root.slime ? root.bar.barShapeId : 0
+    property real material: root.slime ? root.bar.materialId : 0
+    property vector4d group0: root.slime && root.bar.sharedGroupRects[0] ? root.bar.sharedGroupRects[0] : noBulb
+    property vector4d group1: root.slime && root.bar.sharedGroupRects[1] ? root.bar.sharedGroupRects[1] : noBulb
+    property vector4d group2: root.slime && root.bar.sharedGroupRects[2] ? root.bar.sharedGroupRects[2] : noBulb
     property vector4d bulb0: bulbs[0] || noBulb
     property vector4d bulb1: bulbs[1] || noBulb
     property vector4d bulb2: bulbs[2] || noBulb

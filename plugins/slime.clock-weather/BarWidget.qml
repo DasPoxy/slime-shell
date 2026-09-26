@@ -136,7 +136,9 @@ BarWidget {
     // user's size; the button keeps the click, hover and tooltip wiring.
     text: ""
     hasVisualContent: true
-    fixedWidth: Math.ceil(label.implicitWidth) + Style.space(18)
+    // side bars: stacked hours over minutes, no date or weather
+    fixedWidth: root.vertical ? -1 : Math.ceil(label.implicitWidth) + Style.space(18)
+    fixedHeight: root.vertical ? Math.ceil(label.implicitHeight) + 14 : -1
 
     onPressed: function(b) {
       if (b === Qt.RightButton) root.toggleWeatherPanel()
@@ -147,7 +149,11 @@ BarWidget {
     Text {
       id: label
       anchors.centerIn: parent
-      text: root.weatherText !== "" ? root.weatherText + "   " + root.timeText : root.timeText
+      text: root.vertical
+        ? Qt.formatTime(clock.date, root.hour24 ? "HH" : "h") + "\n" + Qt.formatTime(clock.date, "mm")
+        : (root.weatherText !== "" ? root.weatherText + "   " + root.timeText : root.timeText)
+      horizontalAlignment: Text.AlignHCenter
+      lineHeight: 0.85
       color: button.foreground
       // the slime display face when one is picked (Settings > Font & clock)
       font.family: root.bar && root.bar.displayFontFamily ? root.bar.displayFontFamily : button.fontFamily

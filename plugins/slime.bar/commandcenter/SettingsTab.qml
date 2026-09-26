@@ -83,6 +83,18 @@ Item {
         onPicked: value => settings.bar.gradientRole = value
       }
       ChoiceRow {
+        title: "MATERIAL"
+        options: [["slime", "slime"], ["sinew", "sinew"], ["bone", "bone"], ["plain", "plain"]]
+        current: settings.bar.material
+        onPicked: value => settings.bar.material = value
+      }
+      ChoiceRow {
+        title: "BAR SHAPE"
+        options: [["classic", "classic"], ["pills", "pills"], ["islands", "islands"], ["notch", "notch"]]
+        current: settings.bar.barShape
+        onPicked: value => settings.bar.barShape = value
+      }
+      ChoiceRow {
         title: "DRAW SLIME"
         options: [["above windows", "above"], ["behind windows", "behind"]]
         current: settings.bar.slimeLayer

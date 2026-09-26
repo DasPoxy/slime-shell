@@ -38,7 +38,13 @@ PopupWindow {
   // Distance from the bar's bottom edge down to the card.
   readonly property int neck: slime ? root.margin + 4 : 0
   property real dripProgress: 0
-  property point slimeOrigin: Qt.point(0, 0)
+  property point slimeOrigin: Qt.point(0, 0)      // popup's top-left, screen coords
+  readonly property string edge: bar ? bar.position : "top"
+  readonly property bool sideBar: edge === "left" || edge === "right"
+  // where the card sits inside the popup: the neck toward the bar, drip room
+  // away from it, rim room along it
+  readonly property real cardX: !slime ? 0 : edge === "left" ? neck : edge === "right" ? dripPad : sidePad
+  readonly property real cardY: !slime ? 0 : edge === "top" ? neck : edge === "bottom" ? dripPad : sidePad
   NumberAnimation on dripProgress { id: dripAnim; running: false }
   readonly property var anchorWindow: anchorItem ? anchorItem.QsWindow.window : null
   readonly property var popupScreen: anchorWindow ? anchorWindow.screen : null
@@ -84,17 +90,17 @@ PopupWindow {
 
   visible: open || card.opacity > 0 || (slime && dripProgress > 0)
   color: "transparent"
-  implicitWidth: contentWidth + sidePad * 2
-  implicitHeight: contentHeight + neck + dripPad
+  implicitWidth: slime && sideBar ? contentWidth + neck + dripPad : contentWidth + sidePad * 2
+  implicitHeight: slime && sideBar ? contentHeight + sidePad * 2 : contentHeight + neck + dripPad
 
   // Only the card (and the neck above it) takes input; the drip room is
   // click-through.
   mask: slime ? slimeMask : null
   property Region slimeMask: Region {
-    x: root.sidePad
-    y: 0
-    width: root.contentWidth
-    height: root.neck + root.contentHeight
+    x: root.edge === "left" ? 0 : root.cardX
+    y: root.edge === "top" ? 0 : root.cardY
+    width: root.contentWidth + (root.sideBar ? root.neck : 0)
+    height: root.contentHeight + (root.sideBar ? 0 : root.neck)
   }
 
   onOpenChanged: {
@@ -172,12 +178,22 @@ PopupWindow {
       var point = window.contentItem.mapFromItem(target, localX, localY)
 
       if (root.slime) {
-        point.y = root.bar.barSize - 2
-        point.x = Math.max(root.margin - root.sidePad,
-          Math.min(point.x, window.width - popupWidth - root.margin + root.sidePad))
-        root.slimeOrigin = Qt.point(Math.round(point.x), Math.round(point.y))
-        popupAnchor.rect.x = root.slimeOrigin.x
-        popupAnchor.rect.y = root.slimeOrigin.y
+        // flush against the bar on whichever edge it's on, slid along it
+        var bs = root.bar.barSize
+        if (root.edge === "top") point.y = bs - 2
+        else if (root.edge === "bottom") point.y = window.height - bs + 2 - popupHeight
+        else if (root.edge === "left") point.x = bs - 2
+        else point.x = window.width - bs + 2 - popupWidth
+        if (root.sideBar)
+          point.y = Math.max(root.margin - root.sidePad, Math.min(point.y, window.height - popupHeight - root.margin + root.sidePad))
+        else
+          point.x = Math.max(root.margin - root.sidePad, Math.min(point.x, window.width - popupWidth - root.margin + root.sidePad))
+        point.x = Math.round(point.x)
+        point.y = Math.round(point.y)
+        var so = window.screenOrigin ? window.screenOrigin : Qt.vector2d(0, 0)
+        root.slimeOrigin = Qt.point(point.x + so.x, point.y + so.y)
+        popupAnchor.rect.x = point.x
+        popupAnchor.rect.y = point.y
         return
       }
 
@@ -205,20 +221,37 @@ PopupWindow {
     readonly property vector4d noBulb: Qt.vector4d(0, 0, 0, 0)
 
     property vector2d origin: Qt.vector2d(root.slimeOrigin.x, root.slimeOrigin.y)
+    property real orient: root.slime ? root.bar.orientId : 0
+    readonly property var scr: root.anchorWindow && root.anchorWindow.screen ? root.anchorWindow.screen : null
+    property vector2d screenSize: scr ? Qt.vector2d(scr.width, scr.height) : Qt.vector2d(0, 0)
+    // the card in bar space (see SlimeKeyboardPanel)
+    readonly property real cx: origin.x + root.cardX
+    readonly property real cy: origin.y + root.cardY
+    readonly property real along: root.sideBar ? cy : cx
+    readonly property real alongLen: root.sideBar ? root.contentHeight : root.contentWidth
+    readonly property real reach: root.edge === "top" ? cy + root.contentHeight
+      : root.edge === "bottom" ? screenSize.y - cy
+      : root.edge === "left" ? cx + root.contentWidth
+      : screenSize.x - cx
     property real time: root.slime ? root.bar.animTime : 0
     property real barHeight: root.slime ? root.bar.barSize : 0
     property real openProgress: root.dripProgress
-    property real dripAmount: root.slime ? root.bar.dripAmount : 1
+    property real dripAmount: root.slime ? root.bar.dripLevel : 1
     property real shadingStyle: root.slime ? root.bar.shadingStyle : 3
     property vector2d resolution: Qt.vector2d(width, height)
     // In bar coordinates: the blob hangs from the bar's edge to the card's bottom.
-    property vector4d panelRect: Qt.vector4d(origin.x + root.sidePad, 0, root.contentWidth,
-      origin.y + root.neck + root.contentHeight - barHeight)
+    property vector4d panelRect: Qt.vector4d(along, 0, alongLen, reach - barHeight)
     property color slimeColor: root.slime ? root.bar.slimeColor : "black"
     property color slimeColor2: root.slime ? root.bar.slimeColor2 : "black"
     property color paperColor: root.slime ? root.bar.paperColor : "white"
     property real clipTop: barHeight - 2
     property real poolDepth: 0     // fully slime, like the command centre
+    // the bar's physical shape, so this window's drips line up with it
+    property real barShape: root.slime ? root.bar.barShapeId : 0
+    property real material: root.slime ? root.bar.materialId : 0
+    property vector4d group0: root.slime && root.bar.sharedGroupRects[0] ? root.bar.sharedGroupRects[0] : noBulb
+    property vector4d group1: root.slime && root.bar.sharedGroupRects[1] ? root.bar.sharedGroupRects[1] : noBulb
+    property vector4d group2: root.slime && root.bar.sharedGroupRects[2] ? root.bar.sharedGroupRects[2] : noBulb
     property vector4d bulb0: bulbs[0] || noBulb
     property vector4d bulb1: bulbs[1] || noBulb
     property vector4d bulb2: bulbs[2] || noBulb
@@ -239,8 +272,8 @@ PopupWindow {
 
   BorderSurface {
     id: card
-    x: root.sidePad
-    y: root.neck
+    x: root.cardX
+    y: root.cardY
     width: root.contentWidth
     height: root.contentHeight
     // On slime the ooze is the card; the surface itself goes clear.

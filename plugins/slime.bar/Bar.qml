@@ -117,7 +117,9 @@ Item {
   property color urgent: slimeSkin ? paperColor : Color.bar.active
 
   // ---- Slime skin ----------------------------------------------------------
-  readonly property bool slimeSkin: position === "top"
+  readonly property bool slimeSkin: true
+  // Bar edge for the shader: 0 top, 1 bottom, 2 left, 3 right.
+  readonly property real orientId: ["top", "bottom", "left", "right"].indexOf(position)
   readonly property int slimeBarSize: 40
   readonly property real commandCenterWidth: 860
   // Follows the open tab's content (set by the CommandCenter), animated so
@@ -200,12 +202,23 @@ Item {
   property bool clockTimeFirst: false
   // Detritus drifting in the bar (off for a cleaner look).
   property bool barDebris: true
+  // Physical shape of the bar: "classic" strip, "pills" (one per widget),
+  // "islands" (one per section) or "notch" (centre hangs from the edge).
+  property string barShape: "classic"
+  // What the bar is made of: "slime", "sinew", "bone" or "plain". Bone and
+  // plain don't drip; plain also drops the floating debris.
+  property string material: "slime"
+  readonly property real materialId: ["slime", "sinew", "bone", "plain"].indexOf(material)
+  readonly property real dripLevel: material === "bone" || material === "plain" ? 0 : dripAmount
+  readonly property real barShapeId: ["classic", "pills", "islands", "notch"].indexOf(barShape)
+  // Latest left/centre/right section extents, for overlays (see sharedBulbRects).
+  property var sharedGroupRects: []
 
   // ---- Skin settings persistence -----------------------------------------
   // Saved to ~/.config/omarchy/slime-shell/skin.json, loaded on start and
   // written (debounced) whenever one of these changes.
   readonly property var skinKeys: ["slimeRole", "gradientRole", "shadingStyle", "slimeFps", "dripAmount",
-    "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris"]
+    "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material"]
   property bool skinLoaded: false
   // A layer change made while the bar surface is still being set up is lost,
   // so "behind" only takes effect once the bar has been mapped for a moment.
@@ -247,6 +260,8 @@ Item {
   onFontStyleChanged: skinSaveTimer.restart()
   onClockTimeFirstChanged: skinSaveTimer.restart()
   onBarDebrisChanged: skinSaveTimer.restart()
+  onBarShapeChanged: skinSaveTimer.restart()
+  onMaterialChanged: skinSaveTimer.restart()
   onCcTabChanged: skinSaveTimer.restart()
   onCcSectionsChanged: skinSaveTimer.restart()
   property bool commandCenterOpen: false
@@ -286,6 +301,8 @@ Item {
     function color(role: string): void { root.slimeRole = role }
     function fps(n: int): void { root.slimeFps = n }
     // Draw the slime "above" windows or "behind" them.
+    function shape(name: string): void { root.barShape = name }
+    function material(name: string): void { root.material = name }
     function layer(where: string): void { root.slimeLayer = where === "behind" ? "behind" : "above" }
     // Open the command centre on a tab: home, system, wallpapers, tasks, settings.
     function tab(name: string): void { root.ccTab = name; root.commandCenterOpen = root.slimeSkin }
@@ -767,7 +784,7 @@ Item {
   }
 
   readonly property bool vertical: position === "left" || position === "right"
-  readonly property int barSize: vertical ? Style.bar.sizeVertical : (slimeSkin ? slimeBarSize : Style.bar.sizeHorizontal)
+  readonly property int barSize: slimeSkin ? slimeBarSize : (vertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal)
 
   function normalizePosition(value) {
     return BarModel.normalizePosition(value)
@@ -1486,9 +1503,9 @@ Item {
 
     margins {
       top: root.barHidden && root.position === "top" ? -barWindow.implicitHeight : 0
-      bottom: root.barHidden && root.position === "bottom" ? -root.barSize : 0
-      left: root.barHidden && root.position === "left" ? -root.barSize : 0
-      right: root.barHidden && root.position === "right" ? -root.barSize : 0
+      bottom: root.barHidden && root.position === "bottom" ? -barWindow.implicitHeight : 0
+      left: root.barHidden && root.position === "left" ? -barWindow.implicitWidth : 0
+      right: root.barHidden && root.position === "right" ? -barWindow.implicitWidth : 0
     }
 
     anchors {
@@ -1498,8 +1515,10 @@ Item {
       right: root.position === "right" || !root.vertical
     }
 
-    implicitWidth: root.vertical ? root.barSize : 0
-    implicitHeight: root.vertical ? 0 : (root.slimeSkin ? root.barSize + skinRoom : root.barSize)
+    // Thicker than the bar when skinned: room for drips and the command centre.
+    readonly property real thickness: root.slimeSkin ? root.barSize + skinRoom : root.barSize
+    implicitWidth: root.vertical ? thickness : 0
+    implicitHeight: root.vertical ? 0 : thickness
     color: root.slimeSkin || root.transparent ? "transparent" : root.background
     surfaceFormat.opaque: false
     WlrLayershell.namespace: "omarchy-bar"
@@ -1514,11 +1533,20 @@ Item {
     readonly property bool ccShown: root.slimeSkin && (root.commandCenterOpen || ccProgress > 0)
     // Only as tall as needed: bar + drips while closed, room for the command
     // centre while it's open or animating. Fewer pixels for the shader.
-    readonly property real skinRoom: ccShown ? root.commandCenterHeight + 160 : 130
+    // The command centre's extent along the bar and away from it: content is
+    // always laid out landscape, so on a side bar "along" is its height.
+    readonly property real ccAlong: root.vertical ? root.commandCenterHeight : root.commandCenterWidth
+    readonly property real ccAway: root.vertical ? root.commandCenterWidth : root.commandCenterHeight
+    readonly property real skinRoom: ccShown ? ccAway + 160 : 130
+    readonly property real barLength: root.vertical ? height : width
     property var bulbRects: []
-    property real ccCenterX: width / 2
-    readonly property real ccPanelX: Math.max(16, Math.min(width - root.commandCenterWidth - 16,
-      ccCenterX - root.commandCenterWidth / 2))
+    property var groupRects: []   // left, centre, right section extents
+    property real ccCenterX: barLength / 2   // along the bar
+    readonly property real ccPanelX: Math.max(16, Math.min(barLength - ccAlong - 16, ccCenterX - ccAlong / 2))
+    // this window's top-left on the screen (bottom/right bars sit at the far edge)
+    readonly property vector2d screenOrigin: Qt.vector2d(
+      root.position === "right" && screen ? screen.width - width : 0,
+      root.position === "bottom" && screen ? screen.height - height : 0)
     readonly property vector4d noBulb: Qt.vector4d(0, 0, 0, 0)
 
     NumberAnimation on ccProgress { id: ccAnim; running: false }
@@ -1540,18 +1568,34 @@ Item {
       if (!root.slimeSkin) return
       var out = []
       var h = 28
+      var y = Math.round((root.barSize - h) / 2)
+      var groups = { left: null, center: null, right: null }
       var slots = root.moduleSlots
-      for (var i = 0; i < slots.length && out.length < 16; i++) {
+      for (var i = 0; i < slots.length; i++) {
         var slot = slots[i]
         if (!slot || !slot.visible || slot.width <= 0 || !root.sameWindow(root.slotWindow(slot), barWindow)) continue
+        var q = slot.mapToItem(barWindow.contentItem, 0, 0)
+        // position and length along the bar (screen-aligned: the window
+        // starts at the screen's edge on the bar's axis)
+        var at = root.vertical ? q.y : q.x
+        var len = root.vertical ? slot.height : slot.width
+        var g = groups[slot.region]
+        if (slot.region in groups)
+          groups[slot.region] = g ? { x0: Math.min(g.x0, at), x1: Math.max(g.x1, at + len) } : { x0: at, x1: at + len }
+        if (slot.moduleName === "slime.clock-weather") ccCenterX = at + len / 2
         if (slot.activeItem && slot.activeItem.slimeNoBulb === true) continue   // e.g. plain spacers
-        var p = slot.mapToItem(barWindow.contentItem, 0, 0)
-        out.push(Qt.vector4d(p.x, Math.round((root.barSize - h) / 2), slot.width, h))
-        if (slot.moduleName === "slime.clock-weather") ccCenterX = p.x + slot.width / 2
+        if (out.length < 16) out.push(Qt.vector4d(at, y, len, h))
       }
       bulbRects = out
       root.sharedBulbRects = out
+      var gr = ["left", "center", "right"].map(function(k) {
+        var g = groups[k]
+        return g ? Qt.vector4d(g.x0, y, g.x1 - g.x0, h) : Qt.vector4d(0, 0, 0, 0)
+      })
+      groupRects = gr
+      root.sharedGroupRects = gr
     }
+
     Timer { interval: 250; running: root.slimeSkin && root.slimeFps === 0; repeat: true; onTriggered: barWindow.updateBulbs() }
     Component.onCompleted: Qt.callLater(updateBulbs)
 
@@ -1563,10 +1607,11 @@ Item {
 
     Item {
       id: ccHit
-      x: barWindow.ccPanelX
-      y: root.barSize
-      width: root.commandCenterWidth
-      height: root.commandCenterOpen ? root.commandCenterHeight : 0
+      readonly property real away: root.commandCenterOpen ? barWindow.ccAway : 0
+      x: root.vertical ? (root.position === "left" ? root.barSize : barWindow.width - root.barSize - away) : barWindow.ccPanelX
+      y: root.vertical ? barWindow.ccPanelX : (root.position === "bottom" ? barWindow.height - root.barSize - away : root.barSize)
+      width: root.vertical ? away : barWindow.ccAlong
+      height: root.vertical ? barWindow.ccAlong : away
     }
 
     ShaderEffect {
@@ -1578,19 +1623,26 @@ Item {
       property vector4d cullRect: Qt.vector4d(0, 0, 0, 0)
       property real clipTop: -100000
       property real poolDepth: 0
-      property vector2d origin: Qt.vector2d(0, 0)
+      property vector2d origin: barWindow.screenOrigin
       property real blobMode: 0
+      property real orient: root.orientId
+      property vector2d screenSize: barWindow.screen ? Qt.vector2d(barWindow.screen.width, barWindow.screen.height) : Qt.vector2d(0, 0)
 
       property real time: root.animTime
       property real barHeight: root.barSize
       property real openProgress: barWindow.ccProgress
-      property real dripAmount: root.dripAmount
+      property real dripAmount: root.dripLevel
       property real shadingStyle: root.shadingStyle
       property vector2d resolution: Qt.vector2d(width, height)
-      property vector4d panelRect: Qt.vector4d(barWindow.ccPanelX, 0, root.commandCenterWidth, root.commandCenterHeight)
+      property vector4d panelRect: Qt.vector4d(barWindow.ccPanelX, 0, barWindow.ccAlong, barWindow.ccAway)
       property color slimeColor: root.slimeColor
       property color slimeColor2: root.slimeColor2
       property color paperColor: root.paperColor
+      property real barShape: root.barShapeId
+      property real material: root.materialId
+      property vector4d group0: barWindow.groupRects[0] || barWindow.noBulb
+      property vector4d group1: barWindow.groupRects[1] || barWindow.noBulb
+      property vector4d group2: barWindow.groupRects[2] || barWindow.noBulb
       property vector4d bulb0: barWindow.bulbRects[0] || barWindow.noBulb
       property vector4d bulb1: barWindow.bulbRects[1] || barWindow.noBulb
       property vector4d bulb2: barWindow.bulbRects[2] || barWindow.noBulb
@@ -1611,14 +1663,18 @@ Item {
 
     // detritus drifting through the bar, fading out behind widgets
     SlimeDebris {
-      visible: root.slimeSkin && root.barDebris && !root.vertical
+      visible: root.slimeSkin && root.barDebris && root.material !== "plain" && !root.vertical
+      y: root.position === "bottom" ? barWindow.height - root.barSize : 0
       width: barWindow.width
       height: root.barSize
       bar: root
       bitOpacity: 0.7
       avoid: barWindow.bulbRects
+      within: root.barShape === "classic" ? [] : (root.barShape === "pills" ? barWindow.bulbRects : barWindow.groupRects)
       bits: {
-        var out = [], kinds = ["eye", "bubble", "bone", "bubble", "tooth", "eye", "bubble", "bone"]
+        var out = [], kinds = root.material === "sinew" ? ["eye", "tooth", "eye", "eye", "tooth", "eye"]
+          : root.material === "bone" ? ["bone", "tooth", "bone", "eye", "bone", "tooth"]
+          : ["eye", "bubble", "bone", "bubble", "tooth", "eye", "bubble", "bone"]
         var n = Math.max(1, Math.floor(barWindow.width / 150))
         for (var i = 0; i < n; i++) {
           var h = Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 1
@@ -1631,7 +1687,11 @@ Item {
 
     Item {
       id: barStrip
-      width: parent.width
+      // the bar itself, against its screen edge; the rest of the window is
+      // room for drips and the command centre
+      x: root.slimeSkin && root.position === "right" ? parent.width - root.barSize : 0
+      y: root.slimeSkin && root.position === "bottom" ? parent.height - root.barSize : 0
+      width: root.slimeSkin && root.vertical ? root.barSize : parent.width
       height: root.slimeSkin && !root.vertical ? root.barSize : parent.height
 
       Loader {
@@ -1653,8 +1713,13 @@ Item {
     // ---- Command centre (fades in once the ooze has settled) ----
     CommandCenter {
       id: commandCenter
-      x: barWindow.ccPanelX + 24
-      y: root.barSize + 20
+      // laid out landscape on every edge; sits just off the bar
+      x: root.position === "left" ? root.barSize + 20
+        : root.position === "right" ? barWindow.width - root.barSize - 20 - width
+        : barWindow.ccPanelX + 24
+      y: root.position === "bottom" ? barWindow.height - root.barSize - 20 - implicitHeight
+        : root.vertical ? barWindow.ccPanelX + 22
+        : root.barSize + 20
       width: root.commandCenterWidth - 48
       bar: root
       shown: barWindow.ccShown
