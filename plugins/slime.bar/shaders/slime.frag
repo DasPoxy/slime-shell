@@ -164,6 +164,28 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
     float neck = (3.5 + 4.0 * hash(seed + 4.0)) * dripStyle.y;
     float hl = 1e5;
 
+    // ---- gelatinous: the bar holds on to its goo; now and then a small bead
+    // gathers on the underside, quivers, and is shaken loose to fall like a
+    // raindrop. Most cells shed nothing in a given cycle.
+    if (dripExtra.x > 2.5) {
+        float cyc = floor(time * speed + hash(seed + 2.0));
+        if (hash(seed * 1.3 + cyc * 7.1) > 0.4) return vec2(1e5, 1e5);
+        float r = (2.4 + 2.2 * hash(seed + cyc * 1.7)) * clamp(dripAmount, 0.6, 1.6);
+        float bx = cx + (hash(seed + cyc * 3.3) - 0.5) * 34.0;
+        float form = smoothstep(0.0, 0.5, s);            // gathering
+        float fall = max(0.0, s - 0.72) / 0.28;          // shaken loose
+        float shake = sin(time * 23.0 + seed * 4.0) * 1.6 * form * (1.0 - step(0.001, fall));
+        vec2 c = vec2(bx + shake, edgeY + r * 0.7 * form + fall * fall * (maxLen * 1.5 + 190.0));
+        float rr = r * (0.3 + 0.7 * form) * (1.0 - 0.2 * fall);
+        rr *= fadeOut(c.y + rr);
+        vec2 q = p - c;
+        q.y *= 1.0 - 0.3 * fall;                          // stretched as it falls
+        float d = length(q) - rr;
+        if (fall <= 0.0) d = smin(d, sdSegment(p, vec2(bx, edgeY - 3.0), c, rr * 0.5), 4.0);
+        if (rr > 2.5) hl = length(p - (c + vec2(-0.35, -0.4) * rr)) - 0.28 * rr;
+        return vec2(d, hl);
+    }
+
     // ---- mitosis / lava lamp: a blob buds off the edge, pinches its neck
     // shut, splits away and sinks slowly, wobbling, then dissolves
     if (dripExtra.x > 1.5) {
@@ -210,7 +232,7 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
 
     vec2 top = vec2(cx, edgeY - 6.0);
     vec2 tip = vec2(cx, edgeY + len);
-    bool stringy = dripExtra.x > 0.5;
+    bool stringy = dripExtra.x > 0.5 && dripExtra.x < 1.5;
     // stringy goo necks down as it stretches
     float d = sdSegment(p, top, tip, neck * (1.0 - 0.6 * release) * (stringy ? 1.0 - 0.4 * grow : 1.0));
     d = smin(d, length(p - tip) - bulb, 8.0);
@@ -652,7 +674,24 @@ float openPanel(vec2 p, float ci, inout float hl) {
     return d;
 }
 
+// Gelatinous: the body quivers — travelling waves along the bar push its
+// outline in and out, strongest along the underside, still at the screen edge.
+float jelly(vec2 p) {
+    float j = sin(p.x * 0.043 + time * 4.1) * 1.4
+            + sin(p.x * 0.019 - time * 2.6) * 1.8
+            + sin(p.x * 0.11 + time * 6.7) * 0.5;
+    float band = smoothstep(0.0, barHeight, p.y) * (1.0 - smoothstep(barHeight + 30.0, barHeight + 70.0, p.y));
+    return j * band;
+}
+
+vec2 mapSceneBody(vec2 p);
 vec2 mapScene(vec2 p) {
+    vec2 r = mapSceneBody(p);
+    if (dripExtra.x > 2.5 && blobMode < 0.5) r.x += jelly(p);
+    return r;
+}
+
+vec2 mapSceneBody(vec2 p) {
     if (blobMode > 0.5) return mapBlob(p);
     float d = baseShape(p);
     float hl = 1e5;

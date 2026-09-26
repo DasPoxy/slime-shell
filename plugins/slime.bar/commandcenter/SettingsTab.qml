@@ -195,7 +195,7 @@ Item {
       ChoiceRow {
         title: "DRIP STYLE"
         options: [["drip", "drip"], ["honey", "honey"], ["rain", "rain"], ["tar", "tar"], ["frozen", "frozen"],
-          ["stringy", "stringy"], ["lava lamp", "lava"]]
+          ["stringy", "stringy"], ["lava lamp", "lava"], ["gelatinous", "gelatinous"]]
         current: settings.bar.dripStyle
         onPicked: value => settings.bar.dripStyle = value
       }

@@ -245,7 +245,8 @@ Item {
   // How the drips move: "drip" (default), "honey" (slow, thick), "rain" (fast,
   // thin, many), "tar" (crawling, fat, few), "frozen" (hang still),
   // "stringy" (hang by several strands that snap as the drop falls),
-  // "lava" (lava lamp: blobs bud off, pinch apart and sink).
+  // "lava" (lava lamp: blobs bud off, pinch apart and sink),
+  // "gelatinous" (the body jiggles; only the odd small bead is shaken loose).
   // dripAmount -1 means "variable" (each drip waxes and wanes).
   property string dripStyle: "drip"
 
@@ -296,13 +297,14 @@ Item {
     case "frozen": return Qt.vector4d(1, 1, 1, 1)
     case "stringy": return Qt.vector4d(0.75, 1, 0, 1.3)
     case "lava": return Qt.vector4d(0.45, 1.15, 0, 0.8)
+    case "gelatinous": return Qt.vector4d(1.4, 1, 0, 0.9)
     default: return Qt.vector4d(1, 1, 0, 1)
     }
   }
   readonly property real materialId: ["slime", "sinew", "bone", "plain"].indexOf(material)
   // every material drips (bone and plain included) with the chosen amount
   readonly property real dripLevel: dripAmount < 0 ? 1.2 : dripAmount
-  readonly property vector4d dripExtraVec: Qt.vector4d(dripStyle === "stringy" ? 1 : dripStyle === "lava" ? 2 : 0, dripAmount < 0 ? 1 : 0, 0, 0)
+  readonly property vector4d dripExtraVec: Qt.vector4d(dripStyle === "stringy" ? 1 : dripStyle === "lava" ? 2 : dripStyle === "gelatinous" ? 3 : 0, dripAmount < 0 ? 1 : 0, 0, 0)
   readonly property real barShapeId: ["classic", "pills", "islands", "notch"].indexOf(barShape)
   // Latest left/centre/right section extents, for overlays (see sharedBulbRects).
   property var sharedGroupRects: []
@@ -2007,7 +2009,7 @@ Item {
     readonly property real dripRoom: {
       if (root.dripLevel <= 0) return 130
       var amt = root.dripAmount < 0 ? 1.85 : Math.min(root.dripAmount, 2.1)
-      var fall = root.dripStyle === "stringy" || root.dripStyle === "lava" ? 110 : 60
+      var fall = root.dripStyle === "stringy" || root.dripStyle === "lava" || root.dripStyle === "gelatinous" ? 110 : 60
       return Math.max(130, Math.ceil(60 * amt + 50 + fall))
     }
     readonly property real barLength: root.vertical ? height : width
