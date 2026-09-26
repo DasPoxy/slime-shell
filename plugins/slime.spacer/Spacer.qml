@@ -36,15 +36,28 @@ BarWidget {
   // shell's usual updateEntryInline would rewrite every spacer at once).
   function place() {
     if (!bar || !bar.moduleSlots) return null
-    var slots = bar.moduleSlots
-    for (var i = 0; i < slots.length; i++) {
-      var slot = slots[i]
-      if (!slot || slot.activeItem !== root) continue
-      var idx = bar.layoutEntries(slot.region).indexOf(slot.entry)
-      return idx < 0 ? null : { region: slot.region, index: idx }
+    var slots = bar.moduleSlots, mine = null
+    for (var i = 0; i < slots.length; i++) if (slots[i] && slots[i].activeItem === root) mine = slots[i]
+    if (!mine) return null
+    // Slots hold copies of their layout entries, so find this spacer by
+    // position: it's the k-th spacer (along the bar, on this monitor) in its
+    // section, which is the k-th spacer entry in that section's layout.
+    var win = bar.slotWindow(mine)
+    var same = slots.filter(function(sl) {
+      return sl && sl.region === mine.region && sl.moduleName === root.moduleName && bar.sameWindow(bar.slotWindow(sl), win)
+    })
+    function along(sl) { try { var p = sl.mapToItem(null, 0, 0); return bar.vertical ? p.y : p.x } catch (e) { return 0 } }
+    same.sort(function(a, b) { return along(a) - along(b) })
+    var k = same.indexOf(mine)
+    var entries = bar.layoutEntries(mine.region)
+    for (var j = 0, seen = 0; j < entries.length; j++) {
+      if (!entries[j] || entries[j].id !== root.moduleName) continue
+      if (seen === k) return { region: mine.region, index: j }
+      seen++
     }
     return null
   }
+
 
   function saveSetting(key, value) {
     var entry = { id: root.moduleName }
