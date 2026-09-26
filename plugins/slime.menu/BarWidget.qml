@@ -41,13 +41,19 @@ BarWidget {
 
   property bool pickerOpen: false
   property bool appsOpen: false
+  // summoned by keybind: centred on screen instead of dripping from the bar
+  property bool appsFloating: false
   onAppsOpenChanged: if (appsOpen) pickerOpen = false
   onPickerOpenChanged: if (pickerOpen) appsOpen = false
   IpcHandler {
     target: "slime-launcher"
     function icons(): void { root.pickerOpen = root.slime && !root.pickerOpen }
     // the app launcher (bind to e.g. Super+Space)
-    function apps(): void { root.appsOpen = root.slime && !root.appsOpen }
+    function apps(): void {
+      if (root.appsOpen) { root.appsOpen = false; return }
+      root.appsFloating = true
+      root.appsOpen = root.slime
+    }
   }
   function close() { pickerOpen = false; appsOpen = false }
 
@@ -78,7 +84,7 @@ BarWidget {
       if (!root.bar) return
       if (b === Qt.RightButton && root.slime) root.pickerOpen = !root.pickerOpen
       else if (b === Qt.RightButton || b === Qt.MiddleButton) root.bar.run("xdg-terminal-exec")
-      else if (root.slime) root.appsOpen = !root.appsOpen
+      else if (root.slime) { root.appsFloating = false; root.appsOpen = !root.appsOpen }
       else root.bar.run("omarchy-shell shell toggle omarchy.menu '{\"menu\":\"root\"}'")
     }
 
@@ -114,6 +120,7 @@ BarWidget {
     owner: root
     bar: root.bar
     widget: root
+    floating: root.appsFloating
     open: root.appsOpen
   }
 

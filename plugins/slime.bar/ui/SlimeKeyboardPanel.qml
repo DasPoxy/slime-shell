@@ -215,7 +215,13 @@ PanelWindow {
   // centering the card under the icon.
   readonly property real barW: slime ? bar.barSize : (anchorWindow ? anchorWindow.width : screenW)
   readonly property real barH: slime ? bar.barSize : (anchorWindow ? anchorWindow.height : 0)
+  // Floating: the panel sits in the middle of the screen as a free-standing
+  // blob that swells open, instead of dripping out of the bar (used when a
+  // panel is summoned by keybind rather than clicked on the bar).
+  property bool floating: false
+
   readonly property point cardOrigin: {
+    if (floating) return Qt.point(Math.round(screenW / 2 - contentWidth / 2), Math.round(screenH * 0.42 - contentHeight / 2))
     if (!anchorItem || !bar) return Qt.point(margin, margin)
     var x = 0, y = 0
     if (centerOnBar && (barPos === "top" || barPos === "bottom")) {
@@ -412,7 +418,7 @@ PanelWindow {
     fragmentShader: Qt.resolvedUrl("../shaders/slime.frag.qsb")
     // every shader uniform set explicitly: unset ones are not guaranteed to be 0
     property vector2d origin: Qt.vector2d(0, 0)          // full-screen window
-    property real orient: root.slime ? root.bar.orientId : 0
+    property real orient: root.slime && !root.floating ? root.bar.orientId : 0
     property vector2d screenSize: Qt.vector2d(root.screenW, root.screenH)
     // the card in bar space: start and length along the bar, and how far it
     // reaches out from the bar's edge
@@ -422,7 +428,7 @@ PanelWindow {
       : orient < 1.5 ? root.screenH - card.y
       : orient < 2.5 ? card.x + card.width
       : root.screenW - card.x
-    property real blobMode: 0
+    property real blobMode: root.floating ? 1 : 0
 
     readonly property var bulbs: root.anchorWindow && root.anchorWindow.bulbRects ? root.anchorWindow.bulbRects : []
     readonly property vector4d noBulb: Qt.vector4d(0, 0, 0, 0)
@@ -434,13 +440,19 @@ PanelWindow {
     property real shadingStyle: root.slime ? root.bar.shadingStyle : 3
     property vector2d resolution: Qt.vector2d(width, height)
     // The blob hangs from the bar's edge down to the card's bottom.
-    property vector4d panelRect: Qt.vector4d(along, 0, alongLen, reach - barHeight)
+    // floating: the card's own rect, swelling from 40% as it opens
+    readonly property real swell: 0.4 + 0.6 * Math.min(1, openProgress / 0.8)
+    property vector4d panelRect: root.floating
+      ? Qt.vector4d(card.x + card.width * (1 - swell) / 2, card.y + card.height * (1 - swell) / 2, card.width * swell, card.height * swell)
+      : Qt.vector4d(along, 0, alongLen, reach - barHeight)
     property color slimeColor: root.slime ? root.bar.slimeColor : "black"
     property color slimeColor2: root.slime ? root.bar.slimeColor2 : "black"
     property color paperColor: root.slime ? root.bar.paperColor : "white"
     // Only draw below the bar and around this panel; the bar paints the rest.
-    property real clipTop: barHeight - 2
-    property vector4d cullRect: Qt.vector4d(along - 60, along + alongLen + 60, reach + 160, 1)
+    property real clipTop: root.floating ? -100000 : barHeight - 2
+    property vector4d cullRect: root.floating
+      ? Qt.vector4d(card.x - 60, card.x + card.width + 60, card.y + card.height + 160, 1)
+      : Qt.vector4d(along - 60, along + alongLen + 60, reach + 160, 1)
     property real poolDepth: 0     // fully slime, like the command centre
     // the bar's physical shape, so this window's drips line up with it
     property real barShape: root.slime ? root.bar.barShapeId : 0
