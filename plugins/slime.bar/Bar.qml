@@ -125,6 +125,8 @@ Item {
   // Follows the open tab's content (set by the CommandCenter), animated so
   // the ooze stretches and settles when switching tabs.
   property real commandCenterHeight: 480
+  // where commandCenterHeight is heading (the animation's end value)
+  property real commandCenterHeightTarget: 480
   Behavior on commandCenterHeight { NumberAnimation { duration: 320; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
   property string ccTab: "home"
   // Command centre sections folded open/closed, by title (CcSection).
@@ -1857,7 +1859,24 @@ Item {
     // always laid out landscape, so on a side bar "along" is its height.
     readonly property real ccAlong: root.vertical ? root.commandCenterHeight : root.commandCenterWidth
     readonly property real ccAway: root.vertical ? root.commandCenterWidth : root.commandCenterHeight
-    readonly property real skinRoom: ccShown ? Math.max(ccAway + 160, dripRoom) : dripRoom
+    readonly property real skinRoom: ccShown ? Math.max(ccRoom + 160, dripRoom) : dripRoom
+    // The window's room for the command centre. It does NOT follow the
+    // animated height frame by frame: resizing a layer surface every frame
+    // (a compositor round trip and new buffers each time) made the whole bar
+    // stutter while sections folded open/closed. It grows at once to the
+    // target plus the easing's overshoot, and shrinks once things settle.
+    property real ccRoom: ccAway
+    readonly property real ccRoomWant: root.vertical ? root.commandCenterWidth
+      : root.commandCenterHeightTarget + 0.12 * Math.abs(root.commandCenterHeightTarget - root.commandCenterHeight)
+    onCcRoomWantChanged: {
+      if (ccRoomWant > ccRoom) ccRoom = Math.ceil(ccRoomWant / 16) * 16
+      else ccRoomShrink.restart()
+    }
+    Timer {
+      id: ccRoomShrink
+      interval: 450
+      onTriggered: barWindow.ccRoom = Math.max(barWindow.ccAway, Math.ceil(barWindow.ccRoomWant / 16) * 16)
+    }
     // Room past the bar for the longest drips to hang in full (the shader
     // shrinks falling drops away before this edge): longest drip at this
     // amount, plus bulbs under widgets, plus a stretch for drops to fall /
@@ -2132,7 +2151,10 @@ Item {
       shown: barWindow.ccShown
       opacity: Math.max(0, (barWindow.ccProgress - 0.8) / 0.2)
       visible: root.slimeSkin && opacity > 0
-      onImplicitHeightChanged: if (shown) root.commandCenterHeight = Math.max(160, implicitHeight + 44)
+      onImplicitHeightChanged: if (shown) {
+        root.commandCenterHeightTarget = Math.max(160, implicitHeight + 44)
+        root.commandCenterHeight = root.commandCenterHeightTarget
+      }
     }
 
     // Clicking anywhere outside the bar closes the command centre.
