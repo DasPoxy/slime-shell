@@ -508,6 +508,15 @@ float webLattice(vec2 p, vec2 aTop, vec2 aTip, vec2 bTop, vec2 bTip, float seed,
     return d;
 }
 
+// Keep the two bulbs horizontally nearest px (distance past their ends).
+void pickBulb(vec4 b, float seed, float px, inout vec4 b1, inout float s1, inout float e1,
+              inout vec4 b2, inout float s2, inout float e2) {
+    if (b.z <= 0.0) return;
+    float e = abs(px - (b.x + b.z * 0.5)) - b.z * 0.5;
+    if (e < e1) { b2 = b1; s2 = s1; e2 = e1; b1 = b; s1 = seed; e1 = e; }
+    else if (e < e2) { b2 = b; s2 = seed; e2 = e; }
+}
+
 vec2 bulb(vec2 p, vec4 b, float seed) {
     bool stringy = dripExtra.x > 0.5 && dripExtra.x < 1.5;
     // stringy webs reach out to the neighbouring bar drips, so look further
@@ -694,31 +703,38 @@ vec2 mapScene(vec2 p) {
         return vec2(d, hl);
     }
 
-    vec2 bs;
-    bs = bulb(p, bulb0, 1.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb1, 2.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb2, 3.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb3, 4.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb4, 5.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb5, 6.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb6, 7.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb7, 8.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb8, 9.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb9, 10.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb10, 11.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb11, 12.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb12, 13.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb13, 14.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb14, 15.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb15, 16.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb16, 17.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb17, 18.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb18, 19.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb19, 20.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb20, 21.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb21, 22.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb22, 23.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
-    bs = bulb(p, bulb23, 24.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
+    // Only the two bulbs nearest this pixel can reach it (bulbs sit side by
+    // side along the bar): a cheap pass picks them, then just those two are
+    // evaluated. Calling bulb() for all 24 cost more than the rest of the
+    // scene put together.
+    vec4 b1 = vec4(0.0), b2 = vec4(0.0);
+    float s1 = 0.0, s2 = 0.0, e1 = 1e5, e2 = 1e5;
+    pickBulb(bulb0, 1.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb1, 2.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb2, 3.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb3, 4.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb4, 5.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb5, 6.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb6, 7.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb7, 8.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb8, 9.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb9, 10.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb10, 11.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb11, 12.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb12, 13.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb13, 14.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb14, 15.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb15, 16.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb16, 17.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb17, 18.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb18, 19.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb19, 20.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb20, 21.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb21, 22.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb22, 23.0, p.x, b1, s1, e1, b2, s2, e2);
+    pickBulb(bulb23, 24.0, p.x, b1, s1, e1, b2, s2, e2);
+    vec2 bs = bulb(p, b1, s1); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
+    bs = bulb(p, b2, s2); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
 
     if (openProgress > 0.001) d = smin(d, openPanel(p, ci, hl), 26.0);
     if (material > 0.5 && material < 1.5) d = min(d, teethRow(p));

@@ -188,7 +188,7 @@ Item {
       kind: "hourglass"
       ChoiceRow {
         title: "ANIMATION"
-        options: [["paused", 0], ["30 fps", 30], ["60 fps", 60], ["120 fps", 120]]
+        options: [["paused", 0], ["15 fps", 15], ["30 fps", 30], ["60 fps", 60], ["120 fps", 120]]
         current: settings.bar.slimeFps
         onPicked: value => settings.bar.slimeFps = value
       }

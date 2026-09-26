@@ -226,7 +226,9 @@ Item {
   }
   function monsterBody2For(i) { return monsterColor === "gradient" ? slimeColor2 : monsterBodyFor(i) }
 
-  property int slimeFps: 60          // 0 = paused
+  // 0 = paused. 30 by default: the goo moves slowly enough that 60 looks
+  // much the same and costs roughly a third more CPU.
+  property int slimeFps: 30
   property real dripAmount: 1.0
   property int shadingStyle: 3       // 0 soft, 1 anime, 2 manga, 3 print
   property string slimeLayer: "above" // "above" windows, or "behind" them
@@ -273,7 +275,7 @@ Item {
   Timer {
     interval: 20000
     repeat: true
-    running: root.slimeSkin && root.slimeFps > 0
+    running: root.slimeSkin && root.effectiveFps > 0
     onTriggered: if (Math.random() < 0.04) root.startEgg("")
   }
   // where the creature is, in bar space (matches eggShape() in the shader)
@@ -350,7 +352,7 @@ Item {
   onFontStyleChanged: skinSaveTimer.restart()
   onClockTimeFirstChanged: skinSaveTimer.restart()
   onBarDebrisChanged: skinSaveTimer.restart()
-  onBarShapeChanged: skinSaveTimer.restart()
+  onBarShapeChanged: { skinSaveTimer.restart(); bulbsDirty() }
   onMonsterColorChanged: skinSaveTimer.restart()
   onMaterialChanged: skinSaveTimer.restart()
   onDripStyleChanged: skinSaveTimer.restart()
@@ -365,10 +367,25 @@ Item {
   property var sharedBulbRects: []
   readonly property double slimeT0: Date.now()
   property real animTime: 0
+  // The animation only runs when someone can see it: it stops while the bar
+  // is hidden or every screen is showing a fullscreen window, and drops to
+  // 15 fps after a couple of idle minutes (full speed again on any input).
+  IdleMonitor { id: slimeIdle; timeout: 120; respectInhibitors: false }
+  readonly property bool allFullscreen: {
+    var ms = Hyprland.monitors.values
+    if (!ms || ms.length === 0) return false
+    for (var i = 0; i < ms.length; i++) {
+      var ws = ms[i].activeWorkspace
+      if (!ws || !ws.hasFullscreen) return false
+    }
+    return true
+  }
+  readonly property bool animUnseen: barHidden || allFullscreen
+  readonly property int effectiveFps: animUnseen ? 0 : slimeIdle.isIdle ? Math.min(slimeFps, 15) : slimeFps
   Timer {
-    interval: root.slimeFps > 0 ? Math.round(1000 / root.slimeFps) : 1000
+    interval: root.effectiveFps > 0 ? Math.round(1000 / root.effectiveFps) : 1000
     repeat: true
-    running: root.slimeSkin && root.slimeFps > 0
+    running: root.slimeSkin && root.effectiveFps > 0
     onTriggered: root.animTime = (Date.now() - root.slimeT0) / 1000
   }
   function bob(phase) { return slimeSkin ? Math.sin(animTime * 1.3 + phase) * 1.6 : 0 }
@@ -449,6 +466,11 @@ Item {
   property var barMoveScreen: null
   property var clickTargets: []
   property var moduleSlots: []
+  // Something on the bar moved or resized (a slot, a section row, the
+  // layout): each bar window recomputes its widget bulbs once, next frame.
+  // Recomputing them every animation tick instead cost ~30% of a core.
+  signal bulbsDirty()
+  onBarConfigSerialChanged: bulbsDirty()   // pills joined/split, widgets added/removed
   property var pluginBarApis: ({})
   property var pluginObjectOwners: []
 
@@ -660,7 +682,7 @@ Item {
   onActivePopoutChanged: syncAllPluginBarApiObjects()
   onClickTargetsChanged: syncAllPluginBarApiObjects()
   onLayoutConfigChanged: syncAllPluginBarApiObjects()
-  onModuleSlotsChanged: Qt.callLater(prunePluginBarApis)
+  onModuleSlotsChanged: { Qt.callLater(prunePluginBarApis); bulbsDirty() }
 
   Component.onDestruction: {
     SlimeHub.unregister(root)
@@ -2008,11 +2030,20 @@ Item {
         ccAnim.easing.type = root.commandCenterOpen ? Easing.OutQuad : Easing.InQuad
         ccAnim.start()
       }
-      function onAnimTimeChanged() { barWindow.updateBulbs() }
+      function onBulbsDirty() { barWindow.scheduleBulbs() }
     }
 
+    property bool bulbsPending: false
+    function scheduleBulbs() {
+      if (bulbsPending) return
+      bulbsPending = true
+      Qt.callLater(function() { barWindow.bulbsPending = false; barWindow.updateBulbs() })
+    }
+    onWidthChanged: scheduleBulbs()
+    onHeightChanged: scheduleBulbs()
     // Where each visible widget floats, in window coordinates, so the shader
-    // can sag a bulb of ooze beneath it. Refreshed every animation tick.
+    // can sag a bulb of ooze beneath it. Recomputed when something on the bar
+    // moves (root.bulbsDirty), not every frame.
     function updateBulbs() {
       if (!root.slimeSkin) return
       var out = []
@@ -2079,17 +2110,22 @@ Item {
         }
         flush()
       }
-      bulbRects = out
-      root.sharedBulbRects = out
+      if (JSON.stringify(out) !== JSON.stringify(bulbRects)) {
+        bulbRects = out
+        root.sharedBulbRects = out
+      }
       var gr = ["left", "center", "right"].map(function(k) {
         var g = groups[k]
         return g ? Qt.vector4d(g.x0, y, g.x1 - g.x0, h) : Qt.vector4d(0, 0, 0, 0)
       })
-      groupRects = gr
-      root.sharedGroupRects = gr
+      if (JSON.stringify(gr) !== JSON.stringify(groupRects)) {
+        groupRects = gr
+        root.sharedGroupRects = gr
+      }
     }
 
-    Timer { interval: 250; running: root.slimeSkin && root.slimeFps === 0; repeat: true; onTriggered: barWindow.updateBulbs() }
+    // safety net for anything that moves a widget without us hearing of it
+    Timer { interval: 1000; running: root.slimeSkin; repeat: true; onTriggered: barWindow.updateBulbs() }
     Component.onCompleted: Qt.callLater(updateBulbs)
 
     mask: root.slimeSkin ? slimeMask : null
@@ -2154,10 +2190,76 @@ Item {
     // ---- Skin: drips, the command centre, the egg — in their own window just
     // past the bar, one fixed size (resizing a surface on screen makes it
     // jump for a frame), click-through except where the command centre is.
+    // ---- Drips: a window exactly as deep as the drips hang, just past the
+    // bar. It only changes size when the drip settings change (so no jump),
+    // and being small it's cheap to redraw every frame — a full-screen
+    // surface redrawn 60 times a second cost ~25% of a core on its own.
+    PanelWindow {
+      id: dripWindow
+      screen: barWindow.screen
+      visible: root.slimeSkin && barWindow.visible
+      color: "transparent"
+      surfaceFormat.opaque: false
+      exclusionMode: ExclusionMode.Ignore
+      WlrLayershell.namespace: "omarchy-bar-drips"
+      WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+      WlrLayershell.layer: barWindow.WlrLayershell.layer
+      mask: Region {}
+
+      readonly property real depth: barWindow.dripRoom
+      implicitWidth: root.vertical ? depth : 0
+      implicitHeight: root.vertical ? 0 : depth
+      anchors {
+        top: root.position === "top" || root.vertical
+        bottom: root.position === "bottom" || root.vertical
+        left: root.position === "left" || !root.vertical
+        right: root.position === "right" || !root.vertical
+      }
+      readonly property real edgeMargin: root.barHidden ? -(depth + root.barSize) : root.barSize
+      margins {
+        top: root.position === "top" ? dripWindow.edgeMargin : 0
+        bottom: root.position === "bottom" ? dripWindow.edgeMargin : 0
+        left: root.position === "left" ? dripWindow.edgeMargin : 0
+        right: root.position === "right" ? dripWindow.edgeMargin : 0
+      }
+      readonly property vector2d screenOrigin: Qt.vector2d(
+        root.position === "left" ? root.barSize : root.position === "right" && screen ? screen.width - root.barSize - width : 0,
+        root.position === "top" ? root.barSize : root.position === "bottom" && screen ? screen.height - root.barSize - height : 0)
+      function awayToLocal(away) {
+        var d = away - root.barSize
+        return root.position === "bottom" ? height - d : root.position === "right" ? width - d : d
+      }
+
+      SlimeScene {
+        anchors.fill: parent
+        win: barWindow
+        origin: dripWindow.screenOrigin
+      }
+
+      // the easter-egg captive, drawn inside the egg drip's bulb
+      SlimeCaptive {
+        readonly property var tip: root.eggTip
+        visible: tip !== null && root.slimeSkin
+        readonly property real bx: tip ? tip.x : 0
+        readonly property real by: tip ? dripWindow.awayToLocal(tip.y) : 0
+        x: (root.vertical ? by : bx) - width / 2
+        y: (root.vertical ? bx : by) - height / 2
+        size: 25
+        kind: root.eggKind
+        time: root.animTime
+        ink: root.slimeInk
+        paper: root.paperColor
+        goo: root.slimeColor
+        pal: root.palette
+      }
+    }
+
+    // ---- Command centre: full-size (fixed) window, mapped only while the
+    // command centre is out; it draws the panel's goo past the drip band.
     PanelWindow {
       id: skinWindow
       screen: barWindow.screen
-      visible: root.slimeSkin && barWindow.visible
+      visible: root.slimeSkin && barWindow.visible && barWindow.ccShown
       color: "transparent"
       surfaceFormat.opaque: false
       exclusionMode: ExclusionMode.Ignore
@@ -2220,27 +2322,21 @@ Item {
         height: root.vertical ? barWindow.ccAlong : away
       }
 
+      // the command centre's goo, past the drip band (dripWindow draws that)
+      readonly property real dripDepth: Math.min(barWindow.dripRoom, depth)
       SlimeScene {
-        anchors.fill: parent
+        id: ccScene
         win: barWindow
-        origin: skinWindow.screenOrigin
-      }
-
-      // the easter-egg captive, drawn inside the egg drip's bulb
-      SlimeCaptive {
-        readonly property var tip: root.eggTip
-        visible: tip !== null && root.slimeSkin
-        readonly property real bx: tip ? tip.x : 0
-        readonly property real by: tip ? skinWindow.awayToLocal(tip.y) : 0
-        x: (root.vertical ? by : bx) - width / 2
-        y: (root.vertical ? bx : by) - height / 2
-        size: 25
-        kind: root.eggKind
-        time: root.animTime
-        ink: root.slimeInk
-        paper: root.paperColor
-        goo: root.slimeColor
-        pal: root.palette
+        // past the drip band, as deep as the panel plus the drips under it
+        readonly property real reach: Math.min(skinWindow.depth, barWindow.ccAway + 200)
+        readonly property real extent: Math.max(0, reach - skinWindow.dripDepth)
+        readonly property real along0: Math.max(0, barWindow.ccPanelX - 90)
+        readonly property real alongLen: Math.min(barWindow.barLength - along0, barWindow.ccAlong + 180)
+        x: root.vertical ? (root.position === "left" ? skinWindow.dripDepth : skinWindow.width - reach) : along0
+        y: root.vertical ? along0 : (root.position === "bottom" ? skinWindow.height - reach : skinWindow.dripDepth)
+        width: root.vertical ? extent : alongLen
+        height: root.vertical ? alongLen : extent
+        origin: Qt.vector2d(skinWindow.screenOrigin.x + x, skinWindow.screenOrigin.y + y)
       }
 
       // debris adrift in the command centre's ooze, behind its content
@@ -2729,6 +2825,10 @@ Item {
     sourceComponent: root.vertical ? verticalModuleList : horizontalModuleList
     width: item ? item.implicitWidth : 0
     height: item ? item.implicitHeight : 0
+    onXChanged: root.bulbsDirty()
+    onYChanged: root.bulbsDirty()
+    onWidthChanged: root.bulbsDirty()
+    onVisibleChanged: root.bulbsDirty()
 
     Component {
       id: horizontalModuleList
@@ -2820,6 +2920,11 @@ Item {
     z: modulePointer.dragging ? 100 : 0
 
     Component.onCompleted: root.registerModuleSlot(slot)
+    onXChanged: root.bulbsDirty()
+    onYChanged: root.bulbsDirty()
+    onWidthChanged: root.bulbsDirty()
+    onHeightChanged: root.bulbsDirty()
+    onVisibleChanged: root.bulbsDirty()
     Component.onDestruction: {
       if (root.barDragSource === slot) root.clearBarDrag()
       root.unregisterModuleSlot(slot)
