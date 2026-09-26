@@ -21,6 +21,9 @@ Item {
   readonly property color slime: bar.slimeColor
   readonly property color paper: bar.paperColor
   readonly property string font: bar.fontFamily
+  // decorative slime face for big text only (clocks, temperatures, headings)
+  readonly property string displayFont: bar.displayFontFamily
+  readonly property int displayWeight: bar.displayWeight
   readonly property color wash: Qt.rgba(1, 1, 1, 0.45)
 
   // [id, gear kind, label, file]

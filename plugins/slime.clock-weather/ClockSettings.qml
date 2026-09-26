@@ -16,6 +16,7 @@ SlimeKeyboardPanel {
 
   readonly property color ink: bar && bar.slimeSkin ? bar.slimeInk : Color.foreground
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
+  readonly property string displayFamily: bar && bar.displayFontFamily ? bar.displayFontFamily : fontFamily
 
   // [label shown as a live preview, Qt date pattern ("" = no date)]
   readonly property var datePatterns: [
@@ -80,16 +81,16 @@ SlimeKeyboardPanel {
     Text {
       text: "Date & Time"
       color: panel.ink
-      font.family: panel.fontFamily
+      font.family: panel.displayFamily
       font.pixelSize: 16
-      font.weight: Font.Black
+      font.weight: panel.bar && panel.bar.slimeFonts ? panel.bar.displayWeight : Font.Black
     }
     Text {
       text: panel.widget.timeText
       color: panel.ink
-      font.family: panel.fontFamily
+      font.family: panel.displayFamily
       font.pixelSize: panel.widget.fontSize
-      font.weight: panel.widget.fontWeight
+      font.weight: panel.bar && panel.bar.slimeFonts ? panel.bar.displayWeight : panel.widget.fontWeight
       opacity: 0.8
     }
 

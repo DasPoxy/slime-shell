@@ -174,11 +174,11 @@ Item {
         Row {
           spacing: 8
           Text { text: ""; color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 16 }
-          Text { text: "CPU"; color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 14; font.weight: Font.Black }
+          Text { text: "CPU"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 14 }
         }
         Text {
           text: Math.round(sys.cpu * 100) + "%" + (sys.sample && sys.sample.cpuTemp ? "   " + sys.sample.cpuTemp + "°C" : "")
-          color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 26; font.weight: Font.Black
+          color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 26
         }
         Graph { width: parent.width; values: sys.cpuHistory }
         Text {
@@ -191,11 +191,11 @@ Item {
         Row {
           spacing: 8
           Text { text: "\uf1c0"; color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 16 }
-          Text { text: "MEMORY"; color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 14; font.weight: Font.Black }
+          Text { text: "MEMORY"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 14 }
         }
         Text {
           text: sys.sample ? sys.cc.formatBytes(sys.sample.memUsed) + " / " + sys.cc.formatBytes(sys.sample.memTotal) : "…"
-          color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 20; font.weight: Font.Black
+          color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 20
         }
         Graph { width: parent.width; values: sys.memHistory }
         Text {
@@ -212,7 +212,7 @@ Item {
           Text { text: ""; color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 16 }
           Text {
             text: sys.sample && sys.sample.gpu ? sys.sample.gpu.name.replace(/^NVIDIA (GeForce )?/, "") : ""
-            color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 14; font.weight: Font.Black
+            color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 14
           }
         }
         AdventureMeter {
@@ -235,7 +235,7 @@ Item {
         Row {
           spacing: 8
           Text { text: ""; color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 16 }
-          Text { text: "DISKS"; color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 14; font.weight: Font.Black }
+          Text { text: "DISKS"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 14 }
         }
         Repeater {
           // / and /home on one filesystem report identical numbers; show it once.

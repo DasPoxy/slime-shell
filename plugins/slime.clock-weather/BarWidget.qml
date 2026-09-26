@@ -142,9 +142,10 @@ BarWidget {
       anchors.centerIn: parent
       text: root.weatherText !== "" ? root.weatherText + "   " + root.timeText : root.timeText
       color: button.foreground
-      font.family: button.fontFamily
+      // the slime display face when one is picked (Settings > Font & clock)
+      font.family: root.bar && root.bar.displayFontFamily ? root.bar.displayFontFamily : button.fontFamily
       font.pixelSize: root.fontSize
-      font.weight: root.fontWeight
+      font.weight: root.bar && root.bar.slimeFonts ? root.bar.displayWeight : root.fontWeight
     }
   }
 

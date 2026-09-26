@@ -179,9 +179,9 @@ Item {
       Text {
         text: home.hour24 ? Qt.formatTime(clock.date, "HH:mm") : Qt.formatTime(clock.date, "h:mm AP").replace(/\s*[AP]M$/i, "")
         color: home.cc.ink
-        font.family: home.cc.font
+        font.family: home.cc.displayFont
+        font.weight: home.cc.displayWeight
         font.pixelSize: 46
-        font.weight: Font.Black
         MouseArea {
           anchors.fill: parent
           cursorShape: Qt.PointingHandCursor
@@ -195,9 +195,9 @@ Item {
           anchors.right: home.cc.bar.clockTimeFirst ? undefined : parent.right
           text: Qt.formatDate(clock.date, "dddd") + (home.hour24 ? "" : "  " + Qt.formatTime(clock.date, "AP"))
           color: home.cc.ink
-          font.family: home.cc.font
+          font.family: home.cc.displayFont
+          font.weight: home.cc.displayWeight
           font.pixelSize: 15
-          font.bold: true
         }
         Text {
           anchors.right: home.cc.bar.clockTimeFirst ? undefined : parent.right
@@ -281,9 +281,9 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: home.weather ? home.weather.reportTempNum + home.weather.tempUnit : ""
             color: home.cc.ink
-            font.family: home.cc.font
+            font.family: home.cc.displayFont
+            font.weight: home.cc.displayWeight
             font.pixelSize: 28
-            font.weight: Font.Black
           }
           Column {
             anchors.verticalCenter: parent.verticalCenter
@@ -419,9 +419,9 @@ Item {
           anchors.centerIn: parent
           text: Qt.formatDate(calendar.month, "MMMM yyyy")
           color: home.cc.ink
-          font.family: home.cc.font
+          font.family: home.cc.displayFont
+          font.weight: home.cc.displayWeight
           font.pixelSize: 14
-          font.weight: Font.Black
           MouseArea {   // click the title to jump back to today
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor

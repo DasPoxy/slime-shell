@@ -76,13 +76,28 @@ Item {
   // Resolves through fontconfig at paint time (Style.font.family defaults
   // to "monospace"), so changing the system font (via `omarchy-font-set`)
   // updates the bar without a reload.
-  property string fontFamily: slimeSkin && fontStyle === "chewy" && chewyFont.status === FontLoader.Ready ? chewyFont.name
-    : slimeSkin && fontStyle === "wetpaint" && wetPaintFont.status === FontLoader.Ready ? wetPaintFont.name
-    : Style.font.family
-  // Slime Shell font: "system" (fontconfig monospace), or a bundled slime face.
+  // Slime Shell fonts. Each slime style pairs a decorative *display* face,
+  // used only for big text (clocks, temperatures, headings), with Sniglet, a
+  // rounded face that stays readable at small sizes, for everything else.
+  //   system  fontconfig monospace for both
+  //   chewy   blobby: Chewy display
+  //   wetpaint drippy: Rubik Wet Paint display
+  //   bubble  bubble letters: Rubik Bubbles display
   property string fontStyle: "system"
+  readonly property bool slimeFonts: slimeSkin && fontStyle !== "system" && snigletFont.status === FontLoader.Ready
+  property string fontFamily: slimeFonts ? snigletFont.name : Style.font.family
+  readonly property string displayFontFamily: {
+    if (!slimeFonts) return fontFamily
+    var loader = fontStyle === "chewy" ? chewyFont : fontStyle === "wetpaint" ? wetPaintFont : fontStyle === "bubble" ? bubbleFont : null
+    return loader && loader.status === FontLoader.Ready ? loader.name : fontFamily
+  }
+  // Display faces have a single weight; asking for bold makes Qt smear them.
+  readonly property int displayWeight: slimeFonts ? Font.Normal : Font.Black
+  FontLoader { id: snigletFont; source: Qt.resolvedUrl("fonts/Sniglet-Regular.ttf") }
+  FontLoader { id: snigletBoldFont; source: Qt.resolvedUrl("fonts/Sniglet-ExtraBold.ttf") }
   FontLoader { id: chewyFont; source: Qt.resolvedUrl("fonts/Chewy-Regular.ttf") }
   FontLoader { id: wetPaintFont; source: Qt.resolvedUrl("fonts/RubikWetPaint-Regular.ttf") }
+  FontLoader { id: bubbleFont; source: Qt.resolvedUrl("fonts/RubikBubbles-Regular.ttf") }
   // Bound to the central Color singleton so the bar tracks shell.toml's
   // [bar] section. Property names kept for the rest of this file's bindings.
   property color themeForeground: slimeSkin ? slimeInk : Color.bar.text

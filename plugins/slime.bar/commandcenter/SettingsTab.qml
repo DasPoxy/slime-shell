@@ -79,7 +79,7 @@ Item {
       kind: "scroll"
       ChoiceRow {
         title: "FONT"
-        options: [["system", "system"], ["Chewy (blobby)", "chewy"], ["Wet Paint (drippy)", "wetpaint"]]
+        options: [["system", "system"], ["blobby", "chewy"], ["drippy", "wetpaint"], ["bubble", "bubble"]]
         current: settings.bar.fontStyle
         onPicked: value => settings.bar.fontStyle = value
       }
