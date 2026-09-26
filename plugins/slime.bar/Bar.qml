@@ -300,7 +300,11 @@ Item {
     }
   }
   readonly property real materialId: ["slime", "sinew", "bone", "plain"].indexOf(material)
-  readonly property real dripLevel: material === "bone" || material === "plain" ? 0 : (dripAmount < 0 ? 1.2 : dripAmount)
+  // Bone and plain don't drip — except lava lamp, whose globs bud off every
+  // material and need the drip length to sink away (at 0 they'd pinch off
+  // and then just hang there).
+  readonly property real dripLevel: (material === "bone" || material === "plain") && dripStyle !== "lava" ? 0
+    : (dripAmount < 0 ? 1.2 : dripAmount)
   readonly property vector4d dripExtraVec: Qt.vector4d(dripStyle === "stringy" ? 1 : dripStyle === "lava" ? 2 : 0, dripAmount < 0 ? 1 : 0, 0, 0)
   readonly property real barShapeId: ["classic", "pills", "islands", "notch"].indexOf(barShape)
   // Latest left/centre/right section extents, for overlays (see sharedBulbRects).
