@@ -1981,7 +1981,8 @@ Item {
     // keyboard input for the command centre's text fields, only while it's open
     WlrLayershell.keyboardFocus: root.hoverKeysWindow === barWindow ? WlrKeyboardFocus.Exclusive
       : ccShown ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-    WlrLayershell.layer: root.slimeSkin && root.layerReady && root.slimeLayer === "behind" && !ccShown && !root.panelRaised ? WlrLayer.Bottom : WlrLayer.Top
+    readonly property bool slimeBehind: root.slimeSkin && root.layerReady && root.slimeLayer === "behind" && !ccShown && !root.panelRaised
+    WlrLayershell.layer: slimeBehind ? WlrLayer.Bottom : WlrLayer.Top
 
     // ---- Slime skin ----
     // Command centre animation: 0 closed, 1 fully dripped open.
@@ -2218,7 +2219,7 @@ Item {
       exclusionMode: ExclusionMode.Ignore
       WlrLayershell.namespace: "omarchy-bar-drips"
       WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-      WlrLayershell.layer: barWindow.WlrLayershell.layer
+      WlrLayershell.layer: barWindow.slimeBehind ? WlrLayer.Bottom : WlrLayer.Top
       mask: Region {}
 
       readonly property real depth: barWindow.dripRoom
@@ -2281,7 +2282,11 @@ Item {
       WlrLayershell.namespace: "omarchy-bar-skin"
       WlrLayershell.keyboardFocus: root.hoverKeysWindow === skinWindow ? WlrKeyboardFocus.Exclusive
         : barWindow.ccShown ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-      WlrLayershell.layer: barWindow.WlrLayershell.layer
+      // only mapped while the command centre is out, which always shows
+      // above windows (even when the slime is drawn behind them). Overlay,
+      // not Top: the drip window is raised to Top at the same moment and
+      // would otherwise stack over the command centre's content.
+      WlrLayershell.layer: WlrLayer.Overlay
 
       readonly property real depth: barWindow.skinRoom
       implicitWidth: root.vertical ? depth : 0
