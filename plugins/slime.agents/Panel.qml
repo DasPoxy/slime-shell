@@ -366,6 +366,7 @@ Panel {
       ink: root.bar && root.bar.slimeSkin ? root.bar.slimeInk : "black"
       eye: root.bar && root.bar.slimeSkin ? root.bar.paperColor : "white"
       blush: root.bar && root.bar.slimeSkin ? root.bar.monsterBlush : "pink"
+      material: root.bar && root.bar.slimeSkin ? root.bar.material : "slime"
     }
   }
 

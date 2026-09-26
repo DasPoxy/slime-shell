@@ -150,6 +150,7 @@ BarWidget {
           ink: wsButton.ink
           eye: root.slime ? root.bar.paperColor : "white"
           blush: root.slime ? root.bar.monsterBlush : "pink"
+          material: root.slime ? root.bar.material : "slime"
           Behavior on size { NumberAnimation { duration: 220; easing.type: Easing.OutBack } }
         }
 

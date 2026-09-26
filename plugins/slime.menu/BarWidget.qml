@@ -112,6 +112,7 @@ BarWidget {
       ink: root.slime ? root.bar.slimeInk : "black"
       eye: root.slime ? root.bar.paperColor : "white"
       blush: root.slime ? root.bar.monsterBlush : "pink"
+      material: root.slime ? root.bar.material : "slime"
     }
   }
 
@@ -177,6 +178,7 @@ BarWidget {
               ink: root.slime ? root.bar.slimeInk : "black"
               eye: root.slime ? root.bar.paperColor : "white"
               blush: root.slime ? root.bar.monsterBlush : "pink"
+              material: root.slime ? root.bar.material : "slime"
             }
             SlimeGear {
               visible: choice.modelData[2] === "gear"

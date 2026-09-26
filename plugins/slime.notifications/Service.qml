@@ -1033,7 +1033,7 @@ Item {
         property color paperColor: bar ? bar.paperColor : "white"
         property real clipTop: barHeight - 2
         property real orient: 0
-        property vector2d screenSize: Qt.vector2d(0, 0)
+        property vector2d screenSize: Qt.vector2d(width, height)   // full-screen window
         property real barShape: bar ? bar.barShapeId : 0
         property real material: bar ? bar.materialId : 0
         property vector4d dripStyle: bar ? bar.dripStyleVec : Qt.vector4d(1, 1, 0, 1)

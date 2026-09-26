@@ -12,6 +12,8 @@ import QtQuick.Shapes
 //
 // Colours come from the caller so the monster follows the theme: `body` is the
 // goo, `ink` the outline and features, `eye` the whites, `blush` the cheeks.
+// `material` matches the bar: "slime" (glossy), "sinew" (flesh with veins),
+// "bone" (ivory, cracked, no gloss) or "plain" (flat).
 Item {
   id: root
 
@@ -24,6 +26,10 @@ Item {
   property color ink: "#101315"
   property color eye: "#ffffff"
   property color blush: "#ff6fa8"
+  property string material: "slime"
+  readonly property color skin: material === "sinew" ? Qt.tint(body, Qt.rgba(0.86, 0.3, 0.36, 0.5))
+    : material === "bone" ? Qt.tint(eye, Qt.rgba(0.6, 0.48, 0.3, 0.22))
+    : body
 
   readonly property bool emote: mood === "emote"
   readonly property bool asleep: mood === "sleep"
@@ -85,7 +91,7 @@ Item {
       preferredRendererType: Shape.CurveRenderer
       visible: root.variant === 5
       ShapePath {
-        fillColor: root.body
+        fillColor: root.skin
         strokeColor: root.ink
         strokeWidth: 1.2
         joinStyle: ShapePath.RoundJoin
@@ -98,7 +104,7 @@ Item {
       anchors.fill: parent
       preferredRendererType: Shape.CurveRenderer
       ShapePath {
-        fillColor: root.body
+        fillColor: root.skin
         strokeColor: root.ink
         strokeWidth: 1.4
         joinStyle: ShapePath.RoundJoin
@@ -112,11 +118,30 @@ Item {
             : "M3 18.5 C2 11.5 5 4 12 4 C19 4 22 11.5 21 18.5 C21 20.5 19.6 21.4 18.8 20.4 C17.9 22.2 16.2 22.2 15.6 20.6 C14.4 21.6 13 21.6 12 20.6 C11 22.6 8.8 22.6 8.2 20.6 C7 21.6 5.4 21.4 4.8 20.4 C3.8 20.8 3 20.2 3 18.5 Z"
         }
       }
-      // glossy highlight
+      // glossy highlight (slime only)
       ShapePath {
-        fillColor: Qt.rgba(1, 1, 1, 0.55)
+        fillColor: root.material === "slime" ? Qt.rgba(1, 1, 1, 0.55) : "transparent"
         strokeColor: "transparent"
         PathSvg { path: "M6.3 11 C6.3 8 8 6.2 10.2 5.8 C8.6 7 7.6 8.6 7.3 11 Z" }
+      }
+    }
+
+    // ---- material marks: veins for sinew, cracks for bone ----
+    Shape {
+      anchors.fill: parent
+      preferredRendererType: Shape.CurveRenderer
+      visible: root.material === "sinew" || root.material === "bone"
+      ShapePath {
+        fillColor: "transparent"
+        strokeColor: root.material === "sinew" ? Qt.rgba(0.45, 0.05, 0.12, 0.75) : root.ink
+        strokeWidth: root.material === "sinew" ? 0.7 : 0.6
+        capStyle: ShapePath.RoundCap
+        joinStyle: ShapePath.RoundJoin
+        PathSvg {
+          path: root.material === "sinew"
+            ? "M5.4 17.6 Q7.4 14.6 6.4 11.6 Q6 9.6 7.6 8 M6.6 13.4 L4.8 12.2 M18.4 17.8 Q16.4 15 17.6 12 M17.2 14.6 L19 13.8 M10.6 5.6 Q12 7 13.6 6"
+            : "M13.6 4.6 L12.8 6.8 L14.2 8.2 L13.4 9.6 M5.6 15.4 L7.2 16.2 L7 17.8 M18.2 9.4 L16.8 10.6"
+        }
       }
     }
 

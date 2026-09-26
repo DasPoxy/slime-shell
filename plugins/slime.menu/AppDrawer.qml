@@ -136,6 +136,7 @@ SlimeKeyboardPanel {
         ink: drawer.ink
         eye: drawer.slime ? drawer.bar.paperColor : "white"
         blush: drawer.slime ? drawer.bar.monsterBlush : "pink"
+        material: drawer.slime ? drawer.bar.material : "slime"
       }
       Text {
         x: headMonster.width + 10

@@ -208,8 +208,28 @@ float islands(vec2 p) {
     return min(min(sdPod(p, group0, 21.0), sdPod(p, group1, 22.0)), sdPod(p, group2, 23.0));
 }
 
+// A notch side piece: section g wrapped in goo that hugs the screen corner
+// and runs a little way down the screen's side edge, filleted round the bend.
+// `mirror` flips it for the far corner (barLen = the bar's length).
+float cornerPiece(vec2 p, vec4 g, bool mirror, float barLen) {
+    if (g.z <= 0.0) return 1e5;
+    vec2 q = p;
+    float x1 = g.x + g.z;
+    if (mirror) { q.x = barLen - p.x; x1 = barLen - g.x; }
+    float bottom = g.y + g.w + PAD * 0.55 + 2.0;
+    float wob = 1.2 * sin(time * 0.8 + (mirror ? 2.0 : 0.0));
+    float top = sdRoundBox(q, vec2((x1 + PAD * 1.6 - 30.0) * 0.5, (bottom - 30.0) * 0.5),
+                           vec2((x1 + PAD * 1.6 + 30.0) * 0.5, (bottom + 30.0) * 0.5 + wob * 0.3), 16.0);
+    // the run down the side edge, tapering off
+    float drop = 46.0 + 10.0 * sin(time * 0.5 + (mirror ? 1.3 : 0.0));
+    float taper = clamp((q.y - bottom) / drop, 0.0, 1.0);
+    float side = sdRoundBox(q, vec2(0.0, bottom + drop * 0.5 - 8.0), vec2(9.0 - taper * 5.0, drop * 0.5 + 8.0), 7.0);
+    return smin(top, side, 20.0);
+}
+
 // The notch: the centre section in a lump of goo hanging from the screen
-// edge, flaring into the edge; the side sections float as islands.
+// edge, flaring into the edge; the side sections sit in goo that wraps round
+// the screen's corners.
 float notch(vec2 p) {
     if (group1.z <= 0.0) return islands(p);
     vec2 c = group1.xy + group1.zw * 0.5;
@@ -217,7 +237,9 @@ float notch(vec2 p) {
     float body = sdRoundBox(p, vec2(c.x, hs.y - 12.0), hs, 18.0);
     float lip = max(p.y - 4.0 - 1.5 * sin(p.x * 0.03 + time), abs(p.x - c.x) - hs.x - 36.0);   // thin edge strip
     float d = smin(body, lip, 16.0);
-    return min(d, min(sdPod(p, group0, 21.0), sdPod(p, group2, 23.0)));
+    float barLen = orient < 1.5 ? screenSize.x : screenSize.y;
+    if (barLen <= 0.0) barLen = resolution.x;   // bar window on a top bar: its width
+    return min(d, min(cornerPiece(p, group0, false, barLen), cornerPiece(p, group2, true, barLen)));
 }
 
 float baseShape(vec2 p) {
@@ -266,6 +288,11 @@ float dripEdge(float x) {
     }
     e = max(podBottom(group0, x, 0.0), podBottom(group2, x, 0.0));
     if (barShape < 2.5) return max(e, podBottom(group1, x, 0.0));
+    // notch: the corner pieces reach the screen's ends, so they drip all along
+    float len = orient < 1.5 ? screenSize.x : screenSize.y;
+    if (len <= 0.0) len = resolution.x;
+    if (group0.z > 0.0 && x > 12.0 && x < group0.x + group0.z + PAD) e = max(e, group0.y + group0.w + PAD * 0.55 + 2.0);
+    if (group2.z > 0.0 && x < len - 12.0 && x > group2.x - PAD) e = max(e, group2.y + group2.w + PAD * 0.55 + 2.0);
     vec4 n = group1;   // notch: deeper, and wider by its flare
     if (n.z > 0.0 && abs(x - (n.x + n.z * 0.5)) < n.z * 0.5 + PAD * 2.0 - 8.0) e = max(e, n.y + n.w + PAD);
     return e;
