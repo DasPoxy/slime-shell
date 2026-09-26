@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-"""Envy tasks for the command centre's Tasks tab.
+"""Markdown tasks for the command centre's Tasks tab.
 
-  tasks.py list                         -> JSON list of every "- [ ]"/"- [x]" task
+  tasks.py list                         -> {"folder", "source", "tasks": [...]}
   tasks.py toggle FILE LINE EXPECTED    -> flip that checkbox
+  tasks.py set-folder PATH [SUBFOLDERS] -> use PATH ("" = back to automatic)
 
-The vault comes from ~/.config/envy/config.md (`vault = "..."`), honouring
-`include_subfolders`. A toggle only writes if line LINE of FILE still reads
-EXPECTED exactly, so an edit made in Envy meanwhile is never clobbered.
+Works with any folder of markdown notes. The folder is, in order:
+  1. ~/.config/omarchy/slime-shell/tasks.json  {"folder": "...", "subfolders": true}
+  2. Envy's vault (~/.config/envy/config.md: vault = "...", include_subfolders)
+  3. ~/Notes or ~/Documents/Notes, if either exists
+A task is any "- [ ]" / "- [x]" (or * / +) line. A toggle only writes if line
+LINE of FILE still reads EXPECTED exactly, so an edit made meanwhile in your
+notes app is never clobbered.
 """
 import json
 import os
@@ -17,20 +22,41 @@ import tempfile
 TASK = re.compile(r"^(\s*[-*+]\s+\[)([ xX])(\]\s+)(.*)$")
 
 
+SLIME = os.path.expanduser("~/.config/omarchy/slime-shell/tasks.json")
+
+
 def vault_settings():
-    vault, subfolders = "~/Documents/Envy", False
+    """(folder, subfolders, source) — see the module docstring for the order."""
+    try:
+        with open(SLIME) as f:
+            conf = json.load(f)
+        if conf.get("folder"):
+            return os.path.expanduser(conf["folder"]), bool(conf.get("subfolders", True)), "custom"
+    except (OSError, ValueError):
+        pass
+    envy = envy_settings()
+    if envy:
+        return envy[0], envy[1], "envy"
+    for guess in ("~/Notes", "~/Documents/Notes"):
+        if os.path.isdir(os.path.expanduser(guess)):
+            return os.path.expanduser(guess), True, "default"
+    return "", False, "none"
+
+
+def envy_settings():
+    vault, subfolders, found = "~/Documents/Envy", False, False
     try:
         with open(os.path.expanduser("~/.config/envy/config.md")) as f:
             for line in f:
                 m = re.match(r'\s*vault\s*=\s*"([^"]+)"', line)
                 if m:
-                    vault = m.group(1)
+                    vault, found = m.group(1), True
                 m = re.match(r"\s*include_subfolders\s*=\s*(true|false)", line)
                 if m:
                     subfolders = m.group(1) == "true"
     except OSError:
-        pass
-    return os.path.expanduser(vault), subfolders
+        return None
+    return (os.path.expanduser(vault), subfolders) if found else None
 
 
 def notes(vault, subfolders):
@@ -42,8 +68,11 @@ def notes(vault, subfolders):
 
 
 def list_tasks():
-    vault, subfolders = vault_settings()
+    vault, subfolders, source = vault_settings()
     out = []
+    if not vault or not os.path.isdir(vault):
+        print(json.dumps({"folder": vault, "source": source, "tasks": []}))
+        return
     for path in notes(vault, subfolders):
         try:
             with open(path, encoding="utf-8") as f:
@@ -63,11 +92,11 @@ def list_tasks():
                 "done": m.group(2) != " ",
                 "mtime": os.path.getmtime(path),
             })
-    print(json.dumps(out))
+    print(json.dumps({"folder": vault, "source": source, "tasks": out}))
 
 
 def toggle(path, line_no, expected):
-    vault, _ = vault_settings()
+    vault, _, _ = vault_settings()
     real = os.path.realpath(path)
     if not real.startswith(os.path.realpath(vault) + os.sep):
         sys.exit("refusing to edit outside the vault")
@@ -86,9 +115,18 @@ def toggle(path, line_no, expected):
     print("ok")
 
 
+def set_folder(path, subfolders=True):
+    os.makedirs(os.path.dirname(SLIME), exist_ok=True)
+    with open(SLIME, "w") as f:
+        json.dump({"folder": path, "subfolders": subfolders}, f, indent=2)
+    print("ok")
+
+
 if __name__ == "__main__":
     if len(sys.argv) >= 2 and sys.argv[1] == "list":
         list_tasks()
+    elif len(sys.argv) >= 3 and sys.argv[1] == "set-folder":
+        set_folder(sys.argv[2], len(sys.argv) < 4 or sys.argv[3] != "false")
     elif len(sys.argv) == 5 and sys.argv[1] == "toggle":
         toggle(sys.argv[2], int(sys.argv[3]), sys.argv[4])
     else:

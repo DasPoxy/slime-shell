@@ -1585,6 +1585,8 @@ Item {
     // "behind": the bar surface sits on the Bottom layer so drips hang behind
     // windows (the exclusive zone still keeps tiled windows off the bar). It
     // comes back to Top while the command centre is open so that stays usable.
+    // keyboard input for the command centre's text fields, only while it's open
+    WlrLayershell.keyboardFocus: ccShown ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     WlrLayershell.layer: root.slimeSkin && root.layerReady && root.slimeLayer === "behind" && !ccShown ? WlrLayer.Bottom : WlrLayer.Top
 
     // ---- Slime skin ----
