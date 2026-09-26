@@ -12,6 +12,9 @@ import "../slime.bar/commandcenter"
 //          "lump"  the ooze sags into a bulb here, with drips
 //          "eye"   a spare eyeball floats in the gap, looking around (default,
 //                  so a freshly added spacer is visible)
+//          any floating bit: "sword", "axe", "hat", "frog", "mug" (tankard),
+//          "potion", "skull", "bone", "tooth", "bubble", "candle", "orb"
+// Each spacer keeps its own choice (it lives in that spacer's entry).
 // Hovering shows a dashed outline and the size, so plain gaps can be found.
 // Scroll over the gap to resize it.
 BarWidget {
@@ -28,13 +31,53 @@ BarWidget {
   implicitWidth: vertical ? barSize : span
   implicitHeight: vertical ? span : barSize
 
+  // Where this spacer sits in shell.json: { region, index }. Spacers can be on
+  // the bar several times, so settings are written to this entry only (the
+  // shell's usual updateEntryInline would rewrite every spacer at once).
+  function place() {
+    if (!bar || !bar.moduleSlots) return null
+    var slots = bar.moduleSlots
+    for (var i = 0; i < slots.length; i++) {
+      var slot = slots[i]
+      if (!slot || slot.activeItem !== root) continue
+      var idx = bar.layoutEntries(slot.region).indexOf(slot.entry)
+      return idx < 0 ? null : { region: slot.region, index: idx }
+    }
+    return null
+  }
+
   function saveSetting(key, value) {
     var entry = { id: root.moduleName }
     for (var k in root.settings) if (k !== "id") entry[k] = root.settings[k]
     entry[key] = value
     root.settings = entry
-    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
-      root.bar.shell.updateEntryInline(root.moduleName, entry)
+    var at = place()
+    if (!at || !bar.shell || typeof bar.shell.mutateShellConfig !== "function") return
+    bar.shell.mutateShellConfig(function(config) {
+      var list = config.bar && config.bar.layout ? config.bar.layout[at.region] : null
+      if (list && list[at.index] && list[at.index].id === root.moduleName) list[at.index] = entry
+    })
+  }
+
+  // A new spacer right after this one, with the same size and contents.
+  function addAnother() {
+    var at = place()
+    if (!at || !bar.shell || typeof bar.shell.mutateShellConfig !== "function") return
+    var copy = { id: root.moduleName, size: root.span, deco: root.deco }
+    bar.shell.mutateShellConfig(function(config) {
+      var list = config.bar && config.bar.layout ? config.bar.layout[at.region] : null
+      if (list) list.splice(at.index + 1, 0, copy)
+    })
+    menuOpen = false
+  }
+  function removeSelf() {
+    var at = place()
+    if (!at || !bar.shell || typeof bar.shell.mutateShellConfig !== "function") return
+    menuOpen = false
+    bar.shell.mutateShellConfig(function(config) {
+      var list = config.bar && config.bar.layout ? config.bar.layout[at.region] : null
+      if (list && list[at.index] && list[at.index].id === root.moduleName) list.splice(at.index, 1)
+    })
   }
   function close() { menuOpen = false }
 
@@ -56,6 +99,17 @@ BarWidget {
       y: parent.height * 0.28
       color: root.slime ? root.bar.slimeInk : "black"
     }
+  }
+
+  // a floating bit, bobbing in the gap
+  readonly property var own: ["bone", "tooth", "bubble"]
+  SlimeDebris {
+    visible: root.slime && root.deco !== "eye" && root.deco !== "gap" && root.deco !== "lump"
+    anchors.fill: parent
+    bar: root.bar
+    bitOpacity: 1
+    bits: [{ kind: root.deco, x: 0.5, y: 0.5,
+             s: Math.min(root.own.indexOf(root.deco) === -1 ? 22 : 14, root.span - 2, root.barSize - 8), sp: 0.5 }]
   }
 
   // hover hint: where the gap is and how big
@@ -100,7 +154,7 @@ BarWidget {
     owner: root
     bar: root.bar
     open: root.menuOpen
-    contentWidth: Style.space(250)
+    contentWidth: Style.space(300)
     contentHeight: menu.fittedContentHeight(menuColumn.implicitHeight)
 
     Column {
@@ -129,7 +183,10 @@ BarWidget {
         width: parent.width
         spacing: 6
         Repeater {
-          model: [["plain ooze", "gap"], ["sagging lump", "lump"], ["eyeball", "eye"]]
+          model: [["plain ooze", "gap"], ["sagging lump", "lump"], ["eyeball", "eye"],
+            ["sword", "sword"], ["axe", "axe"], ["wizard hat", "hat"], ["frog", "frog"], ["tankard", "mug"],
+            ["potion", "potion"], ["skull", "skull"], ["bone", "bone"], ["tooth", "tooth"], ["bubble", "bubble"],
+            ["candle", "candle"], ["orb", "orb"]]
           CcButton {
             required property var modelData
             cc: look
@@ -138,6 +195,12 @@ BarWidget {
             onClicked: root.saveSetting("deco", modelData[1])
           }
         }
+      }
+      Flow {
+        width: parent.width
+        spacing: 6
+        CcButton { cc: look; icon: "\uf067"; text: "add another spacer"; onClicked: root.addAnother() }
+        CcButton { cc: look; icon: "\uf1f8"; text: "remove"; onClicked: root.removeSelf() }
       }
     }
   }

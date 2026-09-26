@@ -35,6 +35,7 @@ layout(std140, binding = 0) uniform buf {
     float blobMode;   // 1 = no bar: just a free-standing blob in panelRect
     float barShape;   // 0 classic strip, 1 pills, 2 islands, 3 notch
     vec4 dripStyle;   // speed x, thickness x, frozen (1 = hang still), density x
+    vec4 eggDrip;     // easter egg: x along the bar, edge y, start time, active
     float material;   // 0 slime, 1 sinew, 2 bone, 3 plain
     float orient;     // which screen edge the bar is on: 0 top, 1 bottom, 2 left, 3 right
     vec2 screenSize;  // for bottom / right bars
@@ -364,6 +365,28 @@ vec2 mapBlob(vec2 p) {
     return vec2(d, hl);
 }
 
+// The easter-egg drip: one fat drip (the bar draws a creature inside its bulb)
+// that swells for 6 s, hangs, snaps at 10 s and falls. Shares its timing with
+// eggTip() in Bar.qml.
+const float EGG_R = 15.5;
+float eggLen(float t) { return 44.0 * smoothstep(0.0, 6.0, t); }
+float eggShape(vec2 p) {
+    float t = time - eggDrip.z;
+    if (eggDrip.w < 0.5 || t < 0.0 || t > 14.0) return 1e5;
+    float x = eggDrip.x, edge = eggDrip.y;
+    float release = smoothstep(10.0, 10.6, t);
+    float len = eggLen(t);
+    vec2 tip = vec2(x, edge + len);
+    float d = sdSegment(p, vec2(x, edge - 6.0), tip, 5.5 * (1.0 - release));
+    if (release < 1.0) d = smin(d, length(p - tip) - EGG_R, 8.0);
+    if (release > 0.0) {
+        float f = max(0.0, t - 10.6) / 3.0;
+        vec2 drop = vec2(x, edge + len + 300.0 * f * f);
+        d = min(d, length(p - drop) - EGG_R);
+    }
+    return d;
+}
+
 // The command centre / panel blob: a fat drip that falls, then spreads.
 float openPanel(vec2 p, float ci, inout float hl) {
     // Opens like a fat drip: a narrow bead falls first, then spreads
@@ -406,6 +429,8 @@ vec2 mapScene(vec2 p) {
         d = smin(d, dr.x, 12.0);
         hl = min(hl, dr.y);
     }
+
+    d = smin(d, eggShape(p), 8.0);
 
     // pills are their own lumps; every other shape sags a bulb under widgets
     if (barShape > 0.5 && barShape < 1.5) {

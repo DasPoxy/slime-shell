@@ -30,6 +30,7 @@ import QtQuick.Shapes
 //        "book"       spellbook (memory)       lit = glowing rune
 //        "potion"     bubbling flask           lit = bubbling
 //        "skull"      grinning skull           lit = glowing eyes
+//        "sword" · "axe" · "hat" (wizard) · "frog" (lit = croaking) — floating bits
 //        "lich"       crowned lich with a staff    lit = casting: arm raised,
 //                     eyes and hand blazing (the media widget's spellcaster)
 Item {
@@ -578,6 +579,62 @@ Item {
         width: 3.6 + root.pulse * 1.6; height: width; radius: width / 2
         color: lich.spell
         opacity: 0.55 * root.pulse
+      }
+    }
+
+
+    // =================================================================== sword
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "sword"
+      GearPath { d: "M12 1.6 L14 4 L14 15 L10 15 L10 4 Z"; fill: Qt.tint(root.paper, Qt.rgba(0.5, 0.6, 0.75, 0.35)) }   // blade
+      GearPath { d: "M12 3 L12 14"; stroke: Qt.rgba(1, 1, 1, 0.8); line: 0.8 }                                          // fuller
+      GearPath { d: "M6.4 15 L17.6 15 L17 17 L7 17 Z"; fill: root.gold; line: 1 }                                      // guard
+      GearPath { d: "M10.8 17 L13.2 17 L13.2 21 L10.8 21 Z"; fill: root.leather; line: 1 }                              // grip
+      Rectangle { x: 10.4; y: 20.6; width: 3.2; height: 3.2; radius: 1.6; color: root.gold; border.color: root.ink; border.width: 0.8 }  // pommel
+    }
+
+    // ===================================================================== axe
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "axe"
+      GearPath { d: "M7.6 22.4 L14.2 3.2"; stroke: root.leather; line: 2.2 }                                             // haft
+      GearPath { d: "M12.6 4.4 Q20.6 2.8 21.4 9.8 Q17.4 8.6 15 11.4 Z"; fill: Qt.tint(root.paper, Qt.rgba(0.5, 0.6, 0.75, 0.35)) }   // blade
+      GearPath { d: "M13.6 6.2 Q18.4 5.2 20.2 8.4"; stroke: Qt.rgba(1, 1, 1, 0.8); line: 0.8 }
+      GearPath { d: "M12.2 7.4 L15.4 8.6"; stroke: root.gold; line: 1.6 }                                                // binding
+    }
+
+    // ===================================================================== hat
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "hat"
+      readonly property color cloth: root.pal.magenta || "#f52e9b"
+      GearPath { d: "M2 19.4 Q12 22.8 22 19.4 Q18.6 16.8 12 17 Q5.4 16.8 2 19.4 Z"; fill: parent.cloth }             // brim
+      GearPath { d: "M6.2 18.2 Q9 11 10.8 6 Q12.4 1.6 16.4 2.2 Q13.6 3.6 13.8 7.6 Q15.4 12.4 17.8 18.2 Q12 19.6 6.2 18.2 Z"; fill: parent.cloth }   // crooked cone
+      GearPath { d: "M6.6 16.6 Q12 18 17.4 16.6"; stroke: root.gold; line: 1.6 }                                        // band
+      GearPath { d: "M10.8 10.8 L11.4 12 L12.6 12.2 L11.7 13 L12 14.2 L10.8 13.6 L9.6 14.2 L9.9 13 L9 12.2 L10.2 12 Z"; fill: root.flame; line: 0.5 }  // star
+    }
+
+    // ==================================================================== frog
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "frog"
+      readonly property color skin: root.pal.green || "#1be33a"
+      readonly property real puff: root.lit ? 1 + 0.25 * Math.abs(Math.sin(root.time * 4)) : 1
+      GearPath { d: "M4 16 Q2.6 11.4 7 9.4 Q12 7.8 17 9.4 Q21.4 11.4 20 16 Q19 19.6 12 19.8 Q5 19.6 4 16 Z"; fill: parent.skin }   // body
+      GearPath { d: "M3.4 18.8 Q6 16.6 8.4 19.4 M20.6 18.8 Q18 16.6 15.6 19.4"; fill: parent.skin; line: 1.1 }                 // feet
+      Rectangle { x: 5.4; y: 5.2; width: 5.4; height: 5.4; radius: 2.7; color: parent.skin; border.color: root.ink; border.width: 1 }
+      Rectangle { x: 13.2; y: 5.2; width: 5.4; height: 5.4; radius: 2.7; color: parent.skin; border.color: root.ink; border.width: 1 }
+      Rectangle { x: 6.6; y: 6.4; width: 3; height: 3; radius: 1.5; color: root.paper; border.color: root.ink; border.width: 0.6
+        Rectangle { x: 0.9; y: 0.9; width: 1.4; height: 1.4; radius: 0.7; color: root.ink } }
+      Rectangle { x: 14.4; y: 6.4; width: 3; height: 3; radius: 1.5; color: root.paper; border.color: root.ink; border.width: 0.6
+        Rectangle { x: 0.9; y: 0.9; width: 1.4; height: 1.4; radius: 0.7; color: root.ink } }
+      GearPath { d: "M8.4 13.6 Q12 15.8 15.6 13.6"; line: 1 }                                                            // smile
+      Rectangle {   // throat pouch, puffing while croaking
+        visible: root.lit
+        x: 12 - width / 2; y: 15.2
+        width: 5 * parent.puff; height: 3.2 * parent.puff; radius: height / 2
+        color: Qt.lighter(parent.skin, 1.35); border.color: root.ink; border.width: 0.6
       }
     }
 

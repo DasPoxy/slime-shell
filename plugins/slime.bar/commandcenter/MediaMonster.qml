@@ -83,6 +83,7 @@ Item {
       property real barShape: 0
       property real material: bar.materialId   // the monster is made of the same stuff as the bar
       property vector4d dripStyle: bar.dripStyleVec
+      property vector4d eggDrip: Qt.vector4d(0, 0, 0, 0)
       property vector4d group0: Qt.vector4d(0, 0, 0, 0)
       property vector4d group1: Qt.vector4d(0, 0, 0, 0)
       property vector4d group2: Qt.vector4d(0, 0, 0, 0)

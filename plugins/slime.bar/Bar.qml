@@ -211,6 +211,44 @@ Item {
   // How the drips move: "drip" (default), "honey" (slow, thick), "rain" (fast,
   // thin, many), "tar" (crawling, fat, few), "frozen" (hang still).
   property string dripStyle: "drip"
+
+  // ---- Easter egg: now and then a gnome or goblin (a skeleton on bone) gets
+  // stuck in a fat drip, struggles, and falls off with it. ~4% every 20 s.
+  property vector4d eggDrip: Qt.vector4d(0, 0, 0, 0)   // x, edge y, start, active
+  property string eggKind: "gnome"
+  function startEgg() {
+    if (!slimeSkin || material === "plain" || eggDrip.w > 0) return
+    var rects = barShape === "pills" ? sharedBulbRects : (barShape === "classic" ? [] : sharedGroupRects)
+    rects = rects.filter(function(r) { return r && r.z > 0 })
+    var x, edge
+    if (rects.length > 0) {
+      var r = rects[Math.floor(Math.random() * rects.length)]
+      x = r.x + r.z * (0.25 + Math.random() * 0.5)
+      edge = r.y + r.w + (barShape === "notch" && r === sharedGroupRects[1] ? 7 : 3.85)
+    } else {
+      x = 120 + Math.random() * Math.max(100, eggSpan - 240)
+      edge = barSize
+    }
+    eggKind = material === "bone" ? "skeleton" : (Math.random() < 0.5 ? "gnome" : "goblin")
+    eggDrip = Qt.vector4d(x, edge, animTime, 1)
+  }
+  property real eggSpan: 1920       // bar length, set by the bar window
+  Timer {
+    interval: 20000
+    repeat: true
+    running: root.slimeSkin && root.slimeFps > 0
+    onTriggered: if (Math.random() < 0.04) root.startEgg()
+  }
+  // where the creature is, in bar space (matches eggShape() in the shader)
+  readonly property var eggTip: {
+    if (eggDrip.w < 1) return null
+    var t = animTime - eggDrip.z
+    if (t > 14) { Qt.callLater(function() { root.eggDrip = Qt.vector4d(0, 0, 0, 0) }); return null }
+    var e = Math.max(0, Math.min(1, t / 6))
+    var len = 44 * e * e * (3 - 2 * e)
+    var f = Math.max(0, t - 10.6) / 3
+    return { x: eggDrip.x, y: eggDrip.y + len + 300 * f * f }
+  }
   readonly property vector4d dripStyleVec: {
     switch (dripStyle) {
     case "honey": return Qt.vector4d(0.45, 1.45, 0, 0.9)
@@ -317,6 +355,8 @@ Item {
     function shape(name: string): void { root.barShape = name }
     function material(name: string): void { root.material = name }
     function drip(style: string): void { root.dripStyle = style }
+    // (shh) summon the easter egg now
+    function egg(): void { root.startEgg() }
     function layer(where: string): void { root.slimeLayer = where === "behind" ? "behind" : "above" }
     // Open the command centre on a tab: home, system, wallpapers, tasks, settings.
     function tab(name: string): void { root.ccTab = name; root.commandCenterOpen = root.slimeSkin }
@@ -1661,6 +1701,7 @@ Item {
       property real barShape: root.barShapeId
       property real material: root.materialId
       property vector4d dripStyle: root.dripStyleVec
+      property vector4d eggDrip: root.eggDrip
       property vector4d group0: barWindow.groupRects[0] || barWindow.noBulb
       property vector4d group1: barWindow.groupRects[1] || barWindow.noBulb
       property vector4d group2: barWindow.groupRects[2] || barWindow.noBulb
@@ -1701,18 +1742,40 @@ Item {
       avoid: barWindow.bulbRects
       within: root.barShape === "classic" ? [] : (root.barShape === "pills" ? barWindow.bulbRects : barWindow.groupRects)
       bits: {
-        var out = [], kinds = root.material === "sinew" ? ["eye", "tooth", "eye", "eye", "tooth", "eye"]
-          : root.material === "bone" ? ["bone", "tooth", "bone", "eye", "bone", "tooth"]
-          : ["eye", "bubble", "bone", "bubble", "tooth", "eye", "bubble", "bone"]
+        var out = [], kinds = root.material === "sinew" ? ["eye", "tooth", "sword", "eye", "axe", "tooth", "eye", "skull"]
+          : root.material === "bone" ? ["bone", "skull", "tooth", "sword", "bone", "axe", "eye", "mug"]
+          : ["eye", "bubble", "frog", "bone", "hat", "bubble", "mug", "tooth", "potion", "sword", "bubble", "axe"]
+        var own = ["eye", "bone", "tooth", "bubble"]
         var n = Math.max(1, Math.floor(barWindow.width / 150))
         for (var i = 0; i < n; i++) {
           var h = Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 1
-          out.push({ kind: kinds[i % kinds.length], x: (i + 0.25 + h * 0.5) / n, y: 0.3 + h * 0.4,
-                     s: 10 + Math.round(h * 8), sp: 0.3 + h * 0.6 })
+          var kind = kinds[i % kinds.length]
+          var size = 10 + Math.round(h * 8)
+          if (own.indexOf(kind) === -1) size = Math.round(size * 1.35)   // gear reads better a bit bigger
+          out.push({ kind: kind, x: (i + 0.25 + h * 0.5) / n, y: 0.3 + h * 0.4, s: size, sp: 0.3 + h * 0.6 })
         }
         return out
       }
     }
+
+    // the easter-egg captive, drawn inside the egg drip's bulb
+    SlimeCaptive {
+      readonly property var tip: root.eggTip
+      visible: tip !== null && root.slimeSkin
+      readonly property real bx: tip ? tip.x : 0
+      readonly property real by: tip ? tip.y : 0
+      // bar space -> window
+      x: (root.position === "left" ? by : root.position === "right" ? barWindow.width - by : bx) - width / 2
+      y: (root.position === "bottom" ? barWindow.height - by : root.vertical ? bx : by) - height / 2
+      size: 25
+      kind: root.eggKind
+      time: root.animTime
+      ink: root.slimeInk
+      paper: root.paperColor
+      goo: root.slimeColor
+      pal: root.palette
+    }
+    Binding { target: root; property: "eggSpan"; value: barWindow.barLength }
 
     Item {
       id: barStrip

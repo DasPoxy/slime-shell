@@ -1037,6 +1037,7 @@ Item {
         property real barShape: bar ? bar.barShapeId : 0
         property real material: bar ? bar.materialId : 0
         property vector4d dripStyle: bar ? bar.dripStyleVec : Qt.vector4d(1, 1, 0, 1)
+        property vector4d eggDrip: Qt.vector4d(0, 0, 0, 0)
         property vector4d group0: bar && bar.sharedGroupRects[0] ? bar.sharedGroupRects[0] : noBulb
         property vector4d group1: bar && bar.sharedGroupRects[1] ? bar.sharedGroupRects[1] : noBulb
         property vector4d group2: bar && bar.sharedGroupRects[2] ? bar.sharedGroupRects[2] : noBulb

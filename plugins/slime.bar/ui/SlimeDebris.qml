@@ -1,9 +1,10 @@
 import QtQuick
 import QtQuick.Shapes
 
-// Detritus adrift in the goo: spare eyeballs looking about, bones, teeth and
-// bubbles, each bobbing and turning on its own slow drift. `bits` is a list of
-// { kind: "eye"|"bone"|"tooth"|"bubble", x, y (0..1 of this item), s (px), sp }
+// Detritus adrift in the goo: spare eyeballs looking about, bones, teeth,
+// bubbles, and any SlimeGear item (sword, axe, hat, frog, mug, potion, skull…),
+// each bobbing and turning on its own slow drift. `bits` is a list of
+// { kind, x, y (0..1 of this item), s (px), sp }
 // and `avoid` a list of rects (x, y, w, h, in this item's coordinates) the
 // bits fade out over, so they never sit behind text or widgets.
 Item {
@@ -70,8 +71,18 @@ Item {
           color: debris.ink
         }
       }
+      readonly property bool own: ["eye", "bone", "tooth", "bubble"].indexOf(modelData.kind) !== -1
+      SlimeGear {
+        visible: !bit.own
+        anchors.fill: parent
+        size: bit.width
+        bar: debris.bar
+        kind: bit.own ? "chest" : bit.modelData.kind
+        lit: true
+        net: "ethernet"
+      }
       Shape {
-        visible: bit.modelData.kind !== "eye"
+        visible: bit.own && bit.modelData.kind !== "eye"
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
