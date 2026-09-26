@@ -36,7 +36,8 @@ layout(std140, binding = 0) uniform buf {
     float barShape;   // 0 classic strip, 1 pills, 2 islands, 3 notch
     vec4 dripStyle;   // speed x, thickness x, frozen (1 = hang still), density x
     vec4 dripExtra;   // x: shape 0 drip / 1 stringy / 2 mitosis; y: variable amount 0/1;
-                      // z: how far the window reaches from the bar (0 = no limit)
+                      // z: how far falling goo may reach from the bar (0 = no limit)
+                      // w: past this depth only the command centre's column is drawn
     vec4 eggDrip;     // easter egg: x along the bar, edge y, start time, active
     float material;   // 0 slime, 1 sinew, 2 bone, 3 plain
     float orient;     // which screen edge the bar is on: 0 top, 1 bottom, 2 left, 3 right
@@ -1054,6 +1055,14 @@ vec2 toBarSpace(vec2 g) {
 
 void main() {
     vec2 p = toBarSpace(qt_TexCoord0 * resolution + origin);
+    // The bar window grows tall while the command centre is open, but below
+    // the drip zone nothing lives outside the panel's column: skip those
+    // pixels outright (most of the window) rather than run the whole scene.
+    if (dripExtra.w > 0.0 && p.y > dripExtra.w &&
+        (openProgress < 0.001 || p.x < panelRect.x - 90.0 || p.x > panelRect.x + panelRect.z + 90.0)) {
+        fragColor = vec4(0.0);
+        return;
+    }
     if (p.y < clipTop || (cullRect.w > 0.5 && (p.x < cullRect.x || p.x > cullRect.y || p.y > cullRect.z))) {
         fragColor = vec4(0.0);
         return;

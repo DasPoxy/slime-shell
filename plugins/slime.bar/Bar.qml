@@ -2034,7 +2034,10 @@ Item {
       property real barShape: root.barShapeId
       property real material: root.materialId
       property vector4d dripStyle: root.dripStyleVec
-      property vector4d dripExtra: Qt.vector4d(root.dripExtraVec.x, root.dripExtraVec.y, barWindow.thickness, 0)
+      // drip-zone depth: falling goo shrinks away before it, and past it only
+      // the command centre's column is drawn (the window is taller while it's open)
+      property vector4d dripExtra: Qt.vector4d(root.dripExtraVec.x, root.dripExtraVec.y,
+        root.barSize + barWindow.dripRoom, root.barSize + barWindow.dripRoom)
       property vector4d eggDrip: root.eggDrip
       property vector4d group0: barWindow.groupRects[0] || barWindow.noBulb
       property vector4d group1: barWindow.groupRects[1] || barWindow.noBulb
