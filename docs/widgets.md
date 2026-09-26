@@ -6,7 +6,10 @@ Add or remove widgets from the **treasure chest** on the bar, or drag them
 around the bar to reorder (in *pills* shape, drop one onto the middle of
 another to join their pills; drag it away to split them again. Inside a
 joined pill, drag a widget between its pill-mates to shuffle it along, or
-onto the middle of one to swap the two — the pill stays whole).
+onto the middle of one to swap the two — the pill stays whole. Drag it to
+either end of its pill and two markers appear: the one just inside the pill
+swaps it with the end widget, the one just past the end splits it off into a
+pill of its own).
 
 ## Left side
 

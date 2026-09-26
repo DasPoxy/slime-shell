@@ -394,6 +394,9 @@ Item {
   // Pills: dropping a widget on the middle of another joins their pills
   // (entry flag pillJoin = "shares a pill with the next widget").
   property bool barDragMerge: false
+  // Pills: dragging a pill-mate to its pill's far end — {kind: "swap" |
+  // "split", side: -1 | 1, other: outermost slot, marker} — or null.
+  property var barDragEdge: null
   property bool barDragAfter: false
   property var barDragWindow: null
   property var barDragScreen: null
@@ -724,6 +727,7 @@ Item {
     barDragTargetGeometry = null
     barDragAfter = false
     barDragMerge = false
+    barDragEdge = null
     barDragSceneX = 0
     barDragSceneY = 0
     barDragScreenX = 0
@@ -1313,6 +1317,74 @@ Item {
       else delete entries[i].pillJoin
     }
   }
+  // The slot showing layout entry `index` of `region` on `win`'s bar.
+  function slotAtLayoutIndex(region, index, win) {
+    for (var i = 0; i < moduleSlots.length; i++) {
+      var sl = moduleSlots[i]
+      if (sl && sl.region === region && sameWindow(slotWindow(sl), win) && slotLayoutIndex(sl) === index) return sl
+    }
+    return null
+  }
+
+  // Dragging a pill-mate out to either end of its pill. Two drop spots on
+  // each side: a marker just inside the pill swaps it with the outermost
+  // widget there (the pill stays together), a marker just past the pill's
+  // end splits it off into a pill of its own beside the group.
+  function pillEdgeDrop(source, scenePoint) {
+    if (barShape !== "pills" || !source) return null
+    var fi = slotLayoutIndex(source)
+    if (fi < 0) return null
+    var run = pillRun(layoutEntries(source.region), fi)
+    if (run.end <= run.start) return null
+    var win = slotWindow(source)
+    var members = []
+    for (var i = run.start; i <= run.end; i++) {
+      var sl = slotAtLayoutIndex(source.region, i, win)
+      if (!sl || !sl.visible || sl.width <= 0) continue
+      var p = sl.mapToItem(null, 0, 0)
+      members.push({ slot: sl, at: vertical ? p.y : p.x, len: vertical ? sl.height : sl.width, cross: vertical ? p.x : p.y, thick: vertical ? sl.width : sl.height })
+    }
+    if (members.length < 2) return null
+    members.sort(function(a, b) { return a.at - b.at })
+    var first = members[0], last = members[members.length - 1]
+    var g0 = first.at, g1 = last.at + last.len
+    var a = vertical ? scenePoint.y : scenePoint.x
+    var reach = 36                                      // how far past the end still splits
+    var side = 0, kind = ""
+    if (a >= g0 - reach && a < g0 + 3) { side = -1; kind = "split" }
+    else if (a >= g0 + 3 && a < g0 + Math.min(first.len * 0.4, 22)) { side = -1; kind = "swap" }
+    else if (a > g1 - 3 && a <= g1 + reach) { side = 1; kind = "split" }
+    else if (a > g1 - Math.min(last.len * 0.4, 22) && a <= g1 - 3) { side = 1; kind = "swap" }
+    if (!side) return null
+    var outer = side < 0 ? first : last
+    if (kind === "swap" && outer.slot === source) return null   // already the outermost
+    // the marker: inside the pill for a swap, out in the gap for a split
+    var along = kind === "swap" ? (side < 0 ? g0 + 5 : g1 - 5) : (side < 0 ? g0 - 9 : g1 + 9)
+    var t = Style.spacing.xs
+    var sp = barDragScreenPoint(vertical ? { x: outer.cross, y: along } : { x: along, y: outer.cross })
+    var marker = vertical ? { x: sp.x, y: sp.y - t / 2, width: outer.thick, height: t }
+                          : { x: sp.x - t / 2, y: sp.y, width: t, height: outer.thick }
+    return { kind: kind, side: side, other: outer.slot, marker: marker }
+  }
+
+  // Take `source` out of its pill into one of its own, just before (side -1)
+  // or after (side 1) the rest of the group.
+  function splitFromPill(source, side) {
+    if (!source || !root.shell || typeof root.shell.mutateShellConfig !== "function") return
+    var fi = slotLayoutIndex(source)
+    if (fi < 0) return
+    root.shell.mutateShellConfig(function(config) {
+      var e = rawLayoutSection(config, source.region)
+      if (!e[fi] || Util.canonicalWidgetId(e[fi].id) !== source.moduleName) return
+      var run = pillRun(e, fi)
+      if (run.end <= run.start) return
+      var moved = e.splice(fi, 1)[0]
+      delete moved.pillJoin
+      relinkPill(e, run.start, run.end - 1)
+      e.splice(side < 0 ? run.start : run.end, 0, moved)
+    })
+  }
+
   function samePill(source, target) {
     if (barShape !== "pills" || !source || !target || source.region !== target.region) return false
     var fi = slotLayoutIndex(source), ti = slotLayoutIndex(target)
@@ -2752,11 +2824,13 @@ Item {
           root.barDragScreenX = screenPoint.x
           root.barDragScreenY = screenPoint.y
 
-          var drop = root.moduleDropAtScene(scenePoint, slot)
+          var edge = root.pillEdgeDrop(slot, scenePoint)
+          root.barDragEdge = edge
+          var drop = edge ? { slot: edge.other, after: edge.side > 0 } : root.moduleDropAtScene(scenePoint, slot)
           root.barDragTarget = drop ? drop.slot : null
           root.barDragAfter = drop ? drop.after : false
-          root.barDragMerge = !!drop && root.pillMergeAt(drop.slot, scenePoint)
-          root.barDragTargetGeometry = !drop ? null
+          root.barDragMerge = !edge && !!drop && root.pillMergeAt(drop.slot, scenePoint)
+          root.barDragTargetGeometry = edge ? edge.marker : !drop ? null
             : root.barDragMerge ? root.mergeMarkerRect(drop.slot) : root.dropMarkerRect(drop.slot, drop.after)
         }
       }
@@ -2766,13 +2840,18 @@ Item {
         var targetSlot = root.barDragTarget
         var afterTarget = root.barDragAfter
         var merge = root.barDragMerge
+        var edge = root.barDragEdge
 
         if (wasDragging) suppressClick = true
 
         dragging = false
         root.clearBarDrag()
 
-        if (wasDragging && targetSlot) {
+        if (wasDragging && edge) {
+          if (edge.kind === "swap") root.mergePills(slot, edge.other)   // pill-mates: swaps them
+          else root.splitFromPill(slot, edge.side)
+          mouse.accepted = true
+        } else if (wasDragging && targetSlot) {
           if (merge) root.mergePills(slot, targetSlot)
           else root.dropBarModuleAtTarget(slot, targetSlot, afterTarget)
           mouse.accepted = true
