@@ -130,7 +130,7 @@ Command centre → **Settings** (sections fold open and closed):
   date/time order
 - **Motion** — frame rate, drip style, drip amount
 - **Updates** — check GitHub, update & restart
-- **Widgets** — opens each widget's own settings
+- **Widgets** — opens each Slime widget's settings, and any bar widget's own panel
 
 Skin settings are saved in `~/.config/omarchy/slime-shell/skin.json`;
 per-widget settings in the widget's entry in `~/.config/omarchy/shell.json`.

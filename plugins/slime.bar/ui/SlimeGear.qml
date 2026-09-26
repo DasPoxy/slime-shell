@@ -652,6 +652,93 @@ Item {
     }
 
 
+    // ================================================ wizard (a caster, like the lich)
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "wizard"
+      sourceComponent: Item {
+        id: wiz
+        anchors.fill: parent
+        readonly property color robe: Qt.darker(root.pal.magenta || "#8a4dff", 1.7)
+        readonly property color robeLight: Qt.darker(root.pal.magenta || "#8a4dff", 1.2)
+        readonly property color skin: "#f2c2a0"
+        readonly property color spell: root.pal.bright_cyan || root.pal.cyan || "#10ffd9"
+        readonly property real lift: root.lit ? 2.6 + Math.sin(root.time * 5) * 0.8 : 0
+
+        // gnarled staff with a glowing orb
+        GearPath { d: "M5.2 6 Q4.2 12 3.6 22.6"; stroke: root.leather; line: 1.8 }
+        Rectangle {
+          x: 5.2 - 2; y: 4.2 - 2; width: 4; height: 4; radius: 2
+          color: root.flame; border.color: root.ink; border.width: 0.8
+          opacity: root.lit ? root.pulse : 0.85
+        }
+        // robe, face, beard
+        GearPath { d: "M12 5.6 Q17 6 17.6 10 L20.2 21.6 Q12 23.2 3.8 21.6 L6.4 10 Q7 6 12 5.6 Z"; fill: wiz.robe }
+        GearPath { d: "M7.6 21.4 L9 15 M16.4 21.4 L15 15"; stroke: wiz.robeLight; line: 0.8 }
+        GearPath { d: "M9.6 7.8 Q12 6.8 14.4 7.8 L14.2 10.8 Q12 11.8 9.8 10.8 Z"; fill: wiz.skin; line: 0.8 }
+        Rectangle { x: 10.4; y: 8.4; width: 1.1; height: 1.1; radius: 0.55; color: root.ink }
+        Rectangle { x: 12.5; y: 8.4; width: 1.1; height: 1.1; radius: 0.55; color: root.ink }
+        GearPath { d: "M9.4 10.2 Q12 18.4 14.6 10.2 Q12 11.8 9.4 10.2 Z"; fill: root.paper; line: 0.8 }
+        // the hat: a wide brim and a crooked cone with a star
+        GearPath { d: "M6.4 7.6 Q12 5.6 17.6 7.6 Q12 9 6.4 7.6 Z"; fill: wiz.robe; line: 0.9 }
+        GearPath { d: "M8.4 7 Q10.6 3.4 11.6 0.4 Q12.8 1.4 15.4 6.8 Z"; fill: wiz.robe; line: 0.9 }
+        GearPath { d: "M12.4 3.2 l0.35 0.8 l0.85 0.1 l-0.6 0.55 l0.15 0.85 l-0.75 -0.45 l-0.75 0.45 l0.15 -0.85 l-0.6 -0.55 l0.85 -0.1 Z"; fill: root.gold; line: 0.4 }
+        // casting arm
+        GearPath {
+          d: "M15.4 12 Q18.4 " + (11.6 - wiz.lift) + " 20.4 " + (10.2 - wiz.lift) + " L21 " + (12.2 - wiz.lift) + " Q18.6 " + (14 - wiz.lift) + " 16 15 Z"
+          fill: wiz.robeLight; line: 1
+        }
+        Rectangle { x: 21.4 - 1.4; y: 11.2 - wiz.lift - 1.4; width: 2.8; height: 2.8; radius: 1.4; color: wiz.skin; border.color: root.ink; border.width: 0.6 }
+        Rectangle {
+          visible: root.lit
+          x: 22.8 - width / 2; y: 10.2 - wiz.lift - height / 2
+          width: 3.6 + root.pulse * 1.6; height: width; radius: width / 2
+          color: wiz.spell; opacity: 0.55 * root.pulse
+        }
+      }
+    }
+
+    // ================================================ priest (a caster, like the lich)
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "priest"
+      sourceComponent: Item {
+        id: priest
+        anchors.fill: parent
+        readonly property color skin: "#f2c2a0"
+        readonly property color spell: root.pal.bright_yellow || root.pal.yellow || "#ffd000"
+        readonly property real lift: root.lit ? 2.6 + Math.sin(root.time * 5) * 0.8 : 0
+
+        // crozier
+        GearPath { d: "M5.2 7 L3.6 22.6"; stroke: root.gold; line: 1.6 }
+        GearPath { d: "M5.2 7.2 Q4.6 3.4 7 3.2 Q9 3.4 8.4 5.6"; stroke: root.gold; line: 1.3 }
+        // white robe with a gold stole
+        GearPath { d: "M12 5.6 Q17 6 17.6 10 L20.2 21.6 Q12 23.2 3.8 21.6 L6.4 10 Q7 6 12 5.6 Z"; fill: root.paper }
+        GearPath { d: "M10.4 11.4 L9.6 21.8 M13.6 11.4 L14.4 21.8"; stroke: root.gold; line: 1.4 }
+        GearPath { d: "M12 14 L12 17.6 M10.6 15.2 L13.4 15.2"; stroke: root.gold; line: 0.9 }
+        // face
+        GearPath { d: "M9.6 7.8 Q12 6.8 14.4 7.8 L14.2 10.8 Q12 12.2 9.8 10.8 Z"; fill: priest.skin; line: 0.8 }
+        Rectangle { x: 10.4; y: 8.4; width: 1.1; height: 1.1; radius: 0.55; color: root.ink }
+        Rectangle { x: 12.5; y: 8.4; width: 1.1; height: 1.1; radius: 0.55; color: root.ink }
+        GearPath { d: "M11.2 10.4 Q12 11 12.8 10.4"; line: 0.6 }
+        // mitre with a gold cross
+        GearPath { d: "M9 7.8 L9.2 3.6 Q12 0.6 14.8 3.6 L15 7.8 Q12 7 9 7.8 Z"; fill: root.paper; line: 0.9 }
+        GearPath { d: "M12 2.4 L12 6.2 M10.8 3.8 L13.2 3.8"; stroke: root.gold; line: 0.9 }
+        // casting arm, gold light in the palm
+        GearPath {
+          d: "M15.4 12 Q18.4 " + (11.6 - priest.lift) + " 20.4 " + (10.2 - priest.lift) + " L21 " + (12.2 - priest.lift) + " Q18.6 " + (14 - priest.lift) + " 16 15 Z"
+          fill: root.paper; line: 1
+        }
+        Rectangle { x: 21.4 - 1.4; y: 11.2 - priest.lift - 1.4; width: 2.8; height: 2.8; radius: 1.4; color: priest.skin; border.color: root.ink; border.width: 0.6 }
+        Rectangle {
+          visible: root.lit
+          x: 22.8 - width / 2; y: 10.2 - priest.lift - height / 2
+          width: 3.8 + root.pulse * 1.8; height: width; radius: width / 2
+          color: priest.spell; opacity: 0.6 * root.pulse
+        }
+      }
+    }
+
     // =================================================================== sword
     Loader {
       anchors.fill: parent

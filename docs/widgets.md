@@ -60,15 +60,15 @@ past 90%. Preview a level with `omarchy-shell omarchy.agents previewUsage 0.8`
 | Middle click | next subscription |
 
 ### Media — `slime.media`
-A lich casting the music visualizer, then previous / play / next bubbles.
+A lich (or wizard, or priest) casting the music visualizer, then previous / play / next bubbles.
 Hidden when nothing is playing.
 
 | | |
 |---|---|
-| Hover the lich | track title and artist |
-| Left click the lich | command centre (Home, with the full player) |
-| Right click the lich | settings: visualizer on/off |
-| Scroll over the lich | previous / next track |
+| Hover the caster | a drip card: album art, title, artist, album, progress, and which player to follow (auto, or stick to one) |
+| Left click the caster | command centre (Home, with the full player) |
+| Right click the caster | settings: who casts the spell (lich, wizard, priest), visualizer on/off |
+| Scroll over the caster | previous / next track |
 
 ### Spacer — `slime.spacer`
 A gap in the bar holding plain ooze, a sagging lump, or any floating bit

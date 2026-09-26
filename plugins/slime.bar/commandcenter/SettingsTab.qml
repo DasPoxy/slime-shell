@@ -12,6 +12,42 @@ Item {
 
   implicitHeight: column.implicitHeight
 
+  // plugin id -> the name it goes by (same list the treasure chest reads)
+  property var pluginNames: ({})
+  Process {
+    running: true
+    command: ["omarchy-plugin-list", "--json"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var all
+        try { all = JSON.parse(text) } catch (e) { return }
+        var m = {}
+        for (var i = 0; i < all.length; i++) if (all[i].id) m[all[i].id] = String(all[i].name || all[i].id)
+        settings.pluginNames = m
+      }
+    }
+  }
+
+  // Every widget on the bar with a drip panel of its own (Slime's and any
+  // other plugin's: they all offer open()/close()/opened), one per plugin,
+  // named as the plugin names itself.
+  readonly property var panelWidgets: {
+    if (!bar) return []
+    var slots = bar.moduleSlots, seen = {}, out = []
+    var names = pluginNames
+    for (var i = 0; i < slots.length; i++) {
+      var sl = slots[i]
+      if (!sl || !sl.visible || sl.width <= 0 || seen[sl.moduleName]) continue
+      var it = sl.activeItem
+      if (!it || typeof it.open !== "function" || typeof it.close !== "function" || it.opened === undefined) continue
+      seen[sl.moduleName] = true
+      var name = names[sl.moduleName] || sl.moduleName
+      out.push({ id: sl.moduleName, name: String(name).replace(/^SlimeS-/, "") })
+    }
+    out.sort(function(a, b) { return a.name.localeCompare(b.name) })
+    return out
+  }
+
   // ---- updates (update.sh) ------------------------------------------------
   property var update: null        // last JSON from update.sh
   property bool updateBusy: false
@@ -223,6 +259,7 @@ Item {
       cc: settings.cc
       title: "Widgets"
       kind: "anvil"
+      CcHeading { cc: settings.cc; text: "SLIME WIDGET SETTINGS" }
       Flow {
         width: parent.width
         spacing: 6
@@ -252,6 +289,25 @@ Item {
                 if (prop === "open()") t.open()
                 else t[prop] = true
               })
+            }
+          }
+        }
+      }
+      CcHeading { cc: settings.cc; text: "WIDGET PANELS" }
+      Flow {
+        width: parent.width
+        spacing: 6
+        // each drips open that widget's own panel, as if it were clicked
+        Repeater {
+          model: settings.panelWidgets
+          CcButton {
+            required property var modelData
+            cc: settings.cc
+            text: modelData.name
+            onClicked: {
+              settings.bar.commandCenterOpen = false
+              var id = modelData.id
+              Qt.callLater(function() { settings.bar.summonBarWidget(id) })
             }
           }
         }

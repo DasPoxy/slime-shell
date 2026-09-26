@@ -51,8 +51,10 @@ PopupWindow {
   readonly property bool containsMouse: cardHover.hovered
   readonly property real screenW: popupScreen ? popupScreen.width : 0
   readonly property real screenH: popupScreen ? popupScreen.height : 0
-  readonly property real barW: anchorWindow ? anchorWindow.width : 0
-  readonly property real barH: anchorWindow ? anchorWindow.height : 0
+  // the bar's thickness (the skinned bar's window is far bigger than the bar
+  // itself: it holds the drips and the command centre)
+  readonly property real barW: slime ? bar.barSize : (anchorWindow ? anchorWindow.width : 0)
+  readonly property real barH: slime ? bar.barSize : (anchorWindow ? anchorWindow.height : 0)
   readonly property real availableCardWidth: screenW > 0
     ? Math.max(120, screenW - ((bar && (bar.position === "left" || bar.position === "right")) ? barW : 0) - root.margin * 2)
     : 0
@@ -111,7 +113,9 @@ PopupWindow {
       dripAnim.easing.type = open ? Easing.OutQuad : Easing.InQuad
       dripAnim.start()
     }
-    if (!bar) return
+    // a hover card is a passing peek: it mustn't close the command centre or
+    // another widget's panel
+    if (!bar || triggerMode === "hover") return
     if (open) bar.requestPopout(coordinatorKey)
     else if (bar.activePopout === coordinatorKey) bar.releasePopout(coordinatorKey)
   }
@@ -161,11 +165,13 @@ PopupWindow {
         var cx = 0;
         var cy = 0;
         if (root.bar.position === "top" || root.bar.position === "bottom") {
+          // measured from the bar itself, not its window (the skinned bar's
+          // window reaches far past the bar)
           cx = window.width / 2 - popupWidth / 2
-          cy = root.bar.position === "bottom" ? -popupHeight - root.margin : window.height + root.margin
+          cy = root.bar.position === "bottom" ? window.height - root.barH - popupHeight - root.margin : root.barH + root.margin
           cx = Math.max(root.margin, Math.min(cx, window.width - popupWidth - root.margin))
         } else {
-          cx = root.bar.position === "left" ? window.width + root.margin : -popupWidth - root.margin
+          cx = root.bar.position === "left" ? root.barW + root.margin : window.width - root.barW - popupWidth - root.margin
           cy = window.height / 2 - popupHeight / 2
           cy = Math.max(root.margin, Math.min(cy, window.height - popupHeight - root.margin))
         }
