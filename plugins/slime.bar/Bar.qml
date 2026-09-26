@@ -414,7 +414,11 @@ Item {
 
   function bindPluginBarApi(api) {
     if (!api) return
-    api.foreground = Qt.binding(function() { return root.foreground })
+    // Third-party widgets draw their own (dark, stock) popup panels in
+    // `foreground`; on Slime that's the ink meant for text on the goo, which
+    // vanishes on those panels. Give them the theme's normal text colour and
+    // keep the ink in `barForeground`, which is what bar icons use.
+    api.foreground = Qt.binding(function() { return root.slimeSkin ? Color.foreground : root.foreground })
     api.barForeground = Qt.binding(function() { return root.barForeground })
     api.background = Qt.binding(function() { return root.background })
     api.urgent = Qt.binding(function() { return root.urgent })
