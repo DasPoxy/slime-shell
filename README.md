@@ -239,3 +239,8 @@ Built on Omarchy's shell plugins (MIT). Fonts: Chewy (Apache-2.0); Rubik Wet
 Paint, Rubik Bubbles, Sniglet, MedievalSharp, IM Fell English, Creepster, and
 Slime Honey Drip — Lobster with drips added by `tools/make-drip-font.py`
 (SIL OFL). Licences in `plugins/slime.bar/fonts/`.
+
+## Licence
+
+MIT — see [LICENSE](LICENSE), which also carries Omarchy's MIT notice for the
+parts derived from its plugins. Fonts keep their own licences.
