@@ -84,6 +84,7 @@ omarchy-shell slime-shell shape classic|pills|islands|notch
 omarchy-shell slime-shell shading 0|1|2|3        # soft, anime, manga, print
 omarchy-shell slime-shell drip drip|honey|rain|tar|frozen
 omarchy-shell slime-shell layer above|behind     # draw over or behind windows
+omarchy-shell slime-shell toggleLayer           # flip between the two
 omarchy-shell slime-shell color <theme role>     # accent, green, cyan, …
 omarchy-shell slime-shell fps <n>                # 0 pauses the animation
 omarchy-shell slime-launcher apps | icons
