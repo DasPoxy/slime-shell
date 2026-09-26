@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Slime Shell start-up apps (Settings > Start-Up tab).
+#
+#   slime-startup           launch every enabled app in startup.json, moving
+#                           each new window to its workspace (silently)
+#   slime-startup install   add the fenced hook to ~/.config/hypr/autostart.lua
+#   slime-startup status    print whether the hook is installed (yes/no)
+#
+# startup.json: [{"id": "<desktop id>", "name": "...", "workspace": 0|1..10,
+#                 "enabled": true}]  — workspace 0 means "wherever it opens".
+set -uo pipefail
+
+config="$HOME/.config/omarchy/slime-shell/startup.json"
+autostart="$HOME/.config/hypr/autostart.lua"
+self="$HOME/.config/omarchy/plugins/slime.bar/commandcenter/slime-startup"
+begin="-- >>> slime-shell startup >>>"
+end="-- <<< slime-shell startup <<<"
+
+case "${1:-run}" in
+  status)
+    grep -qF "$begin" "$autostart" 2>/dev/null && echo yes || echo no
+    exit 0
+    ;;
+  install)
+    grep -qF "$begin" "$autostart" 2>/dev/null && exit 0
+    cp "$autostart" "$autostart.bak.$(date +%s)" 2>/dev/null
+    {
+      echo ""
+      echo "$begin"
+      echo "-- Written by Slime Shell (Settings > Start-Up). Apps and workspaces live in"
+      echo "-- ~/.config/omarchy/slime-shell/startup.json; remove this block to disable."
+      echo "o.exec_on_start(\"$self\")"
+      echo "$end"
+    } >> "$autostart"
+    exit 0
+    ;;
+esac
+
+[[ -f $config ]] || exit 0
+
+addresses() { hyprctl clients -j 2>/dev/null | jq -r '.[].address' | sort; }
+
+jq -c '.[] | select(.enabled != false)' "$config" | while read -r app; do
+  id=$(jq -r '.id' <<<"$app")
+  ws=$(jq -r '.workspace // 0' <<<"$app")
+  [[ -n $id && $id != null ]] || continue
+  before=$(addresses)
+  uwsm-app -- gtk-launch "$id.desktop" >/dev/null 2>&1 &
+  (( ws > 0 )) || continue
+  # wait (up to 25 s) for the app's first new window, then move it quietly
+  for _ in $(seq 100); do
+    sleep 0.25
+    new=$(comm -13 <(echo "$before") <(addresses) | head -1)
+    if [[ -n $new ]]; then
+      hyprctl dispatch "hl.dsp.window.move({ workspace = \"$ws\", follow = false, window = \"address:$new\" })" >/dev/null
+      break
+    fi
+  done
+done

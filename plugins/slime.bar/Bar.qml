@@ -358,7 +358,7 @@ Item {
     // (shh) summon the easter egg now
     function egg(): void { root.startEgg() }
     function layer(where: string): void { root.slimeLayer = where === "behind" ? "behind" : "above" }
-    // Open the command centre on a tab: home, system, wallpapers, tasks, settings.
+    // Open the command centre on a tab: home, system, wallpapers, tasks, startup, settings.
     function tab(name: string): void { root.ccTab = name; root.commandCenterOpen = root.slimeSkin }
     // Keybind-friendly: open on that tab, or close if it's already showing it.
     function toggleTab(name: string): void {

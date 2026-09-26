@@ -32,6 +32,7 @@ Item {
     ["system", "shield", "System", "SystemTab.qml"],
     ["wallpapers", "painting", "Wallpapers", "WallpapersTab.qml"],
     ["tasks", "scroll", "Tasks", "TasksTab.qml"],
+    ["startup", "potion", "Start-Up", "StartupTab.qml"],
     ["settings", "anvil", "Settings", "SettingsTab.qml"]
   ]
   readonly property real sidebarWidth: 128
