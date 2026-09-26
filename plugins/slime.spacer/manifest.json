@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "slime.spacer",
+  "name": "SlimeS-Spacer",
+  "version": "1.0.0",
+  "author": "Slime Shell",
+  "description": "A gap in the bar: plain ooze, a sagging lump, or a floating eyeball",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Spacer.qml"
+  },
+  "barWidget": {
+    "displayName": "SlimeS-Spacer",
+    "description": "A gap in the bar: plain ooze, a sagging lump, or a floating eyeball",
+    "category": "Layout",
+    "allowMultiple": true,
+    "settingsForm": "spacerSettings"
+  }
+}

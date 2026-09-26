@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "slime.media",
+  "name": "SlimeS-Media",
+  "version": "1.0.0",
+  "author": "Slime Shell",
+  "description": "Now playing: album-art record, scrolling title, controls and an ooze visualizer",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "SlimeS-Media",
+    "description": "Now playing: album-art record, scrolling title, controls and an ooze visualizer",
+    "category": "Media",
+    "allowMultiple": false
+  }
+}

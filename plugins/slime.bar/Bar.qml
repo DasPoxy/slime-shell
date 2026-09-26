@@ -1544,6 +1544,7 @@ Item {
       for (var i = 0; i < slots.length && out.length < 16; i++) {
         var slot = slots[i]
         if (!slot || !slot.visible || slot.width <= 0 || !root.sameWindow(root.slotWindow(slot), barWindow)) continue
+        if (slot.activeItem && slot.activeItem.slimeNoBulb === true) continue   // e.g. plain spacers
         var p = slot.mapToItem(barWindow.contentItem, 0, 0)
         out.push(Qt.vector4d(p.x, Math.round((root.barSize - h) / 2), slot.width, h))
         if (slot.moduleName === "slime.clock-weather") ccCenterX = p.x + slot.width / 2

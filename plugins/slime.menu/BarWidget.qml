@@ -4,9 +4,9 @@ import qs.Commons
 import qs.Ui
 import "../slime.bar/ui"
 
-// Slime Shell launcher button. Left click opens the Omarchy menu as before,
-// middle click opens a terminal (the stock right-click action), and right
-// click drips open a picker of themed icons. The choice is stored in this
+// Slime Shell launcher button. Left click drips open the Slime app launcher
+// (AppDrawer.qml; it links to the Omarchy menu), middle click opens a
+// terminal, and right click drips open a picker of themed icons. The choice is stored in this
 // widget's shell.json entry as `icon`. Off the slime bar it shows the stock
 // Omarchy glyph.
 BarWidget {
@@ -40,11 +40,16 @@ BarWidget {
   readonly property bool showGear: slime && current[2] === "gear"
 
   property bool pickerOpen: false
+  property bool appsOpen: false
+  onAppsOpenChanged: if (appsOpen) pickerOpen = false
+  onPickerOpenChanged: if (pickerOpen) appsOpen = false
   IpcHandler {
     target: "slime-launcher"
     function icons(): void { root.pickerOpen = root.slime && !root.pickerOpen }
+    // the app launcher (bind to e.g. Super+Space)
+    function apps(): void { root.appsOpen = root.slime && !root.appsOpen }
   }
-  function close() { pickerOpen = false }
+  function close() { pickerOpen = false; appsOpen = false }
 
   function pickIcon(id) {
     var entry = { id: root.moduleName }
@@ -73,6 +78,7 @@ BarWidget {
       if (!root.bar) return
       if (b === Qt.RightButton && root.slime) root.pickerOpen = !root.pickerOpen
       else if (b === Qt.RightButton || b === Qt.MiddleButton) root.bar.run("xdg-terminal-exec")
+      else if (root.slime) root.appsOpen = !root.appsOpen
       else root.bar.run("omarchy-shell shell toggle omarchy.menu '{\"menu\":\"root\"}'")
     }
 
@@ -94,13 +100,21 @@ BarWidget {
       anchors.centerIn: parent
       size: 26
       variant: root.showMonster ? root.current[3] : 0
-      mood: hover.hovered || root.pickerOpen ? "emote" : "idle"
+      mood: hover.hovered || root.pickerOpen || root.appsOpen ? "emote" : "idle"
       time: root.slime ? root.bar.animTime : 0
       body: root.slime ? root.bar.monsterBody : "transparent"
       ink: root.slime ? root.bar.slimeInk : "black"
       eye: root.slime ? root.bar.paperColor : "white"
       blush: root.slime ? root.bar.monsterBlush : "pink"
     }
+  }
+
+  AppDrawer {
+    anchorItem: button
+    owner: root
+    bar: root.bar
+    widget: root
+    open: root.appsOpen
   }
 
   SlimePopupCard {

@@ -82,6 +82,20 @@ Item {
       property color paperColor: bar.paperColor
     }
 
+    // ---- the music, as goo rising inside the monster -------------------------
+    SlimeCava {
+      x: 16
+      y: 34
+      width: monster.width - 32
+      height: 64
+      active: monster.playing
+      bars: 24
+      gap: 3
+      fill: Qt.rgba(monster.ink.r, monster.ink.g, monster.ink.b, 0.16)
+      opacity: monster.playing ? 1 : 0
+      Behavior on opacity { NumberAnimation { duration: 500 } }
+    }
+
     // ---- debris adrift in the goo, kept to the margins -----------------------
     SlimeDebris {
       anchors.fill: parent
