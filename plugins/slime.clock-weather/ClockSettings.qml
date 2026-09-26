@@ -172,7 +172,7 @@ SlimeKeyboardPanel {
     }
 
     Heading { text: "SIZE  ·  " + panel.widget.fontSize + "px" }
-    PanelSlider {
+    SlimePanelSlider {
       width: parent.width
       bar: panel.bar
       minimum: 11

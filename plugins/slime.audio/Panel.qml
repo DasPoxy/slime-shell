@@ -841,7 +841,7 @@ Panel {
               foreground: root.bar.foreground
               outline: true
 
-              PanelSlider {
+              SlimePanelSlider {
                 id: outputSlider
                 bar: root.bar
                 anchors.fill: parent
@@ -936,7 +936,7 @@ Panel {
                 anchors.rightMargin: Style.space(6)
                 spacing: Style.space(5)
 
-                PanelSlider {
+                SlimePanelSlider {
                   id: inputSlider
                   bar: root.bar
                   width: parent.width
@@ -1231,7 +1231,7 @@ Panel {
         }
       }
 
-      PanelSlider {
+      SlimePanelSlider {
         bar: root.bar
         width: parent.width
         minimum: 0

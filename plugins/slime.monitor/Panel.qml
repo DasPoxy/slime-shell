@@ -641,7 +641,7 @@ Panel {
               foreground: root.bar.foreground
               outline: true
 
-              PanelSlider {
+              SlimePanelSlider {
                 id: brightnessSlider
                 bar: root.bar
                 anchors.fill: parent
@@ -716,7 +716,7 @@ Panel {
               foreground: root.bar.foreground
               outline: true
 
-              PanelSlider {
+              SlimePanelSlider {
                 id: textSizeSlider
                 bar: root.bar
                 anchors.fill: parent
