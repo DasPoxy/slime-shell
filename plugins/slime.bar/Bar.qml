@@ -76,7 +76,13 @@ Item {
   // Resolves through fontconfig at paint time (Style.font.family defaults
   // to "monospace"), so changing the system font (via `omarchy-font-set`)
   // updates the bar without a reload.
-  property string fontFamily: Style.font.family
+  property string fontFamily: slimeSkin && fontStyle === "chewy" && chewyFont.status === FontLoader.Ready ? chewyFont.name
+    : slimeSkin && fontStyle === "wetpaint" && wetPaintFont.status === FontLoader.Ready ? wetPaintFont.name
+    : Style.font.family
+  // Slime Shell font: "system" (fontconfig monospace), or a bundled slime face.
+  property string fontStyle: "system"
+  FontLoader { id: chewyFont; source: Qt.resolvedUrl("fonts/Chewy-Regular.ttf") }
+  FontLoader { id: wetPaintFont; source: Qt.resolvedUrl("fonts/RubikWetPaint-Regular.ttf") }
   // Bound to the central Color singleton so the bar tracks shell.toml's
   // [bar] section. Property names kept for the rest of this file's bindings.
   property color themeForeground: slimeSkin ? slimeInk : Color.bar.text
@@ -174,12 +180,14 @@ Item {
   property real dripAmount: 1.0
   property int shadingStyle: 3       // 0 soft, 1 anime, 2 manga, 3 print
   property string slimeLayer: "above" // "above" windows, or "behind" them
+  // Clock order everywhere (bar widget and command centre): time before date.
+  property bool clockTimeFirst: false
 
   // ---- Skin settings persistence -----------------------------------------
   // Saved to ~/.config/omarchy/slime-shell/skin.json, loaded on start and
   // written (debounced) whenever one of these changes.
   readonly property var skinKeys: ["slimeRole", "gradientRole", "shadingStyle", "slimeFps", "dripAmount",
-    "slimeLayer", "ccTab", "ccSections"]
+    "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst"]
   property bool skinLoaded: false
   // A layer change made while the bar surface is still being set up is lost,
   // so "behind" only takes effect once the bar has been mapped for a moment.
@@ -218,6 +226,8 @@ Item {
   onSlimeFpsChanged: skinSaveTimer.restart()
   onDripAmountChanged: skinSaveTimer.restart()
   onSlimeLayerChanged: skinSaveTimer.restart()
+  onFontStyleChanged: skinSaveTimer.restart()
+  onClockTimeFirstChanged: skinSaveTimer.restart()
   onCcTabChanged: skinSaveTimer.restart()
   onCcSectionsChanged: skinSaveTimer.restart()
   property bool commandCenterOpen: false

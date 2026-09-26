@@ -32,6 +32,8 @@ layout(std140, binding = 0) uniform buf {
     float clipTop;
     float poolDepth;
     vec2 origin;      // this window's top-left in bar coordinates (popups)
+    float blobMode;   // 1 = no bar: just a free-standing blob in panelRect
+                      //     (x, y, w, h) with drips off its bottom edge
     vec4 bulb0;       // floating widgets: x, y, width, height (width 0 = unused)
     vec4 bulb1;
     vec4 bulb2;
@@ -164,7 +166,33 @@ vec2 bulb(vec2 p, vec4 b, float seed) {
     return vec2(d, hl);
 }
 
+// A free-standing blob (blobMode): a gooey dome in panelRect that wobbles a
+// little and drips from its underside.
+vec2 mapBlob(vec2 p) {
+    vec2 c = panelRect.xy + panelRect.zw * 0.5;
+    vec2 hs = panelRect.zw * 0.5;
+    float wob = 2.0 * sin(p.x * 0.05 + time * 1.3) + 1.5 * sin(p.y * 0.07 - time * 0.9);
+    float d = sdRoundBox(p, c, hs, min(hs.y, 46.0)) + wob * 0.4;
+    // heavier bottom: goo pools downward
+    d = smin(d, sdEllipse(p, vec2(c.x, c.y + hs.y * 0.45), vec2(hs.x * 0.85, hs.y * 0.6)), 10.0);
+
+    float hl = 1e5;
+    float bottom = panelRect.y + panelRect.w - 6.0;
+    float ci = floor(p.x / CELL);
+    for (int k = -1; k <= 1; k++) {
+        float i = ci + float(k);
+        if (hash(i * 5.3 + 71.0) < 0.35) continue;
+        float dx = (i + 0.5 + (hash(i + 40.0) - 0.5) * 0.6) * CELL;
+        if (abs(dx - c.x) > hs.x - 30.0) continue;
+        vec2 dr = drip(p, dx, bottom, i + 300.0, 0.8);
+        d = smin(d, dr.x, 9.0);
+        hl = min(hl, dr.y);
+    }
+    return vec2(d, hl);
+}
+
 vec2 mapScene(vec2 p) {
+    if (blobMode > 0.5) return mapBlob(p);
     float d = p.y - barEdge(p.x);
     float hl = 1e5;
     float ci = floor(p.x / CELL);

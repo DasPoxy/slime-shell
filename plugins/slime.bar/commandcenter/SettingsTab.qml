@@ -75,6 +75,24 @@ Item {
 
     CcSection {
       cc: settings.cc
+      title: "Font & clock"
+      kind: "scroll"
+      ChoiceRow {
+        title: "FONT"
+        options: [["system", "system"], ["Chewy (blobby)", "chewy"], ["Wet Paint (drippy)", "wetpaint"]]
+        current: settings.bar.fontStyle
+        onPicked: value => settings.bar.fontStyle = value
+      }
+      ChoiceRow {
+        title: "CLOCK ORDER"
+        options: [["date · time", false], ["time · date", true]]
+        current: settings.bar.clockTimeFirst
+        onPicked: value => settings.bar.clockTimeFirst = value
+      }
+    }
+
+    CcSection {
+      cc: settings.cc
       title: "Motion"
       kind: "hourglass"
       ChoiceRow {

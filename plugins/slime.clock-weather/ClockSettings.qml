@@ -109,6 +109,22 @@ SlimeKeyboardPanel {
       }
     }
 
+    Heading { text: "ORDER" }
+    Flow {
+      width: parent.width
+      spacing: 6
+      Choice {
+        label: "Date · time"
+        selected: !!panel.bar && !panel.bar.clockTimeFirst
+        onPicked: if (panel.bar) panel.bar.clockTimeFirst = false
+      }
+      Choice {
+        label: "Time · date"
+        selected: !!panel.bar && panel.bar.clockTimeFirst
+        onPicked: if (panel.bar) panel.bar.clockTimeFirst = true
+      }
+    }
+
     Heading { text: "DATE" }
     Flow {
       width: parent.width

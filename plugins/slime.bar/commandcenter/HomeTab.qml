@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Io
 import Quickshell.Bluetooth
@@ -170,9 +171,11 @@ Item {
     width: home.colWidth
     spacing: 12
 
-    // clock: click to swap 12h / 24h (shared with the bar clock)
+    // clock: click the time to swap 12h / 24h; date and time order follows
+    // the shared clock-order setting (Settings > Font & clock)
     Row {
-      spacing: 14
+      spacing: 8
+      layoutDirection: home.cc.bar.clockTimeFirst ? Qt.LeftToRight : Qt.RightToLeft
       Text {
         text: home.hour24 ? Qt.formatTime(clock.date, "HH:mm") : Qt.formatTime(clock.date, "h:mm AP").replace(/\s*[AP]M$/i, "")
         color: home.cc.ink
@@ -187,8 +190,9 @@ Item {
       }
       Column {
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 2
+        spacing: 0
         Text {
+          anchors.right: home.cc.bar.clockTimeFirst ? undefined : parent.right
           text: Qt.formatDate(clock.date, "dddd") + (home.hour24 ? "" : "  " + Qt.formatTime(clock.date, "AP"))
           color: home.cc.ink
           font.family: home.cc.font
@@ -196,6 +200,7 @@ Item {
           font.bold: true
         }
         Text {
+          anchors.right: home.cc.bar.clockTimeFirst ? undefined : parent.right
           text: Qt.formatDate(clock.date, "d MMMM yyyy")
           color: home.cc.ink
           font.family: home.cc.font
@@ -205,23 +210,69 @@ Item {
       }
     }
 
-    // weather
-    Rectangle {
+    // weather: a cartoon cloud in the gear style, bobbing in the goo
+    Item {
+      id: cloud
       visible: !!home.weather && home.weather.reportTempNum !== ""
       width: home.colWidth
-      height: weatherColumn.implicitHeight + 20
-      radius: 16
-      color: home.cc.wash
+      height: weatherColumn.implicitHeight + 46
+      readonly property real t: home.cc.bar.animTime
+      readonly property string icon: home.weather ? home.weather.label : ""
+      // weather glyphs from the Omarchy panel: nerd-font sun / moon / rain / snow
+      readonly property bool wet: /[\uf73d\ue318\ue319\ue31a\ue31b\uf740\uf741\ue308]/.test(icon)
+      transform: Translate { y: Math.sin(cloud.t * 0.9) * 1.5 }
+
+      Shape {
+        anchors.fill: parent
+        preferredRendererType: Shape.CurveRenderer
+        ShapePath {   // the cloud: bumpy top, flat-ish rounded base
+          fillColor: home.cc.bar.monsterBody
+          strokeColor: home.cc.ink
+          strokeWidth: 2
+          joinStyle: ShapePath.RoundJoin
+          PathSvg {
+            path: {
+              var w = cloud.width, h = cloud.height
+              return "M 18 " + (h - 4)
+                + " Q 2 " + (h - 4) + " 4 " + (h - 22)
+                + " Q 4 34 26 30"
+                + " Q 30 8 58 12"
+                + " Q " + (w * 0.3) + " -4 " + (w * 0.46) + " 12"
+                + " Q " + (w * 0.62) + " 0 " + (w * 0.72) + " 18"
+                + " Q " + (w - 18) + " 12 " + (w - 16) + " 36"
+                + " Q " + (w - 2) + " 44 " + (w - 4) + " " + (h - 22)
+                + " Q " + (w - 4) + " " + (h - 4) + " " + (w - 20) + " " + (h - 4) + " Z"
+            }
+          }
+        }
+        ShapePath {   // gloss
+          fillColor: Qt.rgba(1, 1, 1, 0.55)
+          strokeColor: "transparent"
+          PathSvg { path: "M 36 22 Q 44 13 58 16 Q 46 18 40 26 Z" }
+        }
+      }
+      // raindrops under a wet cloud
+      Repeater {
+        model: cloud.wet ? 4 : 0
+        Rectangle {
+          required property int index
+          x: cloud.width * (0.25 + index * 0.16)
+          y: cloud.height - 2 + ((cloud.t * 30 + index * 11) % 14)
+          width: 3; height: 7; radius: 1.5
+          color: home.cc.ink
+          opacity: 0.6
+        }
+      }
 
       Column {
         id: weatherColumn
-        x: 12; y: 10
-        width: parent.width - 24
+        x: 18; y: 28
+        width: parent.width - 36
         spacing: 8
         Row {
           spacing: 12
           Text {
-            text: home.weather ? home.weather.label : ""
+            text: cloud.icon
             color: home.cc.ink
             font.family: home.cc.font
             font.pixelSize: 34
@@ -278,42 +329,43 @@ Item {
     CcHeading { cc: home.cc; text: "SOUND" }
     Repeater {
       model: [
-        { node: home.sink, icon: "\uf028", mutedIcon: "\uf026" },
-        { node: home.source, icon: "\uf130", mutedIcon: "\uf131" }
+        { node: home.sink, kind: "horn" },
+        { node: home.source, kind: "trumpet" }
       ]
       Row {
+        id: soundRow
         required property var modelData
+        required property int index
         readonly property var audio: modelData.node ? modelData.node.audio : null
         visible: audio !== null
         spacing: 10
-        Text {
-          width: 22
+        // the bar's own gear: war horn for output, ear trumpet for the mic
+        CcGearButton {
           anchors.verticalCenter: parent.verticalCenter
-          text: parent.audio && parent.audio.muted ? parent.modelData.mutedIcon : parent.modelData.icon
-          color: home.cc.ink
-          font.family: home.cc.font
-          font.pixelSize: 16
-          MouseArea {
-            anchors.fill: parent
-            anchors.margins: -4
-            cursorShape: Qt.PointingHandCursor
-            onClicked: parent.parent.audio.muted = !parent.parent.audio.muted
-          }
+          cc: home.cc
+          kind: soundRow.modelData.kind
+          labelSide: "none"
+          size: 28
+          phase: soundRow.index * 2
+          muted: !!soundRow.audio && soundRow.audio.muted
+          level: soundRow.audio ? soundRow.audio.volume : 0
+          lit: !!soundRow.audio && !soundRow.audio.muted
+          opacity: lit ? 1 : 0.6
+          onClicked: if (soundRow.audio) soundRow.audio.muted = !soundRow.audio.muted
         }
-        PanelSlider {
+        SlimeSlider {
           anchors.verticalCenter: parent.verticalCenter
-          width: home.colWidth - 22 - 50 - 20
-          bar: home.cc.bar
-          minimum: 0
+          width: home.colWidth - 28 - 50 - 20
+          cc: home.cc
           maximum: 1
-          value: parent.audio ? parent.audio.volume : 0
-          onMoved: v => { if (parent.audio) parent.audio.volume = v }
+          value: soundRow.audio ? soundRow.audio.volume : 0
+          onMoved: v => { if (soundRow.audio) soundRow.audio.volume = v }
         }
         Text {
           width: 50
           anchors.verticalCenter: parent.verticalCenter
           horizontalAlignment: Text.AlignRight
-          text: parent.audio ? Math.round(parent.audio.volume * 100) + "%" : ""
+          text: soundRow.audio ? Math.round(soundRow.audio.volume * 100) + "%" : ""
           color: home.cc.ink
           font.family: home.cc.font
           font.pixelSize: 12

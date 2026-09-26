@@ -23,7 +23,9 @@ BarWidget {
   readonly property int fontWeight: setting("fontWeight", Font.Black)
   readonly property string timeText: {
     var time = Qt.formatTime(clock.date, hour24 ? "HH:mm" : "h:mm AP")
-    return datePattern === "" ? time : Qt.formatDate(clock.date, datePattern) + "   " + time
+    if (datePattern === "") return time
+    var date = Qt.formatDate(clock.date, datePattern)
+    return root.bar && root.bar.clockTimeFirst ? time + "  " + date : date + "  " + time
   }
 
   function saveSetting(key, value) {

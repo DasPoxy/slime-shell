@@ -21,7 +21,7 @@ Item {
   readonly property color ink: cc.ink
   readonly property color paper: cc.paper
 
-  implicitHeight: 168
+  implicitHeight: 180
 
   function clockText(seconds) {
     seconds = Math.max(0, Math.floor(seconds || 0))
@@ -36,41 +36,91 @@ Item {
     anchors.fill: parent
     transform: Scale { origin.x: monster.width / 2; origin.y: monster.height; yScale: 1 + monster.breathe; xScale: 1 - monster.breathe * 0.5 }
 
-    // ---- body -------------------------------------------------------------
-    Shape {
-      anchors.fill: parent
-      preferredRendererType: Shape.CurveRenderer
-      ShapePath {
-        fillColor: monster.body
-        strokeColor: monster.ink
-        strokeWidth: 2
-        joinStyle: ShapePath.RoundJoin
-        PathSvg {
-          path: {
-            var w = monster.width, h = monster.height - 10
-            var d = "M " + (0.04 * w) + " " + (0.86 * h)
-              + " C " + (-0.01 * w) + " " + (0.4 * h) + " " + (0.1 * w) + " " + (0.04 * h) + " " + (0.5 * w) + " " + (0.04 * h)
-              + " C " + (0.9 * w) + " " + (0.04 * h) + " " + (1.01 * w) + " " + (0.4 * h) + " " + (0.96 * w) + " " + (0.86 * h)
-            // drippy underside: bumps with a few longer drips
-            var feet = [[0.86, 1.0], [0.72, 1.12], [0.58, 0.98], [0.42, 1.1], [0.27, 1.0], [0.14, 1.06]]
-            var x = 0.96
-            for (var i = 0; i < feet.length; i++) {
-              var fx = feet[i][0], fy = feet[i][1]
-              d += " Q " + ((x + fx) / 2 * w) + " " + (fy * h + 4) + " " + (fx * w) + " " + (0.9 * h)
-              x = fx
-            }
-            return d + " Q " + (0.08 * w) + " " + (0.96 * h) + " " + (0.04 * w) + " " + (0.86 * h) + " Z"
+    // ---- body: the bar's own slime shader as a free-standing blob -----------
+    // Same shading style as the bar (print/anime/manga/soft), with the
+    // gradient flipped so the monster stands out from the ooze it sits in.
+    ShaderEffect {
+      x: -20
+      y: -10
+      width: monster.width + 40
+      height: monster.height + 90
+      fragmentShader: Qt.resolvedUrl("../shaders/slime.frag.qsb")
+
+      readonly property var bar: monster.cc.bar
+      property real blobMode: 1
+      property real time: bar.animTime
+      property real barHeight: 10
+      property real openProgress: 1
+      property real dripAmount: bar.dripAmount
+      property real shadingStyle: bar.shadingStyle
+      property vector2d resolution: Qt.vector2d(width, height)
+      property vector4d panelRect: Qt.vector4d(20, 10, monster.width, monster.height - 4)
+      property color slimeColor: bar.slimeColor2
+      property color slimeColor2: bar.slimeColor
+      property color paperColor: bar.paperColor
+    }
+
+    // ---- debris adrift in the goo: spare eyes, bones, a tooth, bubbles -------
+    // Kept to the margins and faint enough that the track text stays clear.
+    Repeater {
+      model: [
+        { kind: "eye", x: 0.9, y: 0.2, s: 12, sp: 0.5 },
+        { kind: "bone", x: 0.78, y: 0.08, s: 16, sp: 0.35 },
+        { kind: "eye", x: 0.06, y: 0.62, s: 9, sp: 0.7 },
+        { kind: "tooth", x: 0.93, y: 0.56, s: 9, sp: 0.6 },
+        { kind: "bubble", x: 0.52, y: 0.06, s: 7, sp: 0.9 },
+        { kind: "bubble", x: 0.66, y: 0.58, s: 5, sp: 1.2 },
+        { kind: "eye", x: 0.42, y: 0.58, s: 7, sp: 0.8 },
+        { kind: "bone", x: 0.2, y: 0.9, s: 13, sp: 0.45 }
+      ]
+      Item {
+        id: bit
+        required property var modelData
+        required property int index
+        readonly property real drift: monster.t * modelData.sp + index * 1.9
+        width: modelData.s * 1.5
+        height: modelData.s * 1.5
+        x: modelData.x * monster.width - width / 2 + Math.sin(drift) * 5
+        y: modelData.y * monster.height - height / 2 + Math.cos(drift * 0.8) * 4
+        rotation: Math.sin(drift * 0.6) * 40
+        opacity: 0.8
+
+        // spare eyeball, looking somewhere else
+        Rectangle {
+          visible: bit.modelData.kind === "eye"
+          anchors.fill: parent
+          radius: width / 2
+          color: monster.paper
+          border.color: monster.ink
+          border.width: 1
+          Rectangle {
+            width: parent.width * 0.45; height: width; radius: width / 2
+            x: parent.width * 0.3 + Math.sin(bit.drift * 1.7) * parent.width * 0.15
+            y: parent.height * 0.28
+            color: monster.ink
           }
         }
-      }
-      ShapePath {   // gloss
-        fillColor: Qt.rgba(1, 1, 1, 0.5)
-        strokeColor: "transparent"
-        PathSvg {
-          path: {
-            var w = monster.width, h = monster.height
-            return "M " + (0.1 * w) + " " + (0.42 * h) + " Q " + (0.12 * w) + " " + (0.12 * h) + " " + (0.34 * w) + " " + (0.08 * h)
-              + " Q " + (0.16 * w) + " " + (0.18 * h) + " " + (0.13 * w) + " " + (0.42 * h) + " Z"
+        Shape {
+          visible: bit.modelData.kind !== "eye"
+          anchors.fill: parent
+          preferredRendererType: Shape.CurveRenderer
+          ShapePath {
+            fillColor: bit.modelData.kind === "bubble" ? Qt.rgba(1, 1, 1, 0.35) : monster.paper
+            strokeColor: monster.ink
+            strokeWidth: 1
+            joinStyle: ShapePath.RoundJoin
+            PathSvg {
+              path: {
+                var s = bit.width
+                if (bit.modelData.kind === "bone")
+                  return "M " + s * 0.2 + " " + s * 0.42 + " L " + s * 0.8 + " " + s * 0.42 + " L " + s * 0.8 + " " + s * 0.58 + " L " + s * 0.2 + " " + s * 0.58 + " Z"
+                    + " M " + s * 0.12 + " " + s * 0.5 + " m -" + s * 0.11 + " 0 a " + s * 0.11 + " " + s * 0.11 + " 0 1 0 " + s * 0.22 + " 0 a " + s * 0.11 + " " + s * 0.11 + " 0 1 0 -" + s * 0.22 + " 0"
+                    + " M " + s * 0.88 + " " + s * 0.5 + " m -" + s * 0.11 + " 0 a " + s * 0.11 + " " + s * 0.11 + " 0 1 0 " + s * 0.22 + " 0 a " + s * 0.11 + " " + s * 0.11 + " 0 1 0 -" + s * 0.22 + " 0"
+                if (bit.modelData.kind === "tooth")
+                  return "M " + s * 0.15 + " " + s * 0.1 + " L " + s * 0.85 + " " + s * 0.1 + " L " + s * 0.5 + " " + s * 0.95 + " Z"
+                return "M 0 " + s / 2 + " a " + s / 2 + " " + s / 2 + " 0 1 0 " + s + " 0 a " + s / 2 + " " + s / 2 + " 0 1 0 -" + s + " 0"
+              }
+            }
           }
         }
       }
@@ -172,7 +222,7 @@ Item {
     Item {
       id: mouth
       x: 26
-      y: 104
+      y: 98
       width: monster.width - 52
       height: 26
 
