@@ -8,7 +8,7 @@ import QtQuick.Shapes
 Item {
   id: root
 
-  property string kind: "gnome"      // gnome, goblin, skeleton, knight, wizard, priest
+  property string kind: "gnome"      // gnome, goblin, skeleton, knight, wizard, priest, bard, rogue, orc
   property real size: 24
   property real time: 0
   property color ink: "black"
@@ -22,8 +22,12 @@ Item {
   readonly property color gold: pal.yellow || "#f5c518"
   readonly property color purple: pal.magenta || "#8a4dff"
   readonly property color steel: "#aeb6bf"
-  readonly property color skin: kind === "goblin" ? Qt.darker(green, 1.15) : kind === "skeleton" ? paper : kind === "knight" ? steel : "#f2c2a0"
-  readonly property var bodyFill: ({ gnome: "#3f74ff", goblin: "#7a5230", skeleton: paper, knight: steel, wizard: purple, priest: paper })
+  readonly property color leather: "#8a5a2e"
+  readonly property color skin: kind === "goblin" ? Qt.darker(green, 1.15) : kind === "orc" ? Qt.darker(green, 1.6)
+    : kind === "skeleton" ? paper : kind === "knight" ? steel : "#f2c2a0"
+  readonly property color cyan: pal.cyan || "#1fb5c9"
+  readonly property var bodyFill: ({ gnome: "#3f74ff", goblin: "#7a5230", skeleton: paper, knight: steel, wizard: purple, priest: paper,
+                                     bard: cyan, rogue: "#3b3b46", orc: "#6b4a2a" })
   // hand positions (the arms flail)
   readonly property real rhx: 20 + flail
   readonly property real rhy: 9 - flail * 2
@@ -92,13 +96,26 @@ Item {
     // priest: a mitre with a gold cross
     P { visible: root.kind === "priest"; d: "M8.4 7.6 L8.6 2.6 Q12 -0.8 15.4 2.6 L15.6 7.6 Q12 6.8 8.4 7.6 Z"; fill: root.paper }
     P { visible: root.kind === "priest"; d: "M12 1.6 L12 6.2 M10.6 3.4 L13.4 3.4"; stroke: root.gold; line: 1.1 }
+    // bard: a lute held across the body, and a cap with a long feather
+    P { visible: root.kind === "bard"; d: "M13 16 Q16.6 13.6 18.4 16.4 Q18.8 19.6 15.2 20 Q12.2 19.8 13 16 Z"; fill: root.leather; line: 0.8 }
+    P { visible: root.kind === "bard"; d: "M14 17.4 L7.6 12.2"; stroke: root.leather; line: 1.3 }
+    Rectangle { visible: root.kind === "bard"; x: 15.2; y: 16.8; width: 1.2; height: 1.2; radius: 0.6; color: root.ink }
+    P { visible: root.kind === "bard"; d: "M7 8 Q12 3.4 17 8 Q12 6.6 7 8 Z"; fill: root.red }
+    P { visible: root.kind === "bard"; d: "M15.4 6.4 Q20.6 1.6 22.4 2.4 Q19.4 4.4 16.2 7.2 Z"; fill: root.gold; line: 0.6 }
+    // rogue: a deep hood and a dagger
+    P { visible: root.kind === "rogue"; d: "M6.6 14 Q6 4.6 12 4.2 Q18 4.6 17.4 14 L15.6 11 Q16 7 12 6.8 Q8 7 8.4 11 Z"; fill: root.bodyFill.rogue }
+    P { visible: root.kind === "rogue"; d: "M" + root.rhx + " " + root.rhy + " L" + (root.rhx + 0.8) + " " + (root.rhy - 3.6); stroke: root.steel; line: 1.2 }
+    P { visible: root.kind === "rogue"; d: "M8.8 11.2 L15.2 11.2"; stroke: root.ink; line: 0.8 }
+    // orc: tusks, heavy brow
+    P { visible: root.kind === "orc"; d: "M10.4 12.6 L10.8 10.8 L11.4 12.6 Z M12.6 12.6 L13.2 10.8 L13.6 12.6 Z"; fill: root.paper; line: 0.5 }
+    P { visible: root.kind === "orc"; d: "M8.6 8.2 L11.4 8.8 M12.6 8.8 L15.4 8.2"; line: 1.1 }
     // eyes: wide with panic (sockets for the skeleton; hidden behind the knight's visor)
     Rectangle { visible: root.kind !== "knight"; x: 9.2; y: 8.6; width: 2.2; height: 2.4; radius: 1.1; color: root.kind === "skeleton" ? root.ink : root.paper; border.color: root.ink; border.width: 0.6
       Rectangle { visible: root.kind !== "skeleton"; x: 0.6; y: 0.7; width: 1; height: 1; radius: 0.5; color: root.ink } }
     Rectangle { visible: root.kind !== "knight"; x: 12.6; y: 8.6; width: 2.2; height: 2.4; radius: 1.1; color: root.kind === "skeleton" ? root.ink : root.paper; border.color: root.ink; border.width: 0.6
       Rectangle { visible: root.kind !== "skeleton"; x: 0.6; y: 0.7; width: 1; height: 1; radius: 0.5; color: root.ink } }
     // mouth: an "o" of alarm (or teeth)
-    Rectangle { visible: ["goblin", "skeleton", "priest"].indexOf(root.kind) >= 0; x: 11; y: 12; width: 2; height: 1.6 + Math.abs(root.flail); radius: 1; color: root.ink }
+    Rectangle { visible: ["goblin", "skeleton", "priest", "orc", "rogue"].indexOf(root.kind) >= 0; x: 11; y: 12; width: 2; height: 1.6 + Math.abs(root.flail); radius: 1; color: root.ink }
   }
 
   // the goo film over them, so they read as *inside* the drip

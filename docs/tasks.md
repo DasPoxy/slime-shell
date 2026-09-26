@@ -1,53 +1,90 @@
-# Tasks tab — using your own notes
+# Slime-Tasks — the command centre's Tasks tab
 
-The command centre's **Tasks** tab lists every checkbox in a folder of markdown
-notes and lets you tick them off. It works with [Envy](https://github.com/skuthus/Envy-Universal)
-but doesn't need it.
+A todo, task-log and progress suite built into the command centre, in a
+tavern the slime has swallowed whole. Three signs hang from the beam:
 
-## Which folder it reads
+| Tab | What it's for |
+|---|---|
+| **Todo** | Top-level todos, grouped and colour-coded. Each opens into its own list of sub-todos, which move *to do → in progress → done*. |
+| **Task Log** | What's being worked on: each todo's sub-todos in *to do / in progress / done* lanes, and its log of progress notes and output (newest first). Agents fill this in as they work. |
+| **Progress** | How far along every group and todo is, in collapsible sections. Archive finished lists; search the archive and restore them. |
 
-In order, the first that applies:
+Everything is keyboard driven — press **?** in the tab for the full list:
 
-1. **A folder you set** — Tasks tab → *change*, type a path, *use folder*.
-   Stored in `~/.config/omarchy/slime-shell/tasks.json`:
-   ```json
-   { "folder": "~/Documents/Notes", "subfolders": true }
-   ```
-   Clear the path (or delete the file) to go back to automatic.
-2. **Envy's vault**, from `~/.config/envy/config.md` (`vault = "..."`,
-   `include_subfolders = true|false`).
-3. **`~/Notes`** or **`~/Documents/Notes`**, if either exists (subfolders
-   included).
+- **Tab / 1 2 3** switch tabs · **Esc** backs out (or closes the command centre)
+- Todo: **↑↓** pick · **→/Enter** open sub-todos · **n** new · **a** add sub-todo ·
+  **Space** finish / cycle a sub-todo · **e** rename/edit · **g** group menu ·
+  **A** archive · **d d** delete · **f** show/hide finished · **J/K** reorder sub-todos
+- Task Log: **↑↓** pick · **PgUp/PgDn** scroll the log
+- Progress: **↑↓** pick · **Enter/Space** expand · **A** archive · **/** search the archive
 
-## What counts as a task
+Right-click a todo for the same group menu (existing groups, a new one, no
+group, rename, archive, delete). Each group gets its own colour.
 
-Any line in a `.md` file that looks like a markdown checkbox:
+## Where it's stored
+
+Plain markdown in **`~/Documents/Slime-Notes`**, so Envy, Obsidian or any text
+editor can read and edit it too:
+
+```
+Slime-Notes/
+  Todos/<id>.md        one per todo
+  Logs/<id>.md         its task log
+  Archive/             archived todos (Archive/Logs/ their logs)
+  .slime/groups.json   group colours
+  .slime/trash/        deleted todos, just in case
+```
+
+A todo file:
 
 ```markdown
-- [ ] something to do
-- [x] something done
-* [ ] stars and pluses work too
+---
+group: Slime Shell
+done: false
+created: 2026-09-26 13:40
+---
+# Overhaul the tasks tab
+
+- [ ] a sub-todo
+- [/] one being worked on
+- [x] one that's finished
 ```
 
-Hidden folders (starting with `.`) are skipped. Notes are grouped by file,
-most recently edited first.
+A log file is a list of `## <date time> · <who>` entries with markdown under
+each (code blocks included).
 
-## Ticking tasks
-
-Clicking a task flips just that one line (`[ ]` ↔ `[x]`) with an atomic write.
-If the line changed on disk since the list was read (say you edited the note
-meanwhile), nothing is written and the tab shows why.
-
-## For agents / scripts
-
-`plugins/slime.bar/commandcenter/tasks.py` is the whole backend:
+**With Envy (or another notes app):** point it at the folder, or move the
+folder inside your vault and tell Slime-Tasks where it went:
 
 ```sh
-tasks.py list                          # {"folder", "source", "tasks": [...]}
-tasks.py toggle FILE LINE EXPECTED     # flip line LINE if it still reads EXPECTED
-tasks.py set-folder PATH [false]       # use PATH (false = no subfolders); "" = automatic
+slime-tasks folder ~/Documents/Envy/Slime-Notes
 ```
 
-Each task in `list` has `file`, `note`, `line` (0-based), `raw` (the exact
-line, used as EXPECTED), `text`, `done` and `mtime`. `source` is `custom`,
-`envy`, `default` or `none`. It only ever edits files inside the chosen folder.
+The **From your notes** section at the bottom of the Todo tab still lists
+every `- [ ]` checkbox in your notes vault (Envy's, `~/Notes`, or a folder you
+choose) and ticks them in place, as the old Tasks tab did.
+
+## For agents and scripts
+
+`slime-tasks` (installed to `~/.local/bin` by `slime-shell install`) is the
+same backend the tab uses. Every command prints JSON; failures go to stderr
+with a non-zero exit.
+
+```sh
+slime-tasks find "tasks tab"                    # -> the todo's id
+slime-tasks list                                # every todo and sub-todo
+slime-tasks add "Overhaul the tasks tab" --group "Slime Shell"
+slime-tasks sub-add <id> "Backend CLI"
+slime-tasks start <id> <n> "picking this up" --by claude     # -> in progress, logged
+slime-tasks log <id> "progress, output, findings…" --by claude
+slime-tasks finish <id> <n> "done: 12 tests pass" --by claude  # -> done, logged
+slime-tasks sub-set <id> <n> todo|doing|done [--expect TEXT]
+slime-tasks archive <id>   /   unarchive <id>
+slime-tasks --help                              # everything else
+```
+
+`<n>` is a sub-todo's 0-based position. The tab re-reads the folder every two
+seconds while it's open, so you can watch an agent shift sub-todos across the
+lanes and write its log. Writes are locked and atomic, so the tab and an agent
+never clobber each other; `--expect` makes a state change refuse if the
+sub-todo's text changed meanwhile.

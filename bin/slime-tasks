@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Slime-Tasks from the command line (agents, scripts, you): todos, sub-todos
+# and task logs in ~/Documents/Slime-Notes. See `slime-tasks --help`.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+exec python3 "$here/../plugins/slime.bar/commandcenter/slime_tasks.py" "$@"

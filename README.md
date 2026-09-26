@@ -105,8 +105,11 @@ falls off with it, or turns up trapped in a panel's ooze.
   commands only) and your files (`/` for files only); drips from the bar when
   clicked, floats centred when summoned by keybind.
 - **Notifications** — toasts drip out of the bar (top bar).
-- **Tasks** — checkboxes from your notes (Envy, `~/Notes`, or any folder):
-  [docs/tasks.md](docs/tasks.md).
+- **Slime-Tasks** — the command centre's Tasks tab, a tavern the slime
+  swallowed: todos with sub-todos and coloured groups, a live task log that
+  agents write to (`slime-tasks`), and progress by group with an archive. Fully
+  keyboard driven; plain markdown in `~/Documents/Slime-Notes`, so Envy or any
+  notes app can open it: [docs/tasks.md](docs/tasks.md).
 
 ## The bar
 
@@ -216,6 +219,7 @@ git -C ~/Work/slime-shell pull && omarchy restart shell
 | `layouts/default.json` | the bar layout `slime-shell use` installs |
 | `bin/slime-shell` | install / use / restore / status |
 | `bin/clone-omarchy-plugin` | clone another Omarchy plugin as `slime.<name>` |
+| `bin/slime-tasks` | the tasks backend on the command line (for agents) |
 | `tools/make-drip-font.py` | builds the honey-drip font from Lobster |
 | `docs/` | widget reference, tasks guide, pictures |
 | `spike/` | the original standalone prototype |

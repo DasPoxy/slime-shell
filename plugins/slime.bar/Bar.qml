@@ -2280,7 +2280,9 @@ Item {
       surfaceFormat.opaque: false
       exclusionMode: ExclusionMode.Ignore
       WlrLayershell.namespace: "omarchy-bar-skin"
-      WlrLayershell.keyboardFocus: root.hoverKeysWindow === skinWindow ? WlrKeyboardFocus.Exclusive
+      // the keyboard while it's open, so every tab can be driven from the
+      // keyboard straight away (Esc closes it; clicking off it does too)
+      WlrLayershell.keyboardFocus: root.commandCenterOpen || root.hoverKeysWindow === skinWindow ? WlrKeyboardFocus.Exclusive
         : barWindow.ccShown ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
       // only mapped while the command centre is out, which always shows
       // above windows (even when the slime is drawn behind them). Overlay,

@@ -56,6 +56,9 @@ install_plugins() {
     sleep 0.1
   done
   echo "installed $(find "$repo"/plugins -maxdepth 1 -name 'slime.*' | wc -l) plugins"
+  # the tasks command, for agents and scripts
+  mkdir -p "$HOME/.local/bin"
+  ln -sfn "$repo/bin/slime-tasks" "$HOME/.local/bin/slime-tasks"
 }
 
 case "${1:-status}" in
