@@ -1738,7 +1738,17 @@ Item {
     // always laid out landscape, so on a side bar "along" is its height.
     readonly property real ccAlong: root.vertical ? root.commandCenterHeight : root.commandCenterWidth
     readonly property real ccAway: root.vertical ? root.commandCenterWidth : root.commandCenterHeight
-    readonly property real skinRoom: ccShown ? ccAway + 160 : 130
+    readonly property real skinRoom: ccShown ? Math.max(ccAway + 160, dripRoom) : dripRoom
+    // Room past the bar for the longest drips to hang in full (the shader
+    // shrinks falling drops away before this edge): longest drip at this
+    // amount, plus bulbs under widgets, plus a stretch for drops to fall /
+    // strands to snap / lava globs to sink.
+    readonly property real dripRoom: {
+      if (root.dripLevel <= 0) return 130
+      var amt = root.dripAmount < 0 ? 1.85 : Math.min(root.dripAmount, 2.1)
+      var fall = root.dripStyle === "stringy" || root.dripStyle === "lava" ? 110 : 60
+      return Math.max(130, Math.ceil(60 * amt + 50 + fall))
+    }
     readonly property real barLength: root.vertical ? height : width
     property var bulbRects: []
     property var groupRects: []   // left, centre, right section extents
@@ -1884,7 +1894,7 @@ Item {
       property real barShape: root.barShapeId
       property real material: root.materialId
       property vector4d dripStyle: root.dripStyleVec
-      property vector4d dripExtra: root.dripExtraVec
+      property vector4d dripExtra: Qt.vector4d(root.dripExtraVec.x, root.dripExtraVec.y, barWindow.thickness, 0)
       property vector4d eggDrip: root.eggDrip
       property vector4d group0: barWindow.groupRects[0] || barWindow.noBulb
       property vector4d group1: barWindow.groupRects[1] || barWindow.noBulb

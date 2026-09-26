@@ -35,7 +35,8 @@ layout(std140, binding = 0) uniform buf {
     float blobMode;   // 1 = no bar: just a free-standing blob in panelRect
     float barShape;   // 0 classic strip, 1 pills, 2 islands, 3 notch
     vec4 dripStyle;   // speed x, thickness x, frozen (1 = hang still), density x
-    vec4 dripExtra;   // x: shape 0 drip / 1 stringy / 2 mitosis; y: variable amount 0/1
+    vec4 dripExtra;   // x: shape 0 drip / 1 stringy / 2 mitosis; y: variable amount 0/1;
+                      // z: how far the window reaches from the bar (0 = no limit)
     vec4 eggDrip;     // easter egg: x along the bar, edge y, start time, active
     float material;   // 0 slime, 1 sinew, 2 bone, 3 plain
     float orient;     // which screen edge the bar is on: 0 top, 1 bottom, 2 left, 3 right
@@ -127,6 +128,12 @@ float barEdge(float x) {
 // Where drip `seed` hangs its tip right now (xy) and how much of it is still
 // attached (z: 1 hanging, falling to 0 as it lets go). Mirrors drip()'s timing
 // so the stringy style can web neighbouring drips together.
+// 1 until y nears the far side of the window, then down to 0: falling goo
+// shrinks away there instead of being sliced off by the window edge.
+float fadeOut(float y) {
+    return dripExtra.z > 0.0 ? 1.0 - smoothstep(dripExtra.z - 70.0, dripExtra.z - 6.0, y) : 1.0;
+}
+
 vec3 dripTip(float cx, float edgeY, float seed, float scale) {
     float speed = (0.06 + 0.09 * hash(seed + 1.0)) * dripStyle.x;
     float s = fract(time * speed + hash(seed + 2.0));
@@ -159,6 +166,7 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
         float wob = sin(time * 1.7 + seed * 5.0) * 3.0 * sink;
         vec2 c = vec2(cx + wob, edgeY + r * (0.2 + 1.3 * bud) + sink * sink * maxLen * 2.4);
         float br = r * (0.35 + 0.65 * bud) * (1.0 - 0.3 * sink);
+        br *= fadeOut(c.y + br * 1.6);
         // stretched tall while it pinches, rounding off once it floats free
         float stretch = 1.0 + 0.35 * pinch * (1.0 - sink);
         // every glob its own shape: squat or tall, lumpy edges that roll
@@ -207,6 +215,7 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
     vec2 drop = vec2(cx, edgeY + maxLen + fall * fall * 240.0);
     if (release > 0.0) {
         float dr = (neck + 6.0) * (1.0 - 0.5 * fall);
+        dr *= fadeOut(drop.y + dr);
         d = min(d, length(p - drop) - dr);
         hl = min(hl, sdEllipse(p, drop + vec2(-0.35, -0.3) * dr, vec2(0.18, 0.32) * dr));
     }
@@ -223,7 +232,11 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
             vec2 end = release > 0.0 ? drop : tip + vec2((hash(seed + fj) - 0.5) * bulb, -bulb * 0.4);
             vec2 a0 = vec2(root0, edgeY - 2.0);
             vec2 mid = mix(a0, end, 0.5) + vec2(0.0, 4.0 + 3.0 * hash(seed + fj * 9.1));   // sag
-            float w = (1.4 + 1.1 * hash(seed + fj * 4.4)) * (release > 0.0 ? 1.0 - fall / snapAt : 1.0);
+            // snap before the drop shrinks away near the window's edge (a
+            // hairline with nothing on the end still draws its outline)
+            float fo = fadeOut(end.y + 40.0);
+            if (fo < 0.6) continue;
+            float w = (1.4 + 1.1 * hash(seed + fj * 4.4)) * (release > 0.0 ? 1.0 - 0.5 * fall / snapAt : 1.0);
             d = min(d, min(sdSegment(p, a0, mid, w), sdSegment(p, mid, end, w)));
         }
     }
@@ -483,7 +496,7 @@ vec2 bulb(vec2 p, vec4 b, float seed) {
     // stringy: a sagging web between the belly's two drips
     if (n == 2 && dripExtra.x > 0.5 && dripExtra.x < 1.5 && abs(tips[0].x - tips[1].x) > 8.0) {
         float live = min(tips[0].z, tips[1].z) * smoothstep(2.0, 10.0, max(tips[0].y, tips[1].y) - bottom);
-        if (live > 0.05) {
+        if (live > 0.25) {
             d = smin(d, webLattice(p, vec2(tips[0].x, bottom), tips[0].xy, vec2(tips[1].x, bottom), tips[1].xy, seed + 8.0, live), 2.5);
         }
     }
@@ -506,7 +519,7 @@ vec2 bulb(vec2 p, vec4 b, float seed) {
                 if (ee < 0.0) break;
                 vec3 et = dripTip(ex, ee, i, 1.0);
                 float live = min(t.z, et.z) * smoothstep(2.0, 10.0, max(t.y - bottom, et.y - ee));
-                if (live > 0.05) {
+                if (live > 0.25) {
                     d = smin(d, webLattice(p, vec2(t.x, bottom), t.xy, vec2(ex, ee), et.xy, sk + 2.2, live), 2.5);
                 }
                 break;
@@ -625,7 +638,7 @@ vec2 mapScene(vec2 p) {
             if (ea < 0.0 || eb < 0.0) continue;
             vec3 ta = dripTip(xa, ea, i, 1.0), tb = dripTip(xb, eb, n, 1.0);
             float live = min(ta.z, tb.z) * smoothstep(2.0, 12.0, max(ta.y - ea, tb.y - eb));
-            if (live < 0.05) continue;
+            if (live < 0.25) continue;
             d = smin(d, webLattice(p, vec2(xa, ea), ta.xy, vec2(xb, eb), tb.xy, i * 9.1 + 4.0, live), 2.5);
         }
     }
