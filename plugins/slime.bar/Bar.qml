@@ -1859,24 +1859,17 @@ Item {
     // always laid out landscape, so on a side bar "along" is its height.
     readonly property real ccAlong: root.vertical ? root.commandCenterHeight : root.commandCenterWidth
     readonly property real ccAway: root.vertical ? root.commandCenterWidth : root.commandCenterHeight
-    readonly property real skinRoom: ccShown ? Math.max(ccRoom + 160, dripRoom) : dripRoom
-    // The window's room for the command centre. It does NOT follow the
-    // animated height frame by frame: resizing a layer surface every frame
-    // (a compositor round trip and new buffers each time) made the whole bar
-    // stutter while sections folded open/closed. It grows at once to the
-    // target plus the easing's overshoot, and shrinks once things settle.
-    property real ccRoom: ccAway
-    readonly property real ccRoomWant: root.vertical ? root.commandCenterWidth
-      : root.commandCenterHeightTarget + 0.12 * Math.abs(root.commandCenterHeightTarget - root.commandCenterHeight)
-    onCcRoomWantChanged: {
-      if (ccRoomWant > ccRoom) ccRoom = Math.ceil(ccRoomWant / 16) * 16
-      else ccRoomShrink.restart()
-    }
-    Timer {
-      id: ccRoomShrink
-      interval: 450
-      onTriggered: barWindow.ccRoom = Math.max(barWindow.ccAway, Math.ceil(barWindow.ccRoomWant / 16) * 16)
-    }
+    // One fixed size for the whole time the skin is on, tall enough for the
+    // biggest command centre. Resizing a layer surface while it's on screen
+    // races the compositor: for a frame Hyprland shows the new buffer
+    // stretched to the old size, so the bar and panel visibly jumped on
+    // opening, tab switches and folding sections. The shader skips the empty
+    // pixels and the input mask keeps them click-through, so the extra room
+    // costs next to nothing.
+    readonly property real ccMaxAway: root.vertical ? root.commandCenterWidth
+      : (screen ? screen.height - root.barSize - 24 : 1100)
+    readonly property real screenAway: screen ? (root.vertical ? screen.width : screen.height) : 1440
+    readonly property real skinRoom: Math.max(dripRoom, Math.min(ccMaxAway + 160, screenAway - root.barSize))
     // Room past the bar for the longest drips to hang in full (the shader
     // shrinks falling drops away before this edge): longest drip at this
     // amount, plus bulbs under widgets, plus a stretch for drops to fall /
