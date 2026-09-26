@@ -381,6 +381,9 @@ Item {
   property var barDragSource: null
   property var barDragTarget: null
   property var barDragTargetGeometry: null
+  // Pills: dropping a widget on the middle of another joins their pills
+  // (entry flag pillJoin = "shares a pill with the next widget").
+  property bool barDragMerge: false
   property bool barDragAfter: false
   property var barDragWindow: null
   property var barDragScreen: null
@@ -706,6 +709,7 @@ Item {
     barDragTarget = null
     barDragTargetGeometry = null
     barDragAfter = false
+    barDragMerge = false
     barDragSceneX = 0
     barDragSceneY = 0
     barDragScreenX = 0
@@ -893,16 +897,33 @@ Item {
   function applySettingsDelta(delta) {
     for (var i = 0; i < delta.length; i++) {
       var change = delta[i]
-      layoutConfig[change.region][change.index] = change.entry
+      var id = entryId(change.entry)
+      var list = layoutConfig[change.region]
+      list[change.index] = change.entry
       var settings = entrySettings(change.entry)
-      for (var s = 0; s < moduleSlots.length; s++) {
-        var slot = moduleSlots[s]
-        if (!slot || slot.region !== change.region || slot.moduleName !== entryId(change.entry)) continue
-        var item = slot.activeItem
+      // Slime: a widget can be on the bar several times (spacers), so patch
+      // only the one at this position: the k-th slot with this id in the
+      // section, counted along the bar.
+      var k = 0
+      for (var j = 0; j < change.index; j++) if (list[j] && entryId(list[j]) === id) k++
+      var same = moduleSlots.filter(function(sl) { return sl && sl.region === change.region && sl.moduleName === id })
+      same.sort(function(a, b) {
+        try { var pa = a.mapToItem(null, 0, 0), pb = b.mapToItem(null, 0, 0); return vertical ? pa.y - pb.y : pa.x - pb.x }
+        catch (e) { return 0 }
+      })
+      // one copy per monitor: patch the k-th of each monitor's run
+      var perScreen = {}
+      for (var s = 0; s < same.length; s++) {
+        var key = slotScreenName(same[s])
+        perScreen[key] = (perScreen[key] || 0) + 1
+        if (perScreen[key] - 1 !== k) continue
+        var item = same[s].activeItem
         if (item && "settings" in item) item.settings = settings
       }
     }
   }
+
+
 
   onBarConfigChanged: applyBarConfig()
 
@@ -1199,9 +1220,62 @@ Item {
 
     var changed = false
     root.shell.mutateShellConfig(function(config) {
+      // a widget dragged somewhere normally leaves any joined pill it was in
+      detachFromPill(config, source.region, source.moduleName)
       changed = moveModuleInConfig(config, source.region, source.moduleName, toRegion, beforeName)
+      if (changed) {
+        var list = rawLayoutSection(config, toRegion), i = rawEntryIndex(list, source.moduleName)
+        if (i > 0 && list[i - 1].pillJoin) delete list[i - 1].pillJoin   // don't land inside a joined pill
+      }
     })
     return changed
+  }
+
+  // ---- joined pills ------------------------------------------------------------
+  // Take entry `name` out of whatever joined pill it's in, keeping the rest of
+  // that pill joined around the gap it leaves.
+  function detachFromPill(config, region, name) {
+    var list = rawLayoutSection(config, region), i = rawEntryIndex(list, name)
+    if (i < 0) return
+    if (i > 0 && list[i - 1].pillJoin) {
+      if (list[i].pillJoin) list[i - 1].pillJoin = true
+      else delete list[i - 1].pillJoin
+    }
+    delete list[i].pillJoin
+  }
+
+  // Dropped on the middle half of another widget, in pills mode.
+  function pillMergeAt(targetSlot, scenePoint) {
+    if (barShape !== "pills" || !targetSlot) return false
+    try {
+      var p = targetSlot.mapFromItem(null, scenePoint.x, scenePoint.y)
+      var f = vertical ? p.y / targetSlot.height : p.x / targetSlot.width
+      return f > 0.25 && f < 0.75
+    } catch (e) { return false }
+  }
+
+  function mergeMarkerRect(slot) {
+    try {
+      var p = barDragScreenPoint(slot.mapToItem(null, 0, 0))
+      return { x: p.x, y: p.y + slot.height - 3, width: slot.width, height: 3 }
+    } catch (e) { return null }
+  }
+
+  // Join `source` onto `target`'s pill: it moves in right after the target
+  // (widgets keep their normal spacing; only the pill underneath merges).
+  function mergePills(source, target) {
+    if (!source || !target || source === target || !root.shell || typeof root.shell.mutateShellConfig !== "function") return
+    root.shell.mutateShellConfig(function(config) {
+      detachFromPill(config, source.region, source.moduleName)
+      var from = rawLayoutSection(config, source.region), fi = rawEntryIndex(from, source.moduleName)
+      if (fi < 0) return
+      var moved = from.splice(fi, 1)[0]
+      var to = rawLayoutSection(config, target.region), ti = rawEntryIndex(to, target.moduleName)
+      if (ti < 0) { from.splice(fi, 0, moved); return }
+      if (to[ti].pillJoin) moved.pillJoin = true     // slot into the middle of a longer pill
+      to[ti].pillJoin = true
+      to.splice(ti + 1, 0, moved)
+    })
   }
 
   function moduleDropAtScene(scenePoint, sourceSlot) {
@@ -1632,6 +1706,7 @@ Item {
       var h = 28
       var y = Math.round((root.barSize - h) / 2)
       var groups = { left: null, center: null, right: null }
+      var pieces = []
       var slots = root.moduleSlots
       for (var i = 0; i < slots.length; i++) {
         var slot = slots[i]
@@ -1646,7 +1721,20 @@ Item {
           groups[slot.region] = g ? { x0: Math.min(g.x0, at), x1: Math.max(g.x1, at + len) } : { x0: at, x1: at + len }
         if (slot.moduleName === "slime.clock-weather") ccCenterX = at + len / 2
         if (slot.activeItem && slot.activeItem.slimeNoBulb === true) continue   // e.g. plain spacers
-        if (out.length < 24) out.push(Qt.vector4d(at, y, len, h))
+        var live = slot.activeItem && slot.activeItem.settings ? slot.activeItem.settings : null
+        pieces.push({ region: slot.region, at: at, len: len, join: !!(live && live.pillJoin) })
+      }
+      // one bulb per widget, except joined pills, which become one long bulb
+      var regions = { left: 0, center: 1, right: 2 }
+      pieces.sort(function(a, b) { return (regions[a.region] - regions[b.region]) || (a.at - b.at) })
+      var joinPills = root.barShape === "pills"
+      for (var k = 0; k < pieces.length && out.length < 24; k++) {
+        var start = pieces[k].at, stop = pieces[k].at + pieces[k].len
+        while (joinPills && pieces[k].join && k + 1 < pieces.length && pieces[k + 1].region === pieces[k].region) {
+          k++
+          stop = pieces[k].at + pieces[k].len
+        }
+        out.push(Qt.vector4d(start, y, stop - start, h))
       }
       bulbRects = out
       root.sharedBulbRects = out
@@ -2514,7 +2602,9 @@ Item {
           var drop = root.moduleDropAtScene(scenePoint, slot)
           root.barDragTarget = drop ? drop.slot : null
           root.barDragAfter = drop ? drop.after : false
-          root.barDragTargetGeometry = drop ? root.dropMarkerRect(drop.slot, drop.after) : null
+          root.barDragMerge = !!drop && root.pillMergeAt(drop.slot, scenePoint)
+          root.barDragTargetGeometry = !drop ? null
+            : root.barDragMerge ? root.mergeMarkerRect(drop.slot) : root.dropMarkerRect(drop.slot, drop.after)
         }
       }
 
@@ -2522,6 +2612,7 @@ Item {
         var wasDragging = dragging
         var targetSlot = root.barDragTarget
         var afterTarget = root.barDragAfter
+        var merge = root.barDragMerge
 
         if (wasDragging) suppressClick = true
 
@@ -2529,7 +2620,8 @@ Item {
         root.clearBarDrag()
 
         if (wasDragging && targetSlot) {
-          root.dropBarModuleAtTarget(slot, targetSlot, afterTarget)
+          if (merge) root.mergePills(slot, targetSlot)
+          else root.dropBarModuleAtTarget(slot, targetSlot, afterTarget)
           mouse.accepted = true
         } else if (!wasDragging) {
           mouse.accepted = false
