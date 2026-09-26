@@ -197,6 +197,9 @@ PopupWindow {
     visible: root.slime && root.dripProgress > 0
     anchors.fill: parent
     fragmentShader: Qt.resolvedUrl("../shaders/slime.frag.qsb")
+    // every shader uniform set explicitly: unset ones are not guaranteed to be 0
+    property vector4d cullRect: Qt.vector4d(0, 0, 0, 0)
+    property real blobMode: 0
 
     readonly property var bulbs: root.anchorWindow && root.anchorWindow.bulbRects ? root.anchorWindow.bulbRects : []
     readonly property vector4d noBulb: Qt.vector4d(0, 0, 0, 0)

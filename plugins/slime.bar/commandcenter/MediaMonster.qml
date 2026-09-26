@@ -45,6 +45,27 @@ Item {
       width: monster.width + 40
       height: monster.height + 90
       fragmentShader: Qt.resolvedUrl("../shaders/slime.frag.qsb")
+      // every shader uniform set explicitly: unset ones are not guaranteed to be 0
+      property vector4d cullRect: Qt.vector4d(0, 0, 0, 0)
+      property real clipTop: -100000
+      property real poolDepth: 0
+      property vector2d origin: Qt.vector2d(0, 0)
+      property vector4d bulb0: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb1: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb2: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb3: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb4: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb5: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb6: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb7: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb8: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb9: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb10: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb11: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb12: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb13: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb14: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb15: Qt.vector4d(0, 0, 0, 0)
 
       readonly property var bar: monster.cc.bar
       property real blobMode: 1

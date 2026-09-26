@@ -1009,6 +1009,10 @@ Item {
         visible: popupWindow.slimeBar !== null && popupWindow.blobHeight > 1
         anchors.fill: parent
         fragmentShader: Qt.resolvedUrl("../slime.bar/shaders/slime.frag.qsb")
+        // every shader uniform set explicitly: unset ones are not guaranteed to be 0
+        property real poolDepth: 0
+        property vector2d origin: Qt.vector2d(0, 0)
+        property real blobMode: 0
 
         readonly property var bar: popupWindow.slimeBar
         readonly property var bulbs: bar ? bar.sharedBulbRects : []

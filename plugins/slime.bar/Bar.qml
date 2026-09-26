@@ -1569,6 +1569,12 @@ Item {
       visible: root.slimeSkin
       anchors.fill: parent
       fragmentShader: Qt.resolvedUrl("shaders/slime.frag.qsb")
+      // every shader uniform set explicitly: unset ones are not guaranteed to be 0
+      property vector4d cullRect: Qt.vector4d(0, 0, 0, 0)
+      property real clipTop: -100000
+      property real poolDepth: 0
+      property vector2d origin: Qt.vector2d(0, 0)
+      property real blobMode: 0
 
       property real time: root.animTime
       property real barHeight: root.barSize
