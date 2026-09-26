@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Shapes
 import Quickshell.Io
 import Quickshell.Widgets
+import "../ui"
 
 // System: CPU / memory / GPU with short history graphs, disks, load and the
 // top processes. Meters are adventurers marching on a dungeon (AdventureMeter)
@@ -173,7 +174,7 @@ Item {
       Card {
         Row {
           spacing: 8
-          Text { text: ""; color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 16 }
+          SlimeGear { kind: "anvil"; bar: sys.cc.bar; size: 22; lit: sys.cpu > 0.25; anchors.verticalCenter: parent.verticalCenter }
           Text { text: "CPU"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 14 }
         }
         Text {
@@ -190,7 +191,7 @@ Item {
       Card {
         Row {
           spacing: 8
-          Text { text: "\uf1c0"; color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 16 }
+          SlimeGear { kind: "book"; bar: sys.cc.bar; size: 22; lit: true; anchors.verticalCenter: parent.verticalCenter }
           Text { text: "MEMORY"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 14 }
         }
         Text {
@@ -209,7 +210,7 @@ Item {
         visible: !!sys.sample && !!sys.sample.gpu
         Row {
           spacing: 8
-          Text { text: ""; color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 16 }
+          SlimeGear { kind: "orb"; bar: sys.cc.bar; size: 22; net: "ethernet"; anchors.verticalCenter: parent.verticalCenter }
           Text {
             text: sys.sample && sys.sample.gpu ? sys.sample.gpu.name.replace(/^NVIDIA (GeForce )?/, "") : ""
             color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 14
@@ -234,7 +235,7 @@ Item {
       Card {
         Row {
           spacing: 8
-          Text { text: ""; color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 16 }
+          SlimeGear { kind: "chest"; bar: sys.cc.bar; size: 22; lit: false; anchors.verticalCenter: parent.verticalCenter }
           Text { text: "DISKS"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 14 }
         }
         Repeater {

@@ -1,4 +1,6 @@
 import QtQuick
+import Quickshell
+import Quickshell.Io
 
 // Settings: the slime skin (colour, gradient, shading, animation, drips) and
 // shortcuts to the widget settings that live elsewhere.
@@ -9,6 +11,27 @@ Item {
   readonly property var bar: cc ? cc.bar : null
 
   implicitHeight: column.implicitHeight
+
+  // ---- updates (update.sh) ------------------------------------------------
+  property var update: null        // last JSON from update.sh
+  property bool updateBusy: false
+  readonly property string updateScript: Qt.resolvedUrl("update.sh").toString().replace("file://", "")
+  Process {
+    id: updater
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try { settings.update = JSON.parse(text) } catch (e) { settings.update = { status: "error", message: "no answer from git" } }
+        settings.updateBusy = false
+        if (settings.update.status === "updated") Quickshell.execDetached(["omarchy", "restart", "shell"])
+      }
+    }
+  }
+  function runUpdate(mode) {
+    if (updateBusy) return
+    updateBusy = true
+    updater.command = ["bash", updateScript, mode]
+    updater.running = true
+  }
 
   component ChoiceRow: Column {
     id: choiceRow
@@ -66,6 +89,12 @@ Item {
         onPicked: value => settings.bar.slimeLayer = value
       }
       ChoiceRow {
+        title: "BAR DEBRIS"
+        options: [["floating bits", true], ["clean", false]]
+        current: settings.bar.barDebris
+        onPicked: value => settings.bar.barDebris = value
+      }
+      ChoiceRow {
         title: "SHADING"
         options: [["soft", 0], ["anime", 1], ["manga", 2], ["print", 3]]
         current: settings.bar.shadingStyle
@@ -106,6 +135,61 @@ Item {
         options: [["dry", 0.4], ["ooze", 1.0], ["gush", 1.7]]
         current: settings.bar.dripAmount
         onPicked: value => settings.bar.dripAmount = value
+      }
+    }
+
+    CcSection {
+      cc: settings.cc
+      title: "Updates"
+      kind: "potion"
+      Row {
+        spacing: 8
+        CcButton {
+          cc: settings.cc
+          icon: "\uf021"
+          text: settings.updateBusy ? "Checking…" : "Check for updates"
+          onClicked: settings.runUpdate("check")
+        }
+        CcButton {
+          visible: !!settings.update && settings.update.status === "behind" && !settings.update.dirty
+          cc: settings.cc
+          on: true
+          icon: "\uf019"
+          text: "Update & restart"
+          onClicked: settings.runUpdate("pull")
+        }
+      }
+      Text {
+        visible: !!settings.update
+        width: parent.width
+        wrapMode: Text.Wrap
+        color: settings.cc.ink
+        font.family: settings.cc.font
+        font.pixelSize: 12
+        text: {
+          var u = settings.update
+          if (!u) return ""
+          if (u.status === "error") return "Couldn't check: " + u.message
+          if (u.status === "updated") return "Updated to " + u.local + " — restarting the shell…"
+          var head = u.status === "current" ? "Up to date on " + u.branch + " (" + u.local + ")."
+            : u.status === "diverged" ? "Your copy and the remote have both moved on; update by hand."
+            : u.behind + " update" + (u.behind === 1 ? "" : "s") + " available (" + u.local + " → " + u.remote + "):"
+          if (u.dirty) head += "  You have uncommitted changes, so updating is off."
+          return head
+        }
+      }
+      Repeater {
+        model: settings.update && settings.update.log ? settings.update.log : []
+        Text {
+          required property string modelData
+          width: parent.width
+          elide: Text.ElideRight
+          text: "•  " + modelData
+          color: settings.cc.ink
+          font.family: settings.cc.font
+          font.pixelSize: 11
+          opacity: 0.85
+        }
       }
     }
 

@@ -14,21 +14,30 @@ BarWidget {
   moduleName: "omarchy.menu"
 
   readonly property bool slime: !!root.bar && root.bar.slimeSkin === true
-  // [id, label, monster variant or -1 for the Omarchy glyph]
+  // [id, label, type, value]: type "monster" (SlimeMonster variant),
+  // "gear" (SlimeGear kind) or "omarchy" (the stock glyph)
   readonly property var icons: [
-    ["goober", "Goober", 0],
-    ["cyclops", "Cyclops", 1],
-    ["horned", "Horned", 2],
-    ["drooler", "Drooler", 3],
-    ["antenna", "Antenna", 4],
-    ["omarchy", "Omarchy", -1]
+    ["goober", "Goober", "monster", 0],
+    ["cyclops", "Cyclops", "monster", 1],
+    ["horned", "Horned", "monster", 2],
+    ["drooler", "Drooler", "monster", 3],
+    ["antenna", "Antenna", "monster", 4],
+    ["robot", "Robot", "monster", 5],
+    ["potion", "Potion", "gear", "potion"],
+    ["skull", "Skull", "gear", "skull"],
+    ["chest", "Chest", "gear", "chest"],
+    ["orb", "Orb", "gear", "orb"],
+    ["backpack", "Pack", "gear", "backpack"],
+    ["candle", "Candle", "gear", "candle"],
+    ["omarchy", "Omarchy", "omarchy", -1]
   ]
   readonly property string iconId: setting("icon", "goober")
-  readonly property int variant: {
-    for (var i = 0; i < icons.length; i++) if (icons[i][0] === iconId) return icons[i][2]
-    return 0
+  readonly property var current: {
+    for (var i = 0; i < icons.length; i++) if (icons[i][0] === iconId) return icons[i]
+    return icons[0]
   }
-  readonly property bool showMonster: slime && variant >= 0
+  readonly property bool showMonster: slime && current[2] === "monster"
+  readonly property bool showGear: slime && current[2] === "gear"
 
   property bool pickerOpen: false
   IpcHandler {
@@ -55,10 +64,10 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: root.showMonster ? "" : ""
+    text: root.showMonster || root.showGear ? "" : ""
     fontFamily: "omarchy"
     hasVisualContent: true
-    fixedWidth: root.showMonster ? 34 : -1
+    fixedWidth: root.showMonster || root.showGear ? 34 : -1
     horizontalMargin: 7.5
     onPressed: function(b) {
       if (!root.bar) return
@@ -69,11 +78,22 @@ BarWidget {
 
     HoverHandler { id: hover }
 
+    SlimeGear {
+      visible: root.showGear
+      anchors.centerIn: parent
+      size: 26
+      bar: root.bar
+      kind: root.showGear ? root.current[3] : "chest"
+      lit: hover.hovered || root.pickerOpen
+      net: "ethernet"
+      rotation: hover.hovered && root.bar ? Math.sin(root.bar.animTime * 8) * 6 : 0
+    }
+
     SlimeMonster {
       visible: root.showMonster
       anchors.centerIn: parent
       size: 26
-      variant: Math.max(0, root.variant)
+      variant: root.showMonster ? root.current[3] : 0
       mood: hover.hovered || root.pickerOpen ? "emote" : "idle"
       time: root.slime ? root.bar.animTime : 0
       body: root.slime ? root.bar.monsterBody : "transparent"
@@ -89,8 +109,8 @@ BarWidget {
     owner: root
     bar: root.bar
     open: root.pickerOpen
-    contentWidth: Style.space(12) * 2 + root.icons.length * 62
-    contentHeight: pickerColumn.implicitHeight + Style.space(12) * 2
+    contentWidth: Style.space(12) * 2 + 7 * 62
+    contentHeight: picker.fittedContentHeight(pickerColumn.implicitHeight)
 
     Column {
       id: pickerColumn
@@ -106,7 +126,8 @@ BarWidget {
         opacity: 0.7
       }
 
-      Row {
+      Flow {
+        width: parent.width
         spacing: 4
         Repeater {
           model: root.icons
@@ -124,11 +145,11 @@ BarWidget {
             HoverHandler { id: choiceHover }
 
             SlimeMonster {
-              visible: choice.modelData[2] >= 0
+              visible: choice.modelData[2] === "monster"
               anchors.horizontalCenter: parent.horizontalCenter
               y: 6
               size: 30
-              variant: Math.max(0, choice.modelData[2])
+              variant: choice.modelData[2] === "monster" ? choice.modelData[3] : 0
               mood: choice.selected || choiceHover.hovered ? "emote" : "idle"
               time: root.slime ? root.bar.animTime : 0
               body: root.slime ? root.bar.monsterBody : "transparent"
@@ -136,8 +157,18 @@ BarWidget {
               eye: root.slime ? root.bar.paperColor : "white"
               blush: root.slime ? root.bar.monsterBlush : "pink"
             }
+            SlimeGear {
+              visible: choice.modelData[2] === "gear"
+              anchors.horizontalCenter: parent.horizontalCenter
+              y: 6
+              size: 30
+              bar: root.bar
+              kind: choice.modelData[2] === "gear" ? choice.modelData[3] : "chest"
+              lit: choice.selected || choiceHover.hovered
+              net: "ethernet"
+            }
             Text {
-              visible: choice.modelData[2] < 0
+              visible: choice.modelData[2] === "omarchy"
               anchors.horizontalCenter: parent.horizontalCenter
               y: 8
               text: ""

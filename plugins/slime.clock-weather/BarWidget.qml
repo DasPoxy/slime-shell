@@ -52,7 +52,14 @@ BarWidget {
     id: settingsOwner
     function close() { root.settingsOpen = false }
   }
-  readonly property string weatherText: panelLoader.item ? panelLoader.item.label : ""
+  // What the clock shows of the weather: "icon", "temp" or "both" (setting)
+  readonly property string weatherShow: setting("weatherShow", "icon")
+  readonly property string weatherIcon: panelLoader.item ? panelLoader.item.label : ""
+  readonly property string weatherTemp: panelLoader.item && panelLoader.item.reportTempNum !== ""
+    ? panelLoader.item.reportTempNum + "°" : ""
+  readonly property string weatherText: weatherShow === "temp" ? (weatherTemp || weatherIcon)
+    : weatherShow === "both" ? [weatherIcon, weatherTemp].filter(function(x) { return x !== "" }).join(" ")
+    : weatherIcon
   // The hidden weather panel, for the command centre's weather card.
   readonly property var weatherPanel: panelLoader.item
 

@@ -9,6 +9,7 @@ import qs.Ui
 import "BarModel.js" as BarModel
 import "SlimeHub.js" as SlimeHub
 import "commandcenter"
+import "ui"
 
 // Slime Shell bar: a clone of the Omarchy bar engine (layout, widget slots,
 // drag/reorder, popouts, IPC all unchanged) with the slime skin painted by a
@@ -197,12 +198,14 @@ Item {
   property string slimeLayer: "above" // "above" windows, or "behind" them
   // Clock order everywhere (bar widget and command centre): time before date.
   property bool clockTimeFirst: false
+  // Detritus drifting in the bar (off for a cleaner look).
+  property bool barDebris: true
 
   // ---- Skin settings persistence -----------------------------------------
   // Saved to ~/.config/omarchy/slime-shell/skin.json, loaded on start and
   // written (debounced) whenever one of these changes.
   readonly property var skinKeys: ["slimeRole", "gradientRole", "shadingStyle", "slimeFps", "dripAmount",
-    "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst"]
+    "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris"]
   property bool skinLoaded: false
   // A layer change made while the bar surface is still being set up is lost,
   // so "behind" only takes effect once the bar has been mapped for a moment.
@@ -243,6 +246,7 @@ Item {
   onSlimeLayerChanged: skinSaveTimer.restart()
   onFontStyleChanged: skinSaveTimer.restart()
   onClockTimeFirstChanged: skinSaveTimer.restart()
+  onBarDebrisChanged: skinSaveTimer.restart()
   onCcTabChanged: skinSaveTimer.restart()
   onCcSectionsChanged: skinSaveTimer.restart()
   property bool commandCenterOpen: false
@@ -1602,6 +1606,26 @@ Item {
       property vector4d bulb13: barWindow.bulbRects[13] || barWindow.noBulb
       property vector4d bulb14: barWindow.bulbRects[14] || barWindow.noBulb
       property vector4d bulb15: barWindow.bulbRects[15] || barWindow.noBulb
+    }
+
+    // detritus drifting through the bar, fading out behind widgets
+    SlimeDebris {
+      visible: root.slimeSkin && root.barDebris && !root.vertical
+      width: barWindow.width
+      height: root.barSize
+      bar: root
+      bitOpacity: 0.7
+      avoid: barWindow.bulbRects
+      bits: {
+        var out = [], kinds = ["eye", "bubble", "bone", "bubble", "tooth", "eye", "bubble", "bone"]
+        var n = Math.max(1, Math.floor(barWindow.width / 150))
+        for (var i = 0; i < n; i++) {
+          var h = Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 1
+          out.push({ kind: kinds[i % kinds.length], x: (i + 0.25 + h * 0.5) / n, y: 0.3 + h * 0.4,
+                     s: 10 + Math.round(h * 8), sp: 0.3 + h * 0.6 })
+        }
+        return out
+      }
     }
 
     Item {

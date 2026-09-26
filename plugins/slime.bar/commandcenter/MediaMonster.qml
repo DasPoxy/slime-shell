@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 import Quickshell.Widgets
+import "../ui"
 
 // The media player as a slime monster: a cyclops whose eye is the album art,
 // with the track on its forehead, the controls beside it, and a mouth of
@@ -81,70 +82,20 @@ Item {
       property color paperColor: bar.paperColor
     }
 
-    // ---- debris adrift in the goo: spare eyes, bones, a tooth, bubbles -------
-    // Kept to the margins and faint enough that the track text stays clear.
-    Repeater {
-      model: [
-        { kind: "eye", x: 0.9, y: 0.2, s: 12, sp: 0.5 },
-        { kind: "bone", x: 0.78, y: 0.08, s: 16, sp: 0.35 },
-        { kind: "eye", x: 0.06, y: 0.62, s: 9, sp: 0.7 },
-        { kind: "tooth", x: 0.93, y: 0.56, s: 9, sp: 0.6 },
-        { kind: "bubble", x: 0.52, y: 0.06, s: 7, sp: 0.9 },
-        { kind: "bubble", x: 0.66, y: 0.58, s: 5, sp: 1.2 },
-        { kind: "eye", x: 0.42, y: 0.58, s: 7, sp: 0.8 },
-        { kind: "bone", x: 0.2, y: 0.9, s: 13, sp: 0.45 }
+    // ---- debris adrift in the goo, kept to the margins -----------------------
+    SlimeDebris {
+      anchors.fill: parent
+      bar: monster.cc.bar
+      bits: [
+        { kind: "eye", x: 0.9, y: 0.2, s: 18, sp: 0.5 },
+        { kind: "bone", x: 0.78, y: 0.08, s: 24, sp: 0.35 },
+        { kind: "eye", x: 0.06, y: 0.62, s: 13, sp: 0.7 },
+        { kind: "tooth", x: 0.93, y: 0.56, s: 13, sp: 0.6 },
+        { kind: "bubble", x: 0.52, y: 0.06, s: 10, sp: 0.9 },
+        { kind: "bubble", x: 0.66, y: 0.58, s: 8, sp: 1.2 },
+        { kind: "eye", x: 0.42, y: 0.58, s: 10, sp: 0.8 },
+        { kind: "bone", x: 0.2, y: 0.9, s: 19, sp: 0.45 }
       ]
-      Item {
-        id: bit
-        required property var modelData
-        required property int index
-        readonly property real drift: monster.t * modelData.sp + index * 1.9
-        width: modelData.s * 1.5
-        height: modelData.s * 1.5
-        x: modelData.x * monster.width - width / 2 + Math.sin(drift) * 5
-        y: modelData.y * monster.height - height / 2 + Math.cos(drift * 0.8) * 4
-        rotation: Math.sin(drift * 0.6) * 40
-        opacity: 0.8
-
-        // spare eyeball, looking somewhere else
-        Rectangle {
-          visible: bit.modelData.kind === "eye"
-          anchors.fill: parent
-          radius: width / 2
-          color: monster.paper
-          border.color: monster.ink
-          border.width: 1
-          Rectangle {
-            width: parent.width * 0.45; height: width; radius: width / 2
-            x: parent.width * 0.3 + Math.sin(bit.drift * 1.7) * parent.width * 0.15
-            y: parent.height * 0.28
-            color: monster.ink
-          }
-        }
-        Shape {
-          visible: bit.modelData.kind !== "eye"
-          anchors.fill: parent
-          preferredRendererType: Shape.CurveRenderer
-          ShapePath {
-            fillColor: bit.modelData.kind === "bubble" ? Qt.rgba(1, 1, 1, 0.35) : monster.paper
-            strokeColor: monster.ink
-            strokeWidth: 1
-            joinStyle: ShapePath.RoundJoin
-            PathSvg {
-              path: {
-                var s = bit.width
-                if (bit.modelData.kind === "bone")
-                  return "M " + s * 0.2 + " " + s * 0.42 + " L " + s * 0.8 + " " + s * 0.42 + " L " + s * 0.8 + " " + s * 0.58 + " L " + s * 0.2 + " " + s * 0.58 + " Z"
-                    + " M " + s * 0.12 + " " + s * 0.5 + " m -" + s * 0.11 + " 0 a " + s * 0.11 + " " + s * 0.11 + " 0 1 0 " + s * 0.22 + " 0 a " + s * 0.11 + " " + s * 0.11 + " 0 1 0 -" + s * 0.22 + " 0"
-                    + " M " + s * 0.88 + " " + s * 0.5 + " m -" + s * 0.11 + " 0 a " + s * 0.11 + " " + s * 0.11 + " 0 1 0 " + s * 0.22 + " 0 a " + s * 0.11 + " " + s * 0.11 + " 0 1 0 -" + s * 0.22 + " 0"
-                if (bit.modelData.kind === "tooth")
-                  return "M " + s * 0.15 + " " + s * 0.1 + " L " + s * 0.85 + " " + s * 0.1 + " L " + s * 0.5 + " " + s * 0.95 + " Z"
-                return "M 0 " + s / 2 + " a " + s / 2 + " " + s / 2 + " 0 1 0 " + s + " 0 a " + s / 2 + " " + s / 2 + " 0 1 0 -" + s + " 0"
-              }
-            }
-          }
-        }
-      }
     }
 
     // ---- the eye: album art iris --------------------------------------------

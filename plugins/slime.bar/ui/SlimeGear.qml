@@ -27,6 +27,9 @@ import QtQuick.Shapes
 //
 //   widgets:
 //        "chest"      plugin picker (lit = lid open, glowing loot)
+//        "book"       spellbook (memory)       lit = glowing rune
+//        "potion"     bubbling flask           lit = bubbling
+//        "skull"      grinning skull           lit = glowing eyes
 Item {
   id: root
 
@@ -464,6 +467,63 @@ Item {
       Rectangle { visible: root.lit; x: 10.2; y: 7.6; width: 3.2; height: 3.2; rotation: 45; color: root.crystal; border.color: root.ink; border.width: 0.7 }
       Rectangle { visible: root.lit; x: 13.4; y: 8.8; width: 3.4; height: 3.4; radius: 1.7; color: root.gold; border.color: root.ink; border.width: 0.7 }
       Rectangle { x: 10.6; y: root.lit ? 11.6 : 9.6; width: 2.8; height: 3.2; radius: 0.6; color: root.gold; border.color: root.ink; border.width: 0.8 }   // lock
+    }
+
+
+    // ==================================================================== book
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "book"
+
+      GearPath { d: "M4 5 Q4 3.2 5.8 3.2 L19.2 3.2 L19.2 18.6 L5.8 18.6 Q4 18.6 4 20.4 Z"; fill: root.leather }     // cover
+      GearPath { d: "M4 20.4 Q4 22 5.8 22 L19.2 22 L19.2 18.6 L5.8 18.6 Q4 18.6 4 20.4 Z"; fill: root.paper; line: 1.1 }   // pages
+      GearPath { d: "M6.2 20.3 L18.2 20.3"; line: 0.6 }
+      GearPath { d: "M7.2 3.4 L7.2 18.4"; stroke: root.gold; line: 1.2 }                                                   // spine band
+      GearPath { d: "M10 7 L16.4 7 L16.4 14.8 L10 14.8 Z"; fill: root.leatherLight; line: 0.9 }                              // plate
+      GearPath {   // rune
+        d: "M13.2 8.2 L13.2 13.6 M11.4 9.6 L15 12.2 M15 9.6 L11.4 12.2"
+        stroke: root.lit ? root.glow : root.ink
+        line: 1.2
+        opacity: root.lit ? root.pulse : 0.8
+      }
+      Rectangle { x: 18.2; y: 9.4; width: 2.6; height: 3.4; radius: 0.8; color: root.gold; border.color: root.ink; border.width: 0.7 }   // clasp
+    }
+
+    // ================================================================== potion
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "potion"
+
+      GearPath { d: "M9.6 2.4 L14.4 2.4 L14.4 5 L9.6 5 Z"; fill: root.leather; line: 1 }                                  // cork
+      GearPath { d: "M10 5 L10 9 Q4.2 11 4.2 15.8 Q4.2 21.6 12 21.6 Q19.8 21.6 19.8 15.8 Q19.8 11 14 9 L14 5 Z"; fill: root.glass }
+      GearPath { d: "M5.2 14.6 Q12 12.2 18.8 14.6 Q19.4 20.6 12 20.6 Q4.6 20.6 5.2 14.6 Z"; fill: root.pal.bright_magenta || root.blood; line: 0.9 }   // brew
+      GearPath { d: "M7 12.8 Q7.6 10.6 9.4 10"; stroke: root.paper; line: 1.1 }                                            // shine
+      Repeater {   // bubbles rising out of the brew
+        model: root.lit ? 3 : 0
+        Rectangle {
+          required property int index
+          readonly property real rise: (root.time * 0.6 + index / 3) % 1
+          x: 9.6 + index * 2.2 - width / 2
+          y: 16 - rise * 14
+          width: 1.8 + index * 0.4; height: width; radius: width / 2
+          color: "transparent"; border.color: root.ink; border.width: 0.6
+          opacity: 1 - rise
+        }
+      }
+    }
+
+    // =================================================================== skull
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "skull"
+
+      GearPath { d: "M12 2.4 Q20.4 2.4 20.4 10.4 Q20.4 14 17.6 15.4 L17.6 18.2 L6.4 18.2 L6.4 15.4 Q3.6 14 3.6 10.4 Q3.6 2.4 12 2.4 Z"; fill: root.paper }
+      GearPath { d: "M8.2 18.2 L8.2 21.4 L15.8 21.4 L15.8 18.2 M10.8 18.4 L10.8 21.2 M13.2 18.4 L13.2 21.2"; fill: root.paper; line: 1.1 }   // jaw & teeth
+      GearPath { d: "M6.8 10 Q6.8 7.4 9.4 7.8 Q10.6 8.4 10.4 10.8 Q10 13 8 12.6 Q6.8 12.2 6.8 10 Z M17.2 10 Q17.2 7.4 14.6 7.8 Q13.4 8.4 13.6 10.8 Q14 13 16 12.6 Q17.2 12.2 17.2 10 Z"; fill: root.ink }   // sockets
+      GearPath { d: "M12 13 L11 15.2 L13 15.2 Z"; fill: root.ink; line: 0.6 }                                              // nose
+      Rectangle { visible: root.lit; x: 8; y: 9.2; width: 1.8; height: 1.8; radius: 0.9; color: root.glow; opacity: root.pulse }
+      Rectangle { visible: root.lit; x: 14.2; y: 9.2; width: 1.8; height: 1.8; radius: 0.9; color: root.glow; opacity: root.pulse }
+      GearPath { d: "M16.2 4.4 L15 6.6 L16.4 7.4"; line: 0.7 }                                                              // crack
     }
 
   }

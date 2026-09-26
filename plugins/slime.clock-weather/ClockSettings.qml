@@ -110,6 +110,21 @@ SlimeKeyboardPanel {
       }
     }
 
+    Heading { text: "WEATHER" }
+    Flow {
+      width: parent.width
+      spacing: 6
+      Repeater {
+        model: [["icon", "icon"], ["temperature", "temp"], ["icon + temperature", "both"]]
+        Choice {
+          required property var modelData
+          label: modelData[0]
+          selected: panel.widget.weatherShow === modelData[1]
+          onPicked: panel.widget.saveSetting("weatherShow", modelData[1])
+        }
+      }
+    }
+
     Heading { text: "ORDER" }
     Flow {
       width: parent.width

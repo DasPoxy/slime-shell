@@ -226,7 +226,13 @@ Item {
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
         ShapePath {   // the cloud: bumpy top, flat-ish rounded base
-          fillColor: home.cc.bar.monsterBody
+          // lit from above: bright paper at the top, stormy grey-blue below
+          fillGradient: LinearGradient {
+            x1: 0; y1: 0; x2: 0; y2: cloud.height
+            GradientStop { position: 0.0; color: Qt.lighter(home.cc.paper, 1.06) }
+            GradientStop { position: 0.55; color: Qt.tint(home.cc.paper, Qt.rgba(0.55, 0.62, 0.8, 0.28)) }
+            GradientStop { position: 1.0; color: Qt.tint(home.cc.paper, Qt.rgba(0.32, 0.38, 0.58, 0.5)) }
+          }
           strokeColor: home.cc.ink
           strokeWidth: 2
           joinStyle: ShapePath.RoundJoin
@@ -245,10 +251,45 @@ Item {
             }
           }
         }
-        ShapePath {   // gloss
-          fillColor: Qt.rgba(1, 1, 1, 0.55)
+        ShapePath {   // underbelly: a darker scalloped band of shadow
+          fillColor: Qt.rgba(0.2, 0.24, 0.42, 0.18)
           strokeColor: "transparent"
-          PathSvg { path: "M 36 22 Q 44 13 58 16 Q 46 18 40 26 Z" }
+          PathSvg {
+            path: {
+              var w = cloud.width, h = cloud.height, y = h - 22, d = "M 6 " + y
+              var n = Math.max(4, Math.round(w / 60))
+              for (var i = 0; i < n; i++) {
+                var x0 = 6 + (w - 12) * i / n, x1 = 6 + (w - 12) * (i + 1) / n
+                d += " Q " + ((x0 + x1) / 2) + " " + (y - 12) + " " + x1 + " " + y
+              }
+              return d + " L " + (w - 6) + " " + (h - 6) + " Q " + (w / 2) + " " + (h + 2) + " 6 " + (h - 6) + " Z"
+            }
+          }
+        }
+        ShapePath {   // soft inner shading between the top bumps
+          fillColor: "transparent"
+          strokeColor: Qt.rgba(0.25, 0.3, 0.5, 0.25)
+          strokeWidth: 1.5
+          capStyle: ShapePath.RoundCap
+          PathSvg {
+            path: {
+              var w = cloud.width
+              return "M 30 36 Q 40 26 54 30 M " + (w * 0.4) + " 26 Q " + (w * 0.47) + " 18 " + (w * 0.56) + " 24"
+                + " M " + (w * 0.68) + " 30 Q " + (w * 0.76) + " 24 " + (w * 0.84) + " 32"
+            }
+          }
+        }
+        ShapePath {   // highlights on the lit bumps
+          fillColor: Qt.rgba(1, 1, 1, 0.8)
+          strokeColor: "transparent"
+          PathSvg {
+            path: {
+              var w = cloud.width
+              return "M 36 22 Q 44 13 58 16 Q 46 18 40 26 Z"
+                + " M " + (w * 0.36) + " 12 Q " + (w * 0.42) + " 4 " + (w * 0.5) + " 7 Q " + (w * 0.42) + " 9 " + (w * 0.38) + " 15 Z"
+                + " M " + (w * 0.66) + " 13 Q " + (w * 0.7) + " 8 " + (w * 0.76) + " 11 Q " + (w * 0.7) + " 12 " + (w * 0.68) + " 16 Z"
+            }
+          }
         }
       }
       // raindrops under a wet cloud
