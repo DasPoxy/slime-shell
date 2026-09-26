@@ -173,6 +173,53 @@ Item {
   property int slimeFps: 60          // 0 = paused
   property real dripAmount: 1.0
   property int shadingStyle: 3       // 0 soft, 1 anime, 2 manga, 3 print
+  property string slimeLayer: "above" // "above" windows, or "behind" them
+
+  // ---- Skin settings persistence -----------------------------------------
+  // Saved to ~/.config/omarchy/slime-shell/skin.json, loaded on start and
+  // written (debounced) whenever one of these changes.
+  readonly property var skinKeys: ["slimeRole", "gradientRole", "shadingStyle", "slimeFps", "dripAmount",
+    "slimeLayer", "ccTab", "ccSections"]
+  property bool skinLoaded: false
+  // A layer change made while the bar surface is still being set up is lost,
+  // so "behind" only takes effect once the bar has been mapped for a moment.
+  property bool layerReady: false
+  Timer { interval: 800; running: root.skinLoaded; onTriggered: root.layerReady = true }
+
+  function loadSkin(raw) {
+    var saved = {}
+    try { saved = JSON.parse(raw || "{}") } catch (e) { saved = {} }
+    for (var i = 0; i < skinKeys.length; i++) {
+      var key = skinKeys[i]
+      if (saved[key] !== undefined && saved[key] !== null && typeof saved[key] === typeof root[key]) root[key] = saved[key]
+    }
+    skinLoaded = true
+  }
+
+  function saveSkin() {
+    if (!skinLoaded) return
+    var out = {}
+    for (var i = 0; i < skinKeys.length; i++) out[skinKeys[i]] = root[skinKeys[i]]
+    skinFile.setText(JSON.stringify(out, null, 2) + "\n")
+  }
+
+  FileView {
+    id: skinFile
+    path: root.omarchyConfigDir + "/slime-shell/skin.json"
+    printErrors: false
+    atomicWrites: true
+    onLoaded: root.loadSkin(text())
+    onLoadFailed: root.loadSkin("{}")
+  }
+  Timer { id: skinSaveTimer; interval: 400; onTriggered: root.saveSkin() }
+  onSlimeRoleChanged: skinSaveTimer.restart()
+  onGradientRoleChanged: skinSaveTimer.restart()
+  onShadingStyleChanged: skinSaveTimer.restart()
+  onSlimeFpsChanged: skinSaveTimer.restart()
+  onDripAmountChanged: skinSaveTimer.restart()
+  onSlimeLayerChanged: skinSaveTimer.restart()
+  onCcTabChanged: skinSaveTimer.restart()
+  onCcSectionsChanged: skinSaveTimer.restart()
   property bool commandCenterOpen: false
   // Latest widget bulb rects, for overlays drawn outside the bar window
   // (notification toasts) so their slime lines up with the bar's.
@@ -209,6 +256,8 @@ Item {
     function gradient(role: string): void { root.gradientRole = role }
     function color(role: string): void { root.slimeRole = role }
     function fps(n: int): void { root.slimeFps = n }
+    // Draw the slime "above" windows or "behind" them.
+    function layer(where: string): void { root.slimeLayer = where === "behind" ? "behind" : "above" }
     // Open the command centre on a tab: home, system, wallpapers, tasks, settings.
     function tab(name: string): void { root.ccTab = name; root.commandCenterOpen = root.slimeSkin }
   }
@@ -1425,7 +1474,10 @@ Item {
     color: root.slimeSkin || root.transparent ? "transparent" : root.background
     surfaceFormat.opaque: false
     WlrLayershell.namespace: "omarchy-bar"
-    WlrLayershell.layer: WlrLayer.Top
+    // "behind": the bar surface sits on the Bottom layer so drips hang behind
+    // windows (the exclusive zone still keeps tiled windows off the bar). It
+    // comes back to Top while the command centre is open so that stays usable.
+    WlrLayershell.layer: root.slimeSkin && root.layerReady && root.slimeLayer === "behind" && !ccShown ? WlrLayer.Bottom : WlrLayer.Top
 
     // ---- Slime skin ----
     // Command centre animation: 0 closed, 1 fully dripped open.

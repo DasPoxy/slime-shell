@@ -60,6 +60,12 @@ Item {
         onPicked: value => settings.bar.gradientRole = value
       }
       ChoiceRow {
+        title: "DRAW SLIME"
+        options: [["above windows", "above"], ["behind windows", "behind"]]
+        current: settings.bar.slimeLayer
+        onPicked: value => settings.bar.slimeLayer = value
+      }
+      ChoiceRow {
         title: "SHADING"
         options: [["soft", 0], ["anime", 1], ["manga", 2], ["print", 3]]
         current: settings.bar.shadingStyle
