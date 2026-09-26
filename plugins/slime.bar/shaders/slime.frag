@@ -229,19 +229,30 @@ float dripEdge(float x) {
 
 // Sinew: a row of teeth hanging off the goo's lower edge (distance only).
 float teethRow(vec2 p) {
-    const float STEP = 13.0;
+    // uneven spacing, sizes and tilts: a jittered row where some teeth are
+    // missing, some are stubs, some are long fangs leaning either way
+    const float STEP = 12.0;
     float i = floor(p.x / STEP);
     float d = 1e5;
-    for (int k = -1; k <= 1; k++) {
+    for (int k = -2; k <= 2; k++) {
         float j = i + float(k);
-        float cx = (j + 0.5) * STEP;
+        if (hash(j * 2.3 + 5.0) < 0.3) continue;                       // gaps
+        float cx = (j + 0.5 + (hash(j * 4.1 + 1.0) - 0.5) * 0.7) * STEP;
         float edge = dripEdge(cx);
-        if (edge < 0.0 || hash(j * 2.3 + 5.0) < 0.25) continue;
-        float len = 6.0 + 6.0 * hash(j * 7.1);
-        // triangle: base at the edge, point hanging down
-        vec2 q = p - vec2(cx, edge - 2.0);
-        float w = 4.2 * (1.0 - clamp(q.y / len, 0.0, 1.0));
-        float t = max(abs(q.x) - w, max(-q.y, q.y - len));
+        if (edge < 0.0) continue;
+        float big = hash(j * 7.1);
+        float len = big > 0.85 ? 13.0 + 7.0 * hash(j * 3.3)            // fang
+                  : 4.0 + 7.0 * big;                                   // tooth or stub
+        float wid = (big > 0.85 ? 3.2 : 2.4 + 2.2 * hash(j * 9.7));
+        float tilt = (hash(j * 5.9) - 0.5) * (big > 0.85 ? 0.7 : 0.9);  // radians
+        // rotate around the root so each leans its own way
+        vec2 q = p - vec2(cx, edge - 2.0 + hash(j * 6.2) * 2.0);
+        float cs = cos(tilt), sn = sin(tilt);
+        q = vec2(cs * q.x + sn * q.y, -sn * q.x + cs * q.y);
+        // a slightly curved point: narrows faster near the tip
+        float f = clamp(q.y / len, 0.0, 1.0);
+        float w = wid * (1.0 - f * f * 0.35 - f * 0.65);
+        float t = max(abs(q.x + f * f * tilt * 3.0) - w, max(-q.y, q.y - len));
         d = min(d, t);
     }
     return d;
@@ -464,7 +475,10 @@ vec3 softShade(vec2 p, float d, vec3 base) {
     vec3 col = base * (0.45 + 0.65 * diffuse);
     col += base * 0.4 * rim;
     col = mix(col, base * 0.35, underside * 0.6);
-    return col + vec3(1.0) * (0.9 * spec + 0.12 * sheen);
+    col += vec3(1.0) * (0.9 * spec + 0.12 * sheen);
+    // a slight film grain, stronger in the shadows like real grain
+    float grain = (hash2(floor(p)) - 0.5) * 0.07 + (vnoise(p / 1.7) - 0.5) * 0.05;
+    return col * (1.0 + grain * (1.3 - diffuse * 0.6));
 }
 
 vec3 celShade(vec2 p, vec2 scene, vec3 base, bool screentone) {
