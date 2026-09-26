@@ -373,8 +373,12 @@ float baseShape(vec2 p) {
 // Bottom edge of the goo above x (for hanging drips), or -1 where there is
 // none. Classic always has the strip; the others only under their shapes.
 float podBottom(vec4 b, float x, float extra) {
-    float padX = barShape > 0.5 && barShape < 1.5 ? -2.5 : PAD;
-    if (b.z <= 0.0 || x < b.x - padX + 6.0 || x > b.x + b.z + padX - 6.0) return -1.0;
+    bool pill = barShape > 0.5 && barShape < 1.5;
+    float padX = pill ? -2.5 : PAD;
+    // pills sit 5px apart: keep drips well in from the ends (narrow pills
+    // still get one in the middle) so a drip's blend never bridges two pills
+    float inset = pill ? min(18.0, b.z * 0.5 - 2.0) : 6.0 - padX;
+    if (b.z <= 0.0 || x < b.x + inset || x > b.x + b.z - inset) return -1.0;
     return b.y + b.w + PAD * 0.55 + extra;
 }
 float dripEdge(float x) {

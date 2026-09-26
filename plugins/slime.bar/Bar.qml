@@ -1802,6 +1802,8 @@ Item {
       // is consecutive layout entries linked by pillJoin. Spacers inside a
       // run widen that pill; hidden widgets (the lich when nothing plays) and
       // unjoined spacers break the run so neighbours never bridge across.
+      // In pill mode a lone spacer gets a pill of its own; in the other
+      // shapes it stays bare goo.
       var joinPills = root.barShape === "pills"
       var sections = ["left", "center", "right"]
       for (var r = 0; r < sections.length; r++) {
@@ -1836,7 +1838,7 @@ Item {
           var len2 = root.vertical ? slotHere.height : slotHere.width
           if (!run) run = { x0: at2, x1: at2 + len2, has: false }
           else run.x1 = at2 + len2
-          if (!noBulb) run.has = true
+          if (!noBulb || joinPills) run.has = true
           else if (!run.has && !(joinPills && entry.pillJoin)) { run = null; continue }  // lone spacer
           if (!(joinPills && entry.pillJoin)) flush()
         }
