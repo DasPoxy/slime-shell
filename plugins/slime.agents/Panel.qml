@@ -375,7 +375,8 @@ Panel {
       tint: root.usage >= 0.9 ? (pal.red || "#ff1720") : root.usage >= 0.75 ? (pal.orange || "#ff7a1a") : (pal.yellow || "#d9b800")
       tintAmount: root.usage < 0.5 ? 0 : root.usage < 0.75 ? 0.25 : root.usage < 0.9 ? 0.4 : 0.55 + 0.1 * Math.sin((root.bar ? root.bar.animTime : 0) * 5)
       time: root.bar && root.bar.slimeSkin ? root.bar.animTime : 0
-      body: root.bar && root.bar.slimeSkin ? root.bar.monsterBody : "transparent"
+      body: root.bar && root.bar.slimeSkin ? root.bar.monsterBodyFor(-1) : "transparent"
+      body2: root.bar && root.bar.slimeSkin ? root.bar.monsterBody2For(-1) : "transparent"
       ink: root.bar && root.bar.slimeSkin ? root.bar.slimeInk : "black"
       eye: root.bar && root.bar.slimeSkin ? root.bar.paperColor : "white"
       blush: root.bar && root.bar.slimeSkin ? root.bar.monsterBlush : "pink"

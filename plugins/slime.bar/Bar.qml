@@ -84,12 +84,16 @@ Item {
   //   chewy   blobby: Chewy display
   //   wetpaint drippy: Rubik Wet Paint display
   //   bubble  bubble letters: Rubik Bubbles display
+  //   runic   fantasy runes: MedievalSharp display
+  //   parchment old-print scroll: IM Fell English display
+  //   monster horror-poster: Creepster display
   property string fontStyle: "system"
   readonly property bool slimeFonts: slimeSkin && fontStyle !== "system" && snigletFont.status === FontLoader.Ready
   property string fontFamily: slimeFonts ? snigletFont.name : Style.font.family
   readonly property string displayFontFamily: {
     if (!slimeFonts) return fontFamily
-    var loader = fontStyle === "chewy" ? chewyFont : fontStyle === "wetpaint" ? wetPaintFont : fontStyle === "bubble" ? bubbleFont : null
+    var loader = ({ chewy: chewyFont, wetpaint: wetPaintFont, bubble: bubbleFont,
+                    runic: runicFont, parchment: parchmentFont, monster: monsterFont })[fontStyle] || null
     return loader && loader.status === FontLoader.Ready ? loader.name : fontFamily
   }
   // Display faces have a single weight; asking for bold makes Qt smear them.
@@ -99,6 +103,9 @@ Item {
   FontLoader { id: chewyFont; source: Qt.resolvedUrl("fonts/Chewy-Regular.ttf") }
   FontLoader { id: wetPaintFont; source: Qt.resolvedUrl("fonts/RubikWetPaint-Regular.ttf") }
   FontLoader { id: bubbleFont; source: Qt.resolvedUrl("fonts/RubikBubbles-Regular.ttf") }
+  FontLoader { id: runicFont; source: Qt.resolvedUrl("fonts/MedievalSharp-Regular.ttf") }
+  FontLoader { id: parchmentFont; source: Qt.resolvedUrl("fonts/IMFellEnglish-Regular.ttf") }
+  FontLoader { id: monsterFont; source: Qt.resolvedUrl("fonts/Creepster-Regular.ttf") }
   // Bound to the central Color singleton so the bar tracks shell.toml's
   // [bar] section. Property names kept for the rest of this file's bindings.
   property color themeForeground: slimeSkin ? slimeInk : Color.bar.text
@@ -195,6 +202,26 @@ Item {
   // tinted with the gradient partner, so they pop off the ooze they float in.
   readonly property color monsterBody: Qt.tint(paperColor, Qt.rgba(slimeColor2.r, slimeColor2.g, slimeColor2.b, 0.3))
   readonly property color monsterBlush: palette.bright_magenta || palette.magenta || "#ff6fa8"
+  // How the slime icons (workspaces, agents, launcher) are coloured:
+  //   paper     pale paper tinted with the gradient partner (default: pops off the ooze)
+  //   theme     the theme's own colours; workspace slimes each take a different hue
+  //   gradient  shaded top to bottom like the bar: slime colour into its partner
+  property string monsterColor: "paper"
+  readonly property var monsterHues: ["bright_green", "bright_cyan", "bright_magenta", "bright_yellow", "bright_blue", "bright_red",
+    "green", "cyan", "magenta", "yellow"]
+  function monsterBodyFor(i) {
+    if (monsterColor === "gradient") return slimeColor
+    if (monsterColor === "theme") {
+      if (i < 0) return palette.accent || slimeColor2
+      for (var k = 0; k < monsterHues.length; k++) {
+        var c = palette[monsterHues[(i + k) % monsterHues.length]]
+        if (c) return c
+      }
+      return slimeColor2
+    }
+    return monsterBody
+  }
+  function monsterBody2For(i) { return monsterColor === "gradient" ? slimeColor2 : monsterBodyFor(i) }
 
   property int slimeFps: 60          // 0 = paused
   property real dripAmount: 1.0
@@ -278,7 +305,7 @@ Item {
   // Saved to ~/.config/omarchy/slime-shell/skin.json, loaded on start and
   // written (debounced) whenever one of these changes.
   readonly property var skinKeys: ["slimeRole", "gradientRole", "shadingStyle", "slimeFps", "dripAmount",
-    "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material", "dripStyle"]
+    "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material", "dripStyle", "monsterColor"]
   property bool skinLoaded: false
   // A layer change made while the bar surface is still being set up is lost,
   // so "behind" only takes effect once the bar has been mapped for a moment.
@@ -321,6 +348,7 @@ Item {
   onClockTimeFirstChanged: skinSaveTimer.restart()
   onBarDebrisChanged: skinSaveTimer.restart()
   onBarShapeChanged: skinSaveTimer.restart()
+  onMonsterColorChanged: skinSaveTimer.restart()
   onMaterialChanged: skinSaveTimer.restart()
   onDripStyleChanged: skinSaveTimer.restart()
   onCcTabChanged: skinSaveTimer.restart()

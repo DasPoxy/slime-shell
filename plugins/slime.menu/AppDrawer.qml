@@ -195,7 +195,8 @@ SlimeKeyboardPanel {
         variant: drawer.widget.current[2] === "monster" ? drawer.widget.current[3] : 0
         mood: drawer.query !== "" ? "emote" : "idle"
         time: drawer.slime ? drawer.bar.animTime : 0
-        body: drawer.slime ? drawer.bar.monsterBody : "white"
+        body: drawer.slime ? drawer.bar.monsterBodyFor(-1) : "white"
+        body2: drawer.slime ? drawer.bar.monsterBody2For(-1) : "white"
         ink: drawer.ink
         eye: drawer.slime ? drawer.bar.paperColor : "white"
         blush: drawer.slime ? drawer.bar.monsterBlush : "pink"

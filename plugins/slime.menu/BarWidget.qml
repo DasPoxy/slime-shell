@@ -108,7 +108,8 @@ BarWidget {
       variant: root.showMonster ? root.current[3] : 0
       mood: hover.hovered || root.pickerOpen || root.appsOpen ? "emote" : "idle"
       time: root.slime ? root.bar.animTime : 0
-      body: root.slime ? root.bar.monsterBody : "transparent"
+      body: root.slime ? root.bar.monsterBodyFor(-1) : "transparent"
+      body2: root.slime ? root.bar.monsterBody2For(-1) : "transparent"
       ink: root.slime ? root.bar.slimeInk : "black"
       eye: root.slime ? root.bar.paperColor : "white"
       blush: root.slime ? root.bar.monsterBlush : "pink"
@@ -174,7 +175,8 @@ BarWidget {
               variant: choice.modelData[2] === "monster" ? choice.modelData[3] : 0
               mood: choice.selected || choiceHover.hovered ? "emote" : "idle"
               time: root.slime ? root.bar.animTime : 0
-              body: root.slime ? root.bar.monsterBody : "transparent"
+              body: root.slime ? root.bar.monsterBodyFor(-1) : "transparent"
+              body2: root.slime ? root.bar.monsterBody2For(-1) : "transparent"
               ink: root.slime ? root.bar.slimeInk : "black"
               eye: root.slime ? root.bar.paperColor : "white"
               blush: root.slime ? root.bar.monsterBlush : "pink"

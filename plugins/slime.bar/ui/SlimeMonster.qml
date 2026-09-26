@@ -26,6 +26,8 @@ Item {
   property real time: 0            // drive with the bar's animation clock
   property real seed: variant * 1.7
   property color body: "#9fe870"
+  // set to a second colour to shade the body top-to-bottom (bar gradient)
+  property color body2: body
   property color ink: "#101315"
   property color eye: "#ffffff"
   property color blush: "#ff6fa8"
@@ -37,6 +39,17 @@ Item {
     : material === "bone" ? Qt.tint(eye, Qt.rgba(0.6, 0.48, 0.3, 0.22))
     : body
   readonly property color skin: tintAmount > 0 ? Qt.tint(baseSkin, Qt.rgba(tint.r, tint.g, tint.b, tintAmount)) : baseSkin
+  readonly property bool shaded: !Qt.colorEqual(body2, body)
+  readonly property color baseSkin2: material === "sinew" ? Qt.tint(body2, Qt.rgba(0.86, 0.3, 0.36, 0.5))
+    : material === "bone" ? baseSkin
+    : body2
+  readonly property color skin2: tintAmount > 0 ? Qt.tint(baseSkin2, Qt.rgba(tint.r, tint.g, tint.b, tintAmount)) : baseSkin2
+  LinearGradient {
+    id: skinGrad
+    x1: 0; y1: 4; x2: 0; y2: 22
+    GradientStop { position: 0; color: root.skin }
+    GradientStop { position: 1; color: root.skin2 }
+  }
 
   readonly property bool emote: mood === "emote"
   readonly property bool asleep: mood === "sleep"
@@ -99,6 +112,7 @@ Item {
       visible: root.variant === 5
       ShapePath {
         fillColor: root.skin
+        fillGradient: root.shaded ? skinGrad : null
         strokeColor: root.ink
         strokeWidth: 1.2
         joinStyle: ShapePath.RoundJoin
@@ -112,6 +126,7 @@ Item {
       preferredRendererType: Shape.CurveRenderer
       ShapePath {
         fillColor: root.skin
+        fillGradient: root.shaded ? skinGrad : null
         strokeColor: root.ink
         strokeWidth: 1.4
         joinStyle: ShapePath.RoundJoin

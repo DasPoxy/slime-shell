@@ -150,6 +150,12 @@ Item {
         onPicked: value => settings.bar.barDebris = value
       }
       ChoiceRow {
+        title: "SLIME ICONS"
+        options: [["paper", "paper"], ["theme colours", "theme"], ["bar gradient", "gradient"]]
+        current: settings.bar.monsterColor
+        onPicked: value => settings.bar.monsterColor = value
+      }
+      ChoiceRow {
         title: "SHADING"
         options: [["soft", 0], ["anime", 1], ["manga", 2], ["print", 3]]
         current: settings.bar.shadingStyle
@@ -163,7 +169,8 @@ Item {
       kind: "scroll"
       ChoiceRow {
         title: "FONT"
-        options: [["system", "system"], ["blobby", "chewy"], ["drippy", "wetpaint"], ["bubble", "bubble"]]
+        options: [["system", "system"], ["blobby", "chewy"], ["drippy", "wetpaint"], ["bubble", "bubble"],
+          ["runic", "runic"], ["parchment", "parchment"], ["monster", "monster"]]
         current: settings.bar.fontStyle
         onPicked: value => settings.bar.fontStyle = value
       }

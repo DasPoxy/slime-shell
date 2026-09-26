@@ -125,8 +125,9 @@ omarchy-shell slime-clock settings
 Command centre → **Settings** (sections fold open and closed):
 
 - **Slime** — colour, gradient partner, material, bar position, bar shape,
-  draw above/behind windows, debris (in the bar and drifting behind panels, with the odd trapped adventurer), shading
-- **Font & clock** — system font or a slime set (blobby, drippy, bubble),
+  draw above/behind windows, slime icon colours (paper, theme, bar gradient), debris (in the bar and drifting behind panels, with the odd trapped adventurer), shading
+- **Font & clock** — system font or a display set (blobby, drippy, bubble,
+  runic, parchment, monster),
   date/time order
 - **Motion** — frame rate, drip style, drip amount
 - **Updates** — check GitHub, update & restart
@@ -166,5 +167,5 @@ After editing the shader, recompile it:
 ## Credits
 
 Built on Omarchy's shell plugins (MIT). Fonts: Chewy (Apache-2.0), Rubik Wet
-Paint, Rubik Bubbles and Sniglet (SIL OFL) — licences in
+Paint, Rubik Bubbles, Sniglet, MedievalSharp, IM Fell English and Creepster (SIL OFL) — licences in
 `plugins/slime.bar/fonts/`.

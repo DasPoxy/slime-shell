@@ -146,7 +146,8 @@ BarWidget {
           mood: wsButton.focused ? "emote" : (wsButton.occupied ? "idle" : "sleep")
           opacity: wsButton.focused || wsButton.occupied ? 1 : 0.6
           time: wsButton.t
-          body: root.slime ? root.bar.monsterBody : "transparent"
+          body: root.slime ? root.bar.monsterBodyFor(wsButton.modelData - 1) : "transparent"
+          body2: root.slime ? root.bar.monsterBody2For(wsButton.modelData - 1) : "transparent"
           ink: wsButton.ink
           eye: root.slime ? root.bar.paperColor : "white"
           blush: root.slime ? root.bar.monsterBlush : "pink"
