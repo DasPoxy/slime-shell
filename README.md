@@ -19,6 +19,31 @@ pills, islands, notch) and a **shading** style (soft, anime, manga, print):
 ![Bone notch](docs/images/bar-bone-notch.png)
 ![Slime islands, manga](docs/images/bar-slime-islands-manga.png)
 
+### Drips
+
+Pick how the ooze moves (**Settings → Motion → Drip style**, or
+`omarchy-shell slime-shell drip <style>`):
+
+| Style | |
+|---|---|
+| **drip** — the default | ![drip](docs/images/drip-style-drip.png) |
+| **honey** — slow and thick | ![honey](docs/images/drip-style-honey.png) |
+| **rain** — fast, thin and many | ![rain](docs/images/drip-style-rain.png) |
+| **tar** — crawling, fat and few | ![tar](docs/images/drip-style-tar.png) |
+| **frozen** — hang still | ![frozen](docs/images/drip-style-frozen.png) |
+| **stringy** — hang by strands, webbed together in lattices | ![stringy](docs/images/drip-style-stringy.png) |
+| **lava lamp** — globs bud off, pinch apart and sink | ![lava lamp](docs/images/drip-style-lava.png) |
+
+…and how much of it there is (**Drip amount**):
+
+| Amount | |
+|---|---|
+| **dry** | ![dry](docs/images/drip-amount-dry.png) |
+| **ooze** | ![ooze](docs/images/drip-amount-ooze.png) |
+| **gush** | ![gush](docs/images/drip-amount-gush.png) |
+| **torrent** — longer and more of them | ![torrent](docs/images/drip-amount-torrent.png) |
+| **variable** — each drip waxes and wanes | ![variable](docs/images/drip-amount-variable.png) |
+
 ## What's in it
 
 - **The bar** (`slime.bar`) — Omarchy's bar engine (layout, drag-to-reorder,
