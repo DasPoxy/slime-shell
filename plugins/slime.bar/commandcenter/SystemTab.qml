@@ -1,8 +1,11 @@
 import QtQuick
+import QtQuick.Shapes
 import Quickshell.Io
+import Quickshell.Widgets
 
 // System: CPU / memory / GPU with short history graphs, disks, load and the
-// top processes. Samples come from sysinfo.sh every 1.5 s while this tab is
+// top processes. Meters are adventurers marching on a dungeon (AdventureMeter)
+// and each card sits on a faint landscape backdrop. Samples come from sysinfo.sh every 1.5 s while this tab is
 // showing.
 Item {
   id: sys
@@ -74,50 +77,81 @@ Item {
     }
   }
 
-  component Meter: Item {
-    id: meter
-    property string label
-    property string value
-    property real fraction: 0
-    width: parent ? parent.width : 0
-    height: 30
-    Text {
-      text: meter.label
-      color: sys.cc.ink
-      font.family: sys.cc.font
-      font.pixelSize: 12
-      font.bold: true
-    }
-    Text {
-      anchors.right: parent.right
-      text: meter.value
-      color: sys.cc.ink
-      font.family: sys.cc.font
-      font.pixelSize: 12
-      opacity: 0.8
-    }
-    Rectangle {
-      y: 19
-      width: parent.width
-      height: 7
-      radius: 3.5
-      color: Qt.rgba(sys.cc.ink.r, sys.cc.ink.g, sys.cc.ink.b, 0.18)
-      Rectangle {
-        width: parent.width * Math.max(0, Math.min(1, meter.fraction))
-        height: parent.height
-        radius: parent.radius
-        color: sys.cc.ink
-        Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
-      }
-    }
-  }
-
-  component Card: Rectangle {
+  component Card: ClippingRectangle {
+    id: card
     default property alias content: inner.data
-    width: parent ? (parent.width - 12) / 2 : 0
+    width: (sys.width - 12) / 2
     height: inner.implicitHeight + 24
     radius: 16
     color: sys.cc.wash
+
+    // adventure backdrop: distant mountains, a castle, rolling hills and pines,
+    // all faint so the numbers stay readable
+    Shape {
+      id: scenery
+      anchors.fill: parent
+      preferredRendererType: Shape.CurveRenderer
+      readonly property real w: width
+      readonly property real h: height
+      readonly property color ink: sys.cc.ink
+      ShapePath {   // sun
+        fillColor: Qt.rgba(1, 1, 1, 0.35)
+        strokeColor: "transparent"
+        PathAngleArc { centerX: scenery.w - 34; centerY: 22; radiusX: 13; radiusY: 13; startAngle: 0; sweepAngle: 360 }
+      }
+      ShapePath {   // far mountains
+        fillColor: Qt.rgba(scenery.ink.r, scenery.ink.g, scenery.ink.b, 0.06)
+        strokeColor: "transparent"
+        PathSvg {
+          path: {
+            var w = scenery.w, h = scenery.h
+            return "M 0 " + (h * 0.62) + " L " + (w * 0.14) + " " + (h * 0.4) + " L " + (w * 0.26) + " " + (h * 0.56)
+              + " L " + (w * 0.42) + " " + (h * 0.3) + " L " + (w * 0.58) + " " + (h * 0.54) + " L " + (w * 0.72) + " " + (h * 0.38)
+              + " L " + w + " " + (h * 0.6) + " L " + w + " " + h + " L 0 " + h + " Z"
+          }
+        }
+      }
+      ShapePath {   // castle on the far ridge
+        fillColor: Qt.rgba(scenery.ink.r, scenery.ink.g, scenery.ink.b, 0.09)
+        strokeColor: "transparent"
+        PathSvg {
+          path: {
+            var x = scenery.w * 0.66, y = scenery.h * 0.46
+            return "M " + x + " " + y + " L " + x + " " + (y - 14) + " L " + (x + 3) + " " + (y - 14) + " L " + (x + 3) + " " + (y - 11)
+              + " L " + (x + 6) + " " + (y - 11) + " L " + (x + 6) + " " + (y - 20) + " L " + (x + 10) + " " + (y - 26)
+              + " L " + (x + 14) + " " + (y - 20) + " L " + (x + 14) + " " + (y - 11) + " L " + (x + 17) + " " + (y - 11)
+              + " L " + (x + 17) + " " + (y - 14) + " L " + (x + 20) + " " + (y - 14) + " L " + (x + 20) + " " + y + " Z"
+          }
+        }
+      }
+      ShapePath {   // near hills
+        fillColor: Qt.rgba(scenery.ink.r, scenery.ink.g, scenery.ink.b, 0.08)
+        strokeColor: "transparent"
+        PathSvg {
+          path: {
+            var w = scenery.w, h = scenery.h
+            return "M 0 " + (h * 0.8) + " Q " + (w * 0.2) + " " + (h * 0.62) + " " + (w * 0.42) + " " + (h * 0.78)
+              + " Q " + (w * 0.7) + " " + (h * 0.94) + " " + w + " " + (h * 0.7) + " L " + w + " " + h + " L 0 " + h + " Z"
+          }
+        }
+      }
+      ShapePath {   // pines
+        fillColor: Qt.rgba(scenery.ink.r, scenery.ink.g, scenery.ink.b, 0.1)
+        strokeColor: "transparent"
+        PathSvg {
+          path: {
+            var w = scenery.w, h = scenery.h, d = ""
+            var trees = [[0.06, 0.8, 16], [0.11, 0.78, 12], [0.84, 0.8, 18], [0.9, 0.76, 13], [0.95, 0.79, 15]]
+            for (var i = 0; i < trees.length; i++) {
+              var x = trees[i][0] * w, y = trees[i][1] * h, s = trees[i][2]
+              d += "M " + (x - s * 0.4) + " " + y + " L " + x + " " + (y - s) + " L " + (x + s * 0.4) + " " + y + " Z "
+            }
+            return d
+          }
+        }
+      }
+    }
+
     Column {
       id: inner
       x: 12; y: 12
@@ -125,6 +159,7 @@ Item {
       spacing: 6
     }
   }
+
 
   Column {
     id: column
@@ -180,12 +215,16 @@ Item {
             color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 14; font.weight: Font.Black
           }
         }
-        Meter {
+        AdventureMeter {
+          cc: sys.cc
+          hero: "knight"
           label: "Utilisation"
           value: sys.sample && sys.sample.gpu ? sys.sample.gpu.util + "%   " + sys.sample.gpu.temp + "°C" : ""
           fraction: sys.sample && sys.sample.gpu ? sys.sample.gpu.util / 100 : 0
         }
-        Meter {
+        AdventureMeter {
+          cc: sys.cc
+          hero: "wizard"
           label: "VRAM"
           value: sys.sample && sys.sample.gpu ? sys.cc.formatBytes(sys.sample.gpu.memUsed * 1048576) + " / " + sys.cc.formatBytes(sys.sample.gpu.memTotal * 1048576) : ""
           fraction: sys.sample && sys.sample.gpu ? sys.sample.gpu.memUsed / sys.sample.gpu.memTotal : 0
@@ -211,8 +250,10 @@ Item {
             }
             return out
           }
-          Meter {
+          AdventureMeter {
             required property var modelData
+            cc: sys.cc
+            hero: "rogue"
             label: modelData.mount
             value: sys.cc.formatBytes(modelData.used) + " / " + sys.cc.formatBytes(modelData.size)
             fraction: modelData.used / modelData.size

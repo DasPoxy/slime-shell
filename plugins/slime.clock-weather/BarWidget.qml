@@ -37,6 +37,8 @@ BarWidget {
       root.bar.shell.updateEntryInline(root.moduleName, entry)
   }
 
+  function toggleHour24() { saveSetting("hour24", !hour24) }
+
   property bool settingsOpen: false
   IpcHandler {
     target: "slime-clock"
@@ -49,6 +51,8 @@ BarWidget {
     function close() { root.settingsOpen = false }
   }
   readonly property string weatherText: panelLoader.item ? panelLoader.item.label : ""
+  // The hidden weather panel, for the command centre's weather card.
+  readonly property var weatherPanel: panelLoader.item
 
   function injectPanel() {
     var target = panelLoader.item

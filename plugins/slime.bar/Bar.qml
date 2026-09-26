@@ -97,12 +97,14 @@ Item {
   // ---- Slime skin ----------------------------------------------------------
   readonly property bool slimeSkin: position === "top"
   readonly property int slimeBarSize: 40
-  readonly property real commandCenterWidth: 720
+  readonly property real commandCenterWidth: 860
   // Follows the open tab's content (set by the CommandCenter), animated so
   // the ooze stretches and settles when switching tabs.
   property real commandCenterHeight: 480
   Behavior on commandCenterHeight { NumberAnimation { duration: 320; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
   property string ccTab: "home"
+  // Command centre sections folded open/closed, by title (CcSection).
+  property var ccSections: ({})
 
   // Full theme palette from colors.toml (Color only exposes a few roles).
   property var palette: ({})

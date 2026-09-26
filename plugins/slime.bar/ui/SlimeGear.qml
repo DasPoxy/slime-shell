@@ -11,6 +11,19 @@ import QtQuick.Shapes
 //        "horn"       audio output                   level 0..1, muted
 //        "mirror"     display                        multi (several screens)
 //        "orb"        network                        net "wifi"/"ethernet"/"none", level 0..1
+//
+//   indicators (all use `lit` for their active state):
+//        "bell"       do not disturb (lit = silenced: strapped shut)
+//        "candle"     night light (lit = burning)
+//        "mug"        stay awake (lit = steaming coffee)
+//        "hourglass"  reminders (lit = sand running)
+//        "eye"        screen recording (lit = open, red iris pulsing)
+//        "trumpet"    dictation (lit = listening, sound flowing in)
+//
+//   command centre:
+//        "cottage" home · "shield" system · "painting" wallpapers ·
+//        "scroll" tasks · "anvil" settings · "arrow" (flip = points left) ·
+//        "broom" clear
 Item {
   id: root
 
@@ -25,6 +38,8 @@ Item {
   property bool muted: false
   property bool multi: false
   property string net: "wifi"
+  property bool lit: true
+  property bool flip: false
 
   // ---- palette ----
   readonly property var pal: bar && bar.palette ? bar.palette : ({})
@@ -38,6 +53,10 @@ Item {
   readonly property color stone: Qt.tint(paper, Qt.rgba(ink.r, ink.g, ink.b, 0.38))
   readonly property color glow: pal.bright_cyan || pal.cyan || "#10ffd9"
   readonly property real pulse: 0.75 + 0.25 * Math.sin(time * 3)
+  readonly property color flame: pal.bright_yellow || pal.yellow || "#ffd000"
+  readonly property color ember: pal.orange || pal.red || "#ff5a1f"
+  readonly property color blood: pal.red || "#ff1720"
+  readonly property color coffee: Qt.darker(leather, 1.6)
 
   implicitWidth: size
   implicitHeight: size
@@ -198,5 +217,221 @@ Item {
       GearPath { visible: root.net === "none"; d: "M9 5.4 L11.4 9 L9.8 11 L12.8 14.6 M11.4 9 L14.2 8"; line: 1 }
       GearPath { d: "M8 8.4 Q8.6 6 10.8 5.2"; stroke: root.paper; line: 1.1 }                       // shine
     }
+
+    // ==================================================================== bell
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "bell"
+
+      GearPath { d: "M12 2.2 Q13.6 2.2 13.6 3.8"; line: 1.2 }                                      // hanger
+      GearPath { d: "M12 3.4 Q17.2 3.4 17.6 9.4 L18 14.6 L20.4 18.2 L3.6 18.2 L6 14.6 L6.4 9.4 Q6.8 3.4 12 3.4 Z"; fill: root.gold }
+      GearPath { d: "M8.4 8 Q9 5.8 11 5.4"; stroke: root.paper; line: 1.1 }                     // shine
+      Rectangle { x: 10.3; y: 18.4; width: 3.4; height: 3.4; radius: 1.7; color: root.gold; border.color: root.ink; border.width: 1 }
+      // silenced: a leather strap cinched round the bell, and a snore
+      GearPath { visible: root.lit; d: "M4.8 12.6 L19.2 9.6 L19.6 12.2 L5.2 15.2 Z"; fill: root.leather; line: 1.1 }
+      Rectangle { visible: root.lit; x: 10.9; y: 10.6; width: 2.6; height: 2.8; radius: 0.5; color: root.gold; border.color: root.ink; border.width: 0.7; rotation: -12 }
+      GearPath { visible: root.lit; d: "M19.6 2.4 L22.6 2.4 L19.6 5.4 L22.6 5.4"; line: 1.1; opacity: root.pulse }
+    }
+
+    // ================================================================== candle
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "candle"
+
+      GearPath { d: "M3.8 20.2 Q12 23.8 20.2 20.2 Q12 18.2 3.8 20.2 Z"; fill: root.gold }         // dish
+      GearPath { d: "M19.4 20 Q22.6 18.6 21.4 16.6"; line: 1.3 }                                  // handle
+      GearPath { d: "M9.2 10.4 L14.8 10.4 L14.8 20.4 L9.2 20.4 Z"; fill: root.paper }              // wax
+      GearPath { d: "M9.2 10.6 Q10.2 13.6 11 11 M13.4 10.6 Q14 14.6 14.8 12.2"; fill: root.paper; line: 1 }   // wax drips
+      GearPath { d: "M12 10.4 L12 8.6"; line: 1.1 }                                               // wick
+      // flame (flickers) when lit, a curl of smoke when out
+      GearPath {
+        visible: root.lit
+        d: "M12 1.8 Q15.6 6.2 12.2 9.2 Q8.6 6.6 12 1.8 Z"
+        fill: root.flame
+        stroke: root.ember
+        line: 1
+        transform: Scale { origin.x: 12; origin.y: 9; yScale: 0.9 + 0.12 * Math.sin(root.time * 11); xScale: 1 - 0.06 * Math.sin(root.time * 7) }
+      }
+      GearPath { visible: root.lit; d: "M12 5.6 Q13.2 7.2 12.1 8.4 Q11 7.2 12 5.6 Z"; fill: root.paper; stroke: "transparent" }
+      GearPath { visible: !root.lit; d: "M12 8 Q10.6 6.4 12.2 5 Q13.6 3.6 12.2 2"; line: 1; opacity: 0.6 }
+    }
+
+    // ===================================================================== mug
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "mug"
+
+      GearPath { d: "M15.6 10.4 Q21 10.2 20.6 14.4 Q20.2 18 15.6 17.6"; line: 1.8 }                // handle
+      GearPath { d: "M4.6 8.6 L15.8 8.6 L15.2 20.4 Q15.1 21.4 14 21.4 L6.4 21.4 Q5.3 21.4 5.2 20.4 Z"; fill: root.leather }
+      GearPath { d: "M4.9 12.4 L15.6 12.4 M5.1 17.2 L15.3 17.2"; stroke: root.gold; line: 1.4 }   // bands
+      GearPath { d: "M4.6 8.6 Q10.2 10.6 15.8 8.6 Q10.2 6.8 4.6 8.6 Z"; fill: root.coffee; line: 1 }  // coffee
+      Repeater {    // steam while lit
+        model: root.lit ? 2 : 0
+        GearPath {
+          required property int index
+          readonly property real drift: Math.sin(root.time * 2.4 + index * 2) * 0.8
+          d: {
+            var x = 8 + index * 4 + drift
+            return "M" + x + " 6.6 Q" + (x - 1.4) + " 4.8 " + x + " 3.4 Q" + (x + 1.4) + " 2 " + x + " 0.8"
+          }
+          line: 1.1
+          opacity: 0.45 + 0.35 * Math.sin(root.time * 3 + index)
+        }
+      }
+    }
+
+    // =============================================================== hourglass
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "hourglass"
+
+      readonly property real sand: root.lit ? (root.time * 0.08) % 1 : 0.4   // fraction fallen
+      GearPath { d: "M7.2 4 L16.8 4 Q16.8 9.4 12.8 12 Q16.8 14.6 16.8 20 L7.2 20 Q7.2 14.6 11.2 12 Q7.2 9.4 7.2 4 Z"; fill: root.glass; line: 1.1 }
+      // top sand shrinks, bottom grows
+      GearPath {
+        readonly property real sandTop: 6 + parent.sand * 5
+        d: "M" + (8.2 + (sandTop - 6) * 0.5) + " " + sandTop + " L" + (15.8 - (sandTop - 6) * 0.5) + " " + sandTop + " Q14.6 10 12 11.6 Q9.4 10 " + (8.2 + (sandTop - 6) * 0.5) + " " + sandTop + " Z"
+        fill: root.flame; line: 0.6
+        visible: parent.sand < 0.97
+      }
+      GearPath {
+        readonly property real sandTop: 19 - parent.sand * 5
+        d: "M8 19.2 Q9 " + sandTop + " 12 " + sandTop + " Q15 " + sandTop + " 16 19.2 Z"
+        fill: root.flame; line: 0.6
+      }
+      GearPath { visible: root.lit; d: "M12 11.8 L12 18.6"; stroke: root.flame; line: 1 }            // falling stream
+      GearPath { d: "M5.4 2.6 L18.6 2.6 L18.6 4.4 L5.4 4.4 Z M5.4 19.6 L18.6 19.6 L18.6 21.4 L5.4 21.4 Z"; fill: root.leather; line: 1 }
+    }
+
+    // ===================================================================== eye
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "eye"
+
+      GearPath { d: "M2 12 Q12 2.4 22 12 Q12 21.6 2 12 Z"; fill: root.paper }                        // eyeball
+      GearPath { visible: root.lit; d: "M4.4 10.4 L6.6 11.2 M19.6 13.6 L17.2 12.8 M5.2 14 L7.2 13"; stroke: root.blood; line: 0.7 }   // veins
+      Rectangle {
+        visible: root.lit
+        x: 12 - width / 2; y: 12 - height / 2
+        width: 9 * (0.92 + 0.08 * root.pulse); height: width; radius: width / 2
+        color: root.blood; border.color: root.ink; border.width: 1
+        Rectangle { anchors.centerIn: parent; width: parent.width * 0.45; height: width; radius: width / 2; color: root.ink }
+        Rectangle { x: parent.width * 0.2; y: parent.height * 0.18; width: 1.8; height: 1.8; radius: 0.9; color: root.paper }
+      }
+      // asleep: lid shut with lashes
+      GearPath { visible: !root.lit; d: "M2 12 Q12 2.4 22 12 Q12 15.6 2 12 Z"; fill: root.leatherLight }
+      GearPath { visible: !root.lit; d: "M6 14.4 L5.2 16.2 M12 15.2 L12 17.2 M18 14.4 L18.8 16.2"; line: 1 }
+      GearPath { visible: root.lit; d: "M12 20.4 Q13 22 12 23 Q11 22 12 20.4 Z"; fill: root.blood; line: 0.7 }   // drip
+    }
+
+    // ================================================================= trumpet
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "trumpet"
+
+      GearPath { d: "M9.6 7.6 Q15.2 11.2 21.2 11.2 L21.2 13.2 Q15.2 13.2 9.6 16.8 Z"; fill: root.gold }   // tube
+      GearPath { d: "M9.6 5 Q6.2 12 9.6 19 Q13.2 12 9.6 5 Z"; fill: root.gold }                        // flared bell
+      GearPath { d: "M9.6 7 Q7.6 12 9.6 17 Q11.6 12 9.6 7 Z"; fill: Qt.darker(root.gold, 1.5); line: 0.8 }
+      GearPath { d: "M20.6 10.4 Q23.2 10.8 22.6 14.2"; line: 1.3 }                                       // earpiece curl
+      Repeater {   // sound flowing in while listening
+        model: root.lit ? 2 : 0
+        GearPath {
+          required property int index
+          d: {
+            var r = 2.6 + index * 2.2
+            return "M" + (6 - r * 0.5) + " " + (12 - r) + " Q" + (6 - r * 1.1) + " 12 " + (6 - r * 0.5) + " " + (12 + r)
+          }
+          line: 1.3
+          opacity: 0.5 + 0.5 * Math.sin(root.time * 5 + index)
+        }
+      }
+    }
+
+
+    // ================================================================= cottage
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "cottage"
+
+      GearPath { d: "M16 5 L16 2.6 L18.4 2.6 L18.4 7.4"; fill: root.stone; line: 1.1 }                   // chimney
+      GearPath { d: "M5 11 L5 21 L19 21 L19 11 Z"; fill: root.paper }                                     // walls
+      GearPath { d: "M2.6 12 L12 3.4 L21.4 12 Z"; fill: root.leather }                                    // roof
+      GearPath { d: "M5.4 9.4 L9.6 5.6 M8.6 10.6 L12 7.6 M15 9 L18.4 11.6"; line: 0.8; stroke: root.leatherLight }
+      GearPath { d: "M10 21 L10 15.6 Q12 13.8 14 15.6 L14 21"; fill: root.leatherLight; line: 1.1 }     // door
+      Rectangle { x: 15.2; y: 13.4; width: 2.6; height: 2.6; color: root.lit ? root.flame : root.glass; border.color: root.ink; border.width: 0.8 }
+    }
+
+    // ================================================================== shield
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "shield"
+
+      GearPath { d: "M12 2.4 L20 5.2 Q20.4 15.4 12 21.6 Q3.6 15.4 4 5.2 Z"; fill: root.stone }
+      GearPath { d: "M12 4.6 L17.8 6.6 Q18 14 12 19 Q6 14 6.2 6.6 Z"; fill: root.crystal; line: 0.9 }
+      GearPath { d: "M12 5 L12 18.6 M6.4 10.8 L17.6 10.8"; stroke: root.gold; line: 1.4 }                  // cross
+      GearPath { d: "M8 8 Q8.4 6.4 10 6"; stroke: root.paper; line: 1 }
+    }
+
+    // ================================================================ painting
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "painting"
+
+      GearPath { d: "M2.6 4.6 L21.4 4.6 L21.4 19.4 L2.6 19.4 Z"; fill: root.gold }
+      GearPath { d: "M4.8 6.8 L19.2 6.8 L19.2 17.2 L4.8 17.2 Z"; fill: root.glass; line: 0.9 }
+      GearPath { d: "M4.8 17.2 L9.4 11.2 L12.4 14.6 L14.6 12.4 L19.2 17.2 Z"; fill: root.leatherLight; line: 0.8 }   // hills
+      Rectangle { x: 14.6; y: 8.2; width: 2.6; height: 2.6; radius: 1.3; color: root.flame; border.color: root.ink; border.width: 0.6 }
+      GearPath { d: "M12 4.6 L12 2 M10 2 L14 2"; line: 1 }                                                // hook
+    }
+
+    // ================================================================== scroll
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "scroll"
+
+      GearPath { d: "M6 4.2 L18.6 4.2 L18.6 18.4 Q18.6 20.4 16.6 20.4 L4.6 20.4"; fill: root.paper }
+      GearPath { d: "M4.6 20.4 Q2.4 20.4 2.6 18.4 Q2.8 16.6 4.6 16.6 L16.6 16.6 Q14.8 16.6 14.8 18.4 Q14.8 20.4 16.6 20.4"; fill: Qt.darker(root.paper, 1.15); line: 1.1 }
+      GearPath { d: "M6 4.2 Q4 4.2 4 6.2 Q4 8 6 8 L8 8 L8 6.2 Q8 4.2 6 4.2 Z"; fill: Qt.darker(root.paper, 1.15); line: 1.1 }
+      GearPath { d: "M10 9 L11 10 L13 7.8 M10 12.6 L11 13.6 L13 11.4"; line: 1.1 }                       // ticks
+      GearPath { d: "M14.4 9 L16.6 9 M14.4 12.6 L16.6 12.6"; line: 1 }
+      Rectangle { x: 15.6; y: 18.2; width: 3.4; height: 3.4; radius: 1.7; color: root.blood; border.color: root.ink; border.width: 0.7 }   // wax seal
+    }
+
+    // =================================================================== anvil
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "anvil"
+
+      GearPath { d: "M3 9 L18.4 9 Q21.6 9 21.6 11 Q18 12 15.6 13.4 L15.6 16 L17.6 18.4 L6.4 18.4 L8.4 16 L8.4 13.4 Q5 12.6 3 9 Z"; fill: root.stone }
+      GearPath { d: "M5.4 20.6 L18.6 20.6 L17.6 18.4 L6.4 18.4 Z"; fill: root.stone; line: 1 }
+      GearPath { d: "M13 7.4 L20.2 1.8"; stroke: root.leather; line: 2 }                                   // hammer handle
+      GearPath { d: "M9.6 3 L13.2 1.4 L15.6 6.4 L12 8 Z"; fill: root.gold; line: 1 }                       // hammer head
+      GearPath { visible: root.lit; d: "M7.2 6.4 L6 5 M9 5.8 L8.6 4 M5.8 8 L4.2 7.4"; stroke: root.flame; line: 1; opacity: root.pulse }   // sparks
+    }
+
+    // =================================================================== arrow
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "arrow"
+      transform: Scale { origin.x: 12; xScale: root.flip ? -1 : 1 }
+
+      GearPath { d: "M11.4 16 L11.4 22 M13.4 16 L13.4 22"; line: 1.4 }                                   // post
+      GearPath { d: "M3 6.6 L16 6.6 L21 11.4 L16 16.2 L3 16.2 Z"; fill: root.leather }                     // sign
+      GearPath { d: "M5 9.4 L14.6 9.4 M5 13.2 L12.4 13.2"; stroke: root.leatherLight; line: 0.9 }
+      Rectangle { x: 16.4; y: 10.4; width: 2; height: 2; radius: 1; color: root.gold; border.color: root.ink; border.width: 0.5 }
+    }
+
+    // =================================================================== broom
+    Item {
+      anchors.fill: parent
+      visible: root.kind === "broom"
+
+      GearPath { d: "M17.6 2 L10.8 13.4"; stroke: root.leather; line: 2.2 }                                // handle
+      GearPath { d: "M9.2 12.2 L13.2 14.6 L12.4 16.2 L8 13.8 Z"; fill: root.gold; line: 1 }                // binding
+      GearPath { d: "M8 13.8 L12.4 16.2 Q10.6 21.4 5 22.2 Q3 19.8 4.2 18.4 Q6 16.4 8 13.8 Z"; fill: root.flame }
+      GearPath { d: "M8.6 16 L5.6 20.2 M10 16.8 L7.8 21 M7.4 15.2 L4.6 18.8"; line: 0.7 }
+      GearPath { visible: root.lit; d: "M16 18.4 L17 17.4 M18.4 20.6 L19.8 20.2 M17.4 21.8 L17.8 23"; line: 1; opacity: root.pulse }   // dust
+    }
+
   }
 }

@@ -38,61 +38,77 @@ Item {
   Column {
     id: column
     width: parent.width
-    spacing: 14
+    spacing: 10
 
-    ChoiceRow {
-      title: "SLIME COLOUR"
-      options: [["accent", "accent"], ["green", "green"], ["cyan", "cyan"], ["magenta", "magenta"],
-        ["red", "red"], ["yellow", "yellow"], ["foreground", "foreground"]]
-      current: settings.bar.slimeRole
-      onPicked: value => settings.bar.slimeRole = value
-    }
-    ChoiceRow {
-      title: "GRADIENT PARTNER"
-      options: [["auto", "auto"], ["none", "none"], ["magenta", "magenta"], ["cyan", "cyan"],
-        ["green", "green"], ["yellow", "yellow"], ["red", "red"]]
-      current: settings.bar.gradientRole
-      onPicked: value => settings.bar.gradientRole = value
-    }
-    ChoiceRow {
-      title: "SHADING"
-      options: [["soft", 0], ["anime", 1], ["manga", 2], ["print", 3]]
-      current: settings.bar.shadingStyle
-      onPicked: value => settings.bar.shadingStyle = value
-    }
-    ChoiceRow {
-      title: "ANIMATION"
-      options: [["paused", 0], ["30 fps", 30], ["60 fps", 60], ["120 fps", 120]]
-      current: settings.bar.slimeFps
-      onPicked: value => settings.bar.slimeFps = value
-    }
-    ChoiceRow {
-      title: "DRIPS"
-      options: [["dry", 0.4], ["ooze", 1.0], ["gush", 1.7]]
-      current: settings.bar.dripAmount
-      onPicked: value => settings.bar.dripAmount = value
-    }
-
-    CcHeading { cc: settings.cc; text: "WIDGETS" }
-    Flow {
-      width: parent.width
-      spacing: 6
-      CcButton {
-        cc: settings.cc
-        icon: ""; text: "Date & time"
-        onClicked: {
-          var clock = settings.cc.widget("slime.clock-weather")
-          settings.bar.commandCenterOpen = false
-          if (clock) clock.settingsOpen = true
-        }
+    CcSection {
+      cc: settings.cc
+      title: "Slime"
+      kind: "painting"
+      defaultOpen: true
+      ChoiceRow {
+        title: "COLOUR"
+        options: [["accent", "accent"], ["green", "green"], ["cyan", "cyan"], ["magenta", "magenta"],
+          ["red", "red"], ["yellow", "yellow"], ["foreground", "foreground"]]
+        current: settings.bar.slimeRole
+        onPicked: value => settings.bar.slimeRole = value
       }
-      CcButton {
-        cc: settings.cc
-        icon: ""; text: "Launcher icon"
-        onClicked: {
-          var menu = settings.cc.widget("slime.menu")
-          settings.bar.commandCenterOpen = false
-          if (menu) menu.pickerOpen = true
+      ChoiceRow {
+        title: "GRADIENT PARTNER"
+        options: [["auto", "auto"], ["none", "none"], ["magenta", "magenta"], ["cyan", "cyan"],
+          ["green", "green"], ["yellow", "yellow"], ["red", "red"]]
+        current: settings.bar.gradientRole
+        onPicked: value => settings.bar.gradientRole = value
+      }
+      ChoiceRow {
+        title: "SHADING"
+        options: [["soft", 0], ["anime", 1], ["manga", 2], ["print", 3]]
+        current: settings.bar.shadingStyle
+        onPicked: value => settings.bar.shadingStyle = value
+      }
+    }
+
+    CcSection {
+      cc: settings.cc
+      title: "Motion"
+      kind: "hourglass"
+      ChoiceRow {
+        title: "ANIMATION"
+        options: [["paused", 0], ["30 fps", 30], ["60 fps", 60], ["120 fps", 120]]
+        current: settings.bar.slimeFps
+        onPicked: value => settings.bar.slimeFps = value
+      }
+      ChoiceRow {
+        title: "DRIPS"
+        options: [["dry", 0.4], ["ooze", 1.0], ["gush", 1.7]]
+        current: settings.bar.dripAmount
+        onPicked: value => settings.bar.dripAmount = value
+      }
+    }
+
+    CcSection {
+      cc: settings.cc
+      title: "Widgets"
+      kind: "anvil"
+      Flow {
+        width: parent.width
+        spacing: 6
+        CcButton {
+          cc: settings.cc
+          icon: "\uf017"; text: "Date & time"
+          onClicked: {
+            var clock = settings.cc.widget("slime.clock-weather")
+            settings.bar.commandCenterOpen = false
+            if (clock) clock.settingsOpen = true
+          }
+        }
+        CcButton {
+          cc: settings.cc
+          icon: "\uf1b0"; text: "Launcher icon"
+          onClicked: {
+            var menu = settings.cc.widget("slime.menu")
+            settings.bar.commandCenterOpen = false
+            if (menu) menu.pickerOpen = true
+          }
         }
       }
     }
