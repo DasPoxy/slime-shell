@@ -16,6 +16,9 @@ Item {
 
   required property var bar
   property bool shown: false
+  // Tallest the command centre may be on this screen; taller tab content
+  // scrolls inside it (smaller screens, or every settings section open).
+  property real maxHeight: 100000
 
   readonly property color ink: bar.slimeInk
   readonly property color slime: bar.slimeColor
@@ -56,7 +59,8 @@ Item {
     return (i >= 3 ? bytes.toFixed(1) : Math.round(bytes)) + " " + units[i]
   }
 
-  implicitHeight: Math.max(tabColumn.implicitHeight, loader.item ? loader.item.implicitHeight : 0)
+  readonly property real contentHeight: loader.item ? loader.item.implicitHeight : 0
+  implicitHeight: Math.min(maxHeight, Math.max(tabColumn.implicitHeight, contentHeight))
 
   Column {
     id: tabColumn
@@ -89,15 +93,39 @@ Item {
     color: Qt.rgba(center.ink.r, center.ink.g, center.ink.b, 0.18)
   }
 
-  Loader {
-    id: loader
+  Flickable {
+    id: scroller
     x: center.sidebarWidth + 20
     width: parent.width - x
-    active: center.shown
-    source: center.tabSource
-    onLoaded: {
-      item.cc = center
-      item.width = Qt.binding(function() { return loader.width })
+    height: center.height
+    contentWidth: width
+    contentHeight: center.contentHeight
+    interactive: contentHeight > height + 1
+    boundsBehavior: Flickable.StopAtBounds
+    clip: interactive
+    // a new tab starts at the top
+    Connections { target: center.bar; function onCcTabChanged() { scroller.contentY = 0 } }
+
+    Loader {
+      id: loader
+      width: scroller.width - (scroller.interactive ? 10 : 0)
+      active: center.shown
+      source: center.tabSource
+      onLoaded: {
+        item.cc = center
+        item.width = Qt.binding(function() { return loader.width })
+      }
     }
+  }
+  // scroll indicator, only when the tab doesn't fit
+  Rectangle {
+    visible: scroller.interactive
+    x: parent.width - 4
+    width: 4
+    radius: 2
+    readonly property real frac: scroller.height / Math.max(1, scroller.contentHeight)
+    height: Math.max(24, scroller.height * frac)
+    y: (scroller.height - height) * (scroller.contentY / Math.max(1, scroller.contentHeight - scroller.height))
+    color: Qt.rgba(center.ink.r, center.ink.g, center.ink.b, 0.45)
   }
 }

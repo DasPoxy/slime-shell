@@ -1857,8 +1857,18 @@ Item {
     // centre while it's open or animating. Fewer pixels for the shader.
     // The command centre's extent along the bar and away from it: content is
     // always laid out landscape, so on a side bar "along" is its height.
-    readonly property real ccAlong: root.vertical ? root.commandCenterHeight : root.commandCenterWidth
-    readonly property real ccAway: root.vertical ? root.commandCenterWidth : root.commandCenterHeight
+    // The command centre's height, capped to this screen (the height is
+    // shared by every bar, but each screen may be a different size).
+    readonly property real ccMaxHeight: root.vertical ? (screen ? screen.height - 32 : 1000) : ccMaxAway
+    readonly property real ccHeight: Math.min(root.commandCenterHeight, ccMaxHeight)
+    // ...and its width, narrowed on small or portrait screens
+    readonly property real ccWidth: !screen ? root.commandCenterWidth
+      : Math.min(root.commandCenterWidth, root.vertical ? screen.width - root.barSize - 24 : screen.width - 32)
+    // narrow screens shrink the whole command centre rather than squeeze its
+    // tabs (their layouts are built for the full width)
+    readonly property real ccScale: ccWidth / root.commandCenterWidth
+    readonly property real ccAlong: root.vertical ? ccHeight : ccWidth
+    readonly property real ccAway: root.vertical ? ccWidth : ccHeight
     // One fixed size for the whole time the skin is on, tall enough for the
     // biggest command centre. Resizing a layer surface while it's on screen
     // races the compositor: for a frame Hyprland shows the new buffer
@@ -1866,8 +1876,8 @@ Item {
     // opening, tab switches and folding sections. The shader skips the empty
     // pixels and the input mask keeps them click-through, so the extra room
     // costs next to nothing.
-    readonly property real ccMaxAway: root.vertical ? root.commandCenterWidth
-      : (screen ? screen.height - root.barSize - 24 : 1100)
+    readonly property real ccMaxAway: root.vertical ? ccWidth
+      : (screen ? screen.height - root.barSize - 40 : 1000)
     readonly property real screenAway: screen ? (root.vertical ? screen.width : screen.height) : 1440
     readonly property real skinRoom: Math.max(dripRoom, Math.min(ccMaxAway + 160, screenAway - root.barSize))
     // Room past the bar for the longest drips to hang in full (the shader
@@ -2136,19 +2146,22 @@ Item {
     CommandCenter {
       id: commandCenter
       // laid out landscape on every edge; sits just off the bar
-      x: root.position === "left" ? root.barSize + 20
-        : root.position === "right" ? barWindow.width - root.barSize - 20 - width
-        : barWindow.ccPanelX + 24
-      y: root.position === "bottom" ? barWindow.height - root.barSize - 20 - implicitHeight
-        : root.vertical ? barWindow.ccPanelX + 22
-        : root.barSize + 20
+      x: root.position === "left" ? root.barSize + 20 * barWindow.ccScale
+        : root.position === "right" ? barWindow.width - root.barSize - (20 + width) * barWindow.ccScale
+        : barWindow.ccPanelX + 24 * barWindow.ccScale
+      y: root.position === "bottom" ? barWindow.height - root.barSize - (20 + implicitHeight) * barWindow.ccScale
+        : root.vertical ? barWindow.ccPanelX + 22 * barWindow.ccScale
+        : root.barSize + 20 * barWindow.ccScale
       width: root.commandCenterWidth - 48
+      scale: barWindow.ccScale
+      transformOrigin: Item.TopLeft
       bar: root
+      maxHeight: (barWindow.ccMaxHeight - 44) / barWindow.ccScale
       shown: barWindow.ccShown
       opacity: Math.max(0, (barWindow.ccProgress - 0.8) / 0.2)
       visible: root.slimeSkin && opacity > 0
       onImplicitHeightChanged: if (shown) {
-        root.commandCenterHeightTarget = Math.max(160, implicitHeight + 44)
+        root.commandCenterHeightTarget = Math.max(160, (implicitHeight + 44) * barWindow.ccScale)
         root.commandCenterHeight = root.commandCenterHeightTarget
       }
     }
