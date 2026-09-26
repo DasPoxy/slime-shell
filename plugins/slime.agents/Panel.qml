@@ -47,6 +47,12 @@ Panel {
   readonly property bool balanceAlarming: !!balance && balance.funded > 0
     && balance.remaining / balance.funded <= 0.1
   readonly property bool alarming: (!!headline && headline.percent >= 0.9) || balanceAlarming
+  // How used up the tightest window (or prepaid balance) is, 0..1, for the
+  // slime robot's face and colour on the bar.
+  property real usagePreview: -1          // IPC slime-agents preview <0..1>, -1 = real
+  readonly property real usage: usagePreview >= 0 ? usagePreview
+    : headline ? Math.max(0, Math.min(1, headline.percent))
+    : (balance && balance.funded > 0 ? 1 - balance.remaining / balance.funded : 0)
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)) }
   function alpha(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
@@ -335,6 +341,8 @@ Panel {
     function toggle(): void { root.toggle() }
     function refresh(): string { root.refreshNow(); return "ok" }
     function next(): string { root.selectProvider(root.providerIndex + 1); return "ok" }
+    // preview the bar robot at a usage level (0..1), or -1 for the real one
+    function previewUsage(level: real): string { root.usagePreview = level; return "ok" }
   }
 
   BarIconButton {
@@ -360,7 +368,12 @@ Panel {
     SlimeMonster {
       variant: 5
       size: parent ? parent.width : 24
-      mood: root.alarming ? "emote" : "idle"
+      mood: root.alarming || root.usage >= 0.9 ? "emote" : "idle"
+      // fresh: happy, half used: meh, three-quarters: worried, 90%+: panic
+      face: root.usage >= 0.75 ? "worried" : root.usage >= 0.5 ? "meh" : "happy"
+      readonly property var pal: root.bar && root.bar.palette ? root.bar.palette : ({})
+      tint: root.usage >= 0.9 ? (pal.red || "#ff1720") : root.usage >= 0.75 ? (pal.orange || "#ff7a1a") : (pal.yellow || "#d9b800")
+      tintAmount: root.usage < 0.5 ? 0 : root.usage < 0.75 ? 0.25 : root.usage < 0.9 ? 0.4 : 0.55 + 0.1 * Math.sin((root.bar ? root.bar.animTime : 0) * 5)
       time: root.bar && root.bar.slimeSkin ? root.bar.animTime : 0
       body: root.bar && root.bar.slimeSkin ? root.bar.monsterBody : "transparent"
       ink: root.bar && root.bar.slimeSkin ? root.bar.slimeInk : "black"

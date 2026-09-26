@@ -43,6 +43,10 @@ focused one. They follow the bar's material.
 
 ### Agents — `slime.agents`
 A slime robot. Omarchy's agents panel (usage limits, tokens by day/model).
+Its face follows your tightest usage window: happy, then flat-faced and
+yellowish past 50%, worried and sweating (orange) past 75%, red and panicking
+past 90%. Preview a level with `omarchy-shell omarchy.agents previewUsage 0.8`
+(`-1` goes back to the real value).
 
 | | |
 |---|---|

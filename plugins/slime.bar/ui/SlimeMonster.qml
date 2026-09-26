@@ -14,6 +14,9 @@ import QtQuick.Shapes
 // goo, `ink` the outline and features, `eye` the whites, `blush` the cheeks.
 // `material` matches the bar: "slime" (glossy), "sinew" (flesh with veins),
 // "bone" (ivory, cracked, no gloss) or "plain" (flat).
+// Robot (variant 5) extras: `face` "happy" (^ ^), "meh" (— —), "worried"
+// (wide eyes, sweat drop, wobbly mouth); "emote" mood is the panic face.
+// `tint` / `tintAmount` wash the body toward a colour (e.g. usage warning).
 Item {
   id: root
 
@@ -27,9 +30,13 @@ Item {
   property color eye: "#ffffff"
   property color blush: "#ff6fa8"
   property string material: "slime"
-  readonly property color skin: material === "sinew" ? Qt.tint(body, Qt.rgba(0.86, 0.3, 0.36, 0.5))
+  property string face: "happy"
+  property color tint: "transparent"
+  property real tintAmount: 0
+  readonly property color baseSkin: material === "sinew" ? Qt.tint(body, Qt.rgba(0.86, 0.3, 0.36, 0.5))
     : material === "bone" ? Qt.tint(eye, Qt.rgba(0.6, 0.48, 0.3, 0.22))
     : body
+  readonly property color skin: tintAmount > 0 ? Qt.tint(baseSkin, Qt.rgba(tint.r, tint.g, tint.b, tintAmount)) : baseSkin
 
   readonly property bool emote: mood === "emote"
   readonly property bool asleep: mood === "sleep"
@@ -145,6 +152,21 @@ Item {
       }
     }
 
+    // ---- robot sweat drop when worried ----
+    Shape {
+      anchors.fill: parent
+      preferredRendererType: Shape.CurveRenderer
+      visible: root.variant === 5 && root.face === "worried" && !root.emote
+      y: ((root.time * 0.7) % 1) * 3
+      opacity: 1 - ((root.time * 0.7) % 1) * 0.6
+      ShapePath {
+        fillColor: Qt.rgba(0.55, 0.85, 1, 0.9)
+        strokeColor: root.ink
+        strokeWidth: 0.7
+        PathSvg { path: "M19.4 6.4 Q21.2 9 21.2 10 A1.8 1.8 0 1 1 17.6 10 Q17.6 9 19.4 6.4 Z" }
+      }
+    }
+
     // ---- cheeks ----
     Repeater {
       model: root.emote ? [[6.2, 14.2], [17.8, 14.2]] : []
@@ -203,9 +225,14 @@ Item {
         capStyle: ShapePath.RoundCap
         PathSvg {
           path: {
-            if (root.variant === 5)   // robot: ^ ^ normally, > < when alerting
-              return root.emote ? "M7.4 10 L10.2 11.8 L7.4 13.6 M16.6 10 L13.8 11.8 L16.6 13.6"
-                                : "M7.4 12.6 L9 10.6 L10.6 12.6 M13.4 12.6 L15 10.6 L16.6 12.6"
+            if (root.variant === 5) {   // robot: face by mood, > < when alerting
+              if (root.emote) return "M7.4 10 L10.2 11.8 L7.4 13.6 M16.6 10 L13.8 11.8 L16.6 13.6"
+              if (root.face === "meh") return "M7.4 11.8 L10.6 11.8 M13.4 11.8 L16.6 11.8"
+              if (root.face === "worried")   // wide round eyes, brows raised in the middle
+                return "M7.6 11.6 A1.6 1.6 0 1 0 10.8 11.6 A1.6 1.6 0 1 0 7.6 11.6 M13.2 11.6 A1.6 1.6 0 1 0 16.4 11.6 A1.6 1.6 0 1 0 13.2 11.6"
+                  + " M7.4 9.2 L10.4 8.4 M16.6 9.2 L13.6 8.4"
+              return "M7.4 12.6 L9 10.6 L10.6 12.6 M13.4 12.6 L15 10.6 L16.6 12.6"
+            }
             var up = root.emote   // happy eyes arch up, sleepy ones droop
             var cy = up ? 12 : 11
             var q = up ? 9.4 : 12.4
@@ -228,7 +255,8 @@ Item {
         capStyle: ShapePath.RoundCap
         joinStyle: ShapePath.RoundJoin
         PathSvg {
-          path: root.variant === 5 && !root.emote ? "M9.4 16.2 L14.6 16.2 M11 15.2 L11 17.2 M13 15.2 L13 17.2"   // grille
+          path: root.variant === 5 && !root.emote && root.face === "worried" ? "M9 16.6 Q10 15.4 11 16.6 Q12 17.8 13 16.6 Q14 15.4 15 16.6"   // wobbly
+            : root.variant === 5 && !root.emote ? "M9.4 16.2 L14.6 16.2 M11 15.2 L11 17.2 M13 15.2 L13 17.2"   // grille
             : root.emote ? "M8.3 14.6 Q12 20.4 15.7 14.6 Z"
             : root.asleep ? "M11.3 15.8 Q12 16.6 12.7 15.8 Q12 15 11.3 15.8 Z"
             : root.variant === 2 ? "M9.4 15.2 L10.6 16.4 L12 15.2 L13.4 16.4 L14.6 15.2"   // fangs
