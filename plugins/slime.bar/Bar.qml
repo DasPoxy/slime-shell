@@ -1299,12 +1299,45 @@ Item {
     } catch (e) { return null }
   }
 
+  // The joined pill run (first and last layout index) that entry `i` is in.
+  function pillRun(entries, i) {
+    var a = i, b = i
+    while (a > 0 && entries[a - 1] && entries[a - 1].pillJoin) a--
+    while (b < entries.length - 1 && entries[b] && entries[b].pillJoin) b++
+    return { start: a, end: b }
+  }
+  // Re-link a run after its members were shuffled: all joined but the last.
+  function relinkPill(entries, start, end) {
+    for (var i = start; i <= end; i++) {
+      if (i < end) entries[i].pillJoin = true
+      else delete entries[i].pillJoin
+    }
+  }
+  function samePill(source, target) {
+    if (barShape !== "pills" || !source || !target || source.region !== target.region) return false
+    var fi = slotLayoutIndex(source), ti = slotLayoutIndex(target)
+    if (fi < 0 || ti < 0 || fi === ti) return false
+    var run = pillRun(layoutEntries(source.region), fi)
+    return run.end > run.start && ti >= run.start && ti <= run.end
+  }
+
   // Join `source` onto `target`'s pill: it moves in right after the target
   // (widgets keep their normal spacing; only the pill underneath merges).
   function mergePills(source, target) {
     if (!source || !target || source === target || !root.shell || typeof root.shell.mutateShellConfig !== "function") return
     var fi = slotLayoutIndex(source), ti = slotLayoutIndex(target)
     if (fi < 0 || ti < 0) return
+    // dropped on a pill-mate: the two swap places, the pill stays as it was
+    if (samePill(source, target)) {
+      root.shell.mutateShellConfig(function(config) {
+        var e = rawLayoutSection(config, source.region)
+        if (!e[fi] || !e[ti] || Util.canonicalWidgetId(e[fi].id) !== source.moduleName) return
+        var run = pillRun(e, fi)
+        var t = e[fi]; e[fi] = e[ti]; e[ti] = t
+        relinkPill(e, run.start, run.end)
+      })
+      return
+    }
     root.shell.mutateShellConfig(function(config) {
       var from = rawLayoutSection(config, source.region)
       if (!from[fi] || Util.canonicalWidgetId(from[fi].id) !== source.moduleName) return
@@ -1393,12 +1426,23 @@ Item {
     var fromRegion = sourceSlot.region, toRegion = targetSlot.region
     var to = afterTarget ? target + 1 : target
     if (fromRegion === toRegion && (to === from || to === from + 1)) return false
+    var shuffle = samePill(sourceSlot, targetSlot)
 
     var changed = false
     root.shell.mutateShellConfig(function(config) {
       var fromEntries = rawLayoutSection(config, fromRegion)
       var toEntries = rawLayoutSection(config, toRegion)
       if (!fromEntries[from] || Util.canonicalWidgetId(fromEntries[from].id) !== sourceSlot.moduleName) return
+      // dropped on a pill-mate: reorder inside the pill and keep it whole
+      if (shuffle) {
+        var run = pillRun(fromEntries, from)
+        var m = fromEntries.splice(from, 1)[0]
+        var at = from < to ? to - 1 : to
+        fromEntries.splice(Math.max(run.start, Math.min(run.end, at)), 0, m)
+        relinkPill(fromEntries, run.start, run.end)
+        changed = true
+        return
+      }
       // a widget dragged somewhere normally leaves any joined pill it was in
       if (from > 0 && fromEntries[from - 1].pillJoin) {
         if (fromEntries[from].pillJoin) fromEntries[from - 1].pillJoin = true

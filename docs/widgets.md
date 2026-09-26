@@ -4,7 +4,9 @@ Every Slime widget, what it looks like, and what each click does. Widgets
 cloned from Omarchy keep Omarchy's panels and behaviour; the look is Slime's.
 Add or remove widgets from the **treasure chest** on the bar, or drag them
 around the bar to reorder (in *pills* shape, drop one onto the middle of
-another to join their pills; drag it away to split them again).
+another to join their pills; drag it away to split them again. Inside a
+joined pill, drag a widget between its pill-mates to shuffle it along, or
+onto the middle of one to swap the two — the pill stays whole).
 
 ## Left side
 
