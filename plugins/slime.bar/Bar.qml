@@ -7,6 +7,8 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
 import "BarModel.js" as BarModel
+import "SlimeHub.js" as SlimeHub
+import "commandcenter"
 
 // Slime Shell bar: a clone of the Omarchy bar engine (layout, widget slots,
 // drag/reorder, popouts, IPC all unchanged) with the slime skin painted by a
@@ -95,8 +97,12 @@ Item {
   // ---- Slime skin ----------------------------------------------------------
   readonly property bool slimeSkin: position === "top"
   readonly property int slimeBarSize: 40
-  readonly property real commandCenterWidth: 380
-  readonly property real commandCenterHeight: 480
+  readonly property real commandCenterWidth: 720
+  // Follows the open tab's content (set by the CommandCenter), animated so
+  // the ooze stretches and settles when switching tabs.
+  property real commandCenterHeight: 480
+  Behavior on commandCenterHeight { NumberAnimation { duration: 320; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
+  property string ccTab: "home"
 
   // Full theme palette from colors.toml (Color only exposes a few roles).
   property var palette: ({})
@@ -166,7 +172,9 @@ Item {
   property real dripAmount: 1.0
   property int shadingStyle: 3       // 0 soft, 1 anime, 2 manga, 3 print
   property bool commandCenterOpen: false
-
+  // Latest widget bulb rects, for overlays drawn outside the bar window
+  // (notification toasts) so their slime lines up with the bar's.
+  property var sharedBulbRects: []
   readonly property double slimeT0: Date.now()
   property real animTime: 0
   Timer {
@@ -199,64 +207,8 @@ Item {
     function gradient(role: string): void { root.gradientRole = role }
     function color(role: string): void { root.slimeRole = role }
     function fps(n: int): void { root.slimeFps = n }
-  }
-
-  component Chip: Rectangle {
-    id: chip
-    property string label
-    property bool selected
-    signal clicked
-
-    implicitWidth: chipText.implicitWidth + 18
-    implicitHeight: 24
-    radius: 12
-    color: selected ? root.slimeInk : Qt.rgba(1, 1, 1, 0.6)
-
-    Text {
-      id: chipText
-      anchors.centerIn: parent
-      text: chip.label
-      font.family: root.fontFamily
-      font.pixelSize: 12
-      font.bold: true
-      color: chip.selected ? root.slimeColor : root.slimeInk
-    }
-    MouseArea {
-      anchors.fill: parent
-      cursorShape: Qt.PointingHandCursor
-      onClicked: chip.clicked()
-    }
-  }
-
-  component ChipRow: Column {
-    id: chipRow
-    property string title
-    property var options: []      // [label, value] pairs
-    property var current
-    signal picked(var value)
-
-    spacing: 6
-    Text {
-      text: chipRow.title
-      color: root.slimeInk
-      font.family: root.fontFamily
-      font.pixelSize: 10
-      font.bold: true
-      opacity: 0.7
-    }
-    Flow {
-      width: chipRow.width
-      spacing: 6
-      Repeater {
-        model: chipRow.options
-        Chip {
-          required property var modelData
-          label: modelData[0]
-          selected: chipRow.current === modelData[1]
-          onClicked: chipRow.picked(modelData[1])
-        }
-      }
-    }
+    // Open the command centre on a tab: home, system, wallpapers, tasks, settings.
+    function tab(name: string): void { root.ccTab = name; root.commandCenterOpen = root.slimeSkin }
   }
 
   Behavior on barForeground { enabled: root.foregroundAnimationEnabled; ColorAnimation { duration: 420; easing.type: Easing.InOutCubic } }
@@ -498,6 +450,7 @@ Item {
   onModuleSlotsChanged: Qt.callLater(prunePluginBarApis)
 
   Component.onDestruction: {
+    SlimeHub.unregister(root)
     for (var id in pluginBarApis) {
       root.releasePluginObjects(id)
       if (pluginBarApis[id] && typeof pluginBarApis[id].destroy === "function")
@@ -986,7 +939,10 @@ Item {
     return source ? Util.fileUrl(source) : ""
   }
 
-  Component.onCompleted: applyBarConfig()
+  Component.onCompleted: {
+    applyBarConfig()
+    SlimeHub.register(root)
+  }
 
   // Revealing the indicators widens their section, which can slide a neighbour
   // under a stationary pointer. Collapsing on that un-hover would move it back
@@ -1510,6 +1466,7 @@ Item {
         if (slot.moduleName === "slime.clock-weather") ccCenterX = p.x + slot.width / 2
       }
       bulbRects = out
+      root.sharedBulbRects = out
     }
     Timer { interval: 250; running: root.slimeSkin && root.slimeFps === 0; repeat: true; onTriggered: barWindow.updateBulbs() }
     Component.onCompleted: Qt.callLater(updateBulbs)
@@ -1584,67 +1541,23 @@ Item {
     }
 
     // ---- Command centre (fades in once the ooze has settled) ----
-    Column {
+    CommandCenter {
+      id: commandCenter
       x: barWindow.ccPanelX + 24
-      y: root.barSize + 18
+      y: root.barSize + 20
       width: root.commandCenterWidth - 48
-      spacing: 12
+      bar: root
+      shown: barWindow.ccShown
       opacity: Math.max(0, (barWindow.ccProgress - 0.8) / 0.2)
       visible: root.slimeSkin && opacity > 0
+      onImplicitHeightChanged: if (shown) root.commandCenterHeight = Math.max(160, implicitHeight + 44)
+    }
 
-      Text {
-        text: Qt.formatDateTime(ccClock.date, "HH:mm:ss")
-        color: root.slimeInk
-        font.family: root.fontFamily
-        font.pixelSize: 40
-        font.bold: true
-      }
-      Text {
-        text: Qt.formatDateTime(ccClock.date, "dddd, d MMMM yyyy")
-        color: root.slimeInk
-        font.family: root.fontFamily
-        font.pixelSize: 14
-        font.bold: true
-      }
-      SystemClock { id: ccClock; precision: SystemClock.Seconds; enabled: barWindow.ccShown }
-
-      ChipRow {
-        width: parent.width
-        title: "SLIME COLOUR"
-        options: [["accent", "accent"], ["green", "green"], ["cyan", "cyan"], ["magenta", "magenta"],
-          ["red", "red"], ["yellow", "yellow"], ["foreground", "foreground"]]
-        current: root.slimeRole
-        onPicked: value => root.slimeRole = value
-      }
-      ChipRow {
-        width: parent.width
-        title: "GRADIENT PARTNER"
-        options: [["auto", "auto"], ["none", "none"], ["magenta", "magenta"], ["cyan", "cyan"],
-          ["green", "green"], ["yellow", "yellow"], ["red", "red"]]
-        current: root.gradientRole
-        onPicked: value => root.gradientRole = value
-      }
-      ChipRow {
-        width: parent.width
-        title: "SHADING"
-        options: [["soft", 0], ["anime", 1], ["manga", 2], ["print", 3]]
-        current: root.shadingStyle
-        onPicked: value => root.shadingStyle = value
-      }
-      ChipRow {
-        width: parent.width
-        title: "ANIMATION"
-        options: [["paused", 0], ["30 fps", 30], ["60 fps", 60], ["120 fps", 120]]
-        current: root.slimeFps
-        onPicked: value => root.slimeFps = value
-      }
-      ChipRow {
-        width: parent.width
-        title: "DRIPS"
-        options: [["dry", 0.4], ["ooze", 1.0], ["gush", 1.7]]
-        current: root.dripAmount
-        onPicked: value => root.dripAmount = value
-      }
+    // Clicking anywhere outside the bar closes the command centre.
+    HyprlandFocusGrab {
+      windows: [barWindow]
+      active: root.commandCenterOpen
+      onCleared: root.commandCenterOpen = false
     }
 
     PopupWindow {

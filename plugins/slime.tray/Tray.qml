@@ -271,6 +271,10 @@ BarWidget {
           height: implicitHeight
           x: root.drawerExtent - root.revealExtent
           text: "\uf053"
+          // Slime Shell: drawn as gear floating in the ooze on the slime bar.
+          iconComponent: root.bar && root.bar.slimeSkin ? slimeIcon : null
+          opticalSize: root.bar && root.bar.slimeSkin ? 26 : Style.bar.iconCanvas
+          slotSize: root.bar && root.bar.slimeSkin ? 32 : Style.bar.iconSlot
           onPressed: function(button) {
             if (button === Qt.RightButton) root.managePopupOpen = !root.managePopupOpen
           }
@@ -353,6 +357,10 @@ BarWidget {
           height: implicitHeight
           y: root.drawerExtent - root.revealExtent
           text: "\uf053"
+          // Slime Shell: drawn as gear floating in the ooze on the slime bar.
+          iconComponent: root.bar && root.bar.slimeSkin ? slimeIcon : null
+          opticalSize: root.bar && root.bar.slimeSkin ? 26 : Style.bar.iconCanvas
+          slotSize: root.bar && root.bar.slimeSkin ? 32 : Style.bar.iconSlot
           textRotation: 90
           onPressed: function(button) {
             if (button === Qt.RightButton) root.managePopupOpen = !root.managePopupOpen
@@ -396,6 +404,16 @@ BarWidget {
     }
   }
 
+
+  Component {
+    id: slimeIcon
+    SlimeGear {
+      kind: "backpack"
+      bar: root.bar
+      size: parent ? parent.width : 24
+      open: root.expanded
+    }
+  }
   SlimePopupCard {
     id: managePopup
     anchorItem: root

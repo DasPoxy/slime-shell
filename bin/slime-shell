@@ -7,10 +7,11 @@
 #   slime-shell status    show which bar is active
 #
 # The Omarchy shell only loads third-party widgets that are in the bar layout,
-# so switching swaps the whole `bar` subtree of shell.json. Overlays that other
-# bars draw over the top edge (Ruixen's notch) are disabled while Slime is
-# active. Both are kept in ~/.config/omarchy/slime-shell/previous-bar.json
-# until restored.
+# so switching swaps the whole `bar` subtree of shell.json. Slime's own
+# services (notifications) are enabled in place of Omarchy's, and overlays that
+# other bars draw over the top edge (Ruixen's notch) are disabled while Slime is
+# active. The previous bar, plugin list and disabled list are kept in
+# ~/.config/omarchy/slime-shell/previous-bar.json until restored.
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -18,8 +19,12 @@ plugins_dir="$HOME/.config/omarchy/plugins"
 shell_json="$HOME/.config/omarchy/shell.json"
 state_dir="$HOME/.config/omarchy/slime-shell"
 backup="$state_dir/previous-bar.json"
-# Other bars' companions that paint over the top edge where Slime drips.
-companions='["ruixen.notch"]'
+# Plugins disabled while Slime is active: other bars' companions that paint
+# over the top edge, and the Omarchy services Slime replaces (only one
+# notification server can run).
+disable_while_active='["ruixen.notch", "omarchy.notifications"]'
+# Slime services enabled while active.
+slime_services='[{"id": "slime.notifications"}]'
 
 current_bar() { jq -r '.bar.id // "omarchy.bar"' "$shell_json"; }
 
@@ -54,19 +59,26 @@ case "${1:-status}" in
     install_plugins
     mkdir -p "$state_dir"
     if [[ $(current_bar) != slime.bar ]]; then
-      jq '{bar: .bar, disabledPlugins: (.disabledPlugins // [])}' "$shell_json" > "$backup"
+      jq '{bar: .bar, plugins: (.plugins // []), disabledPlugins: (.disabledPlugins // [])}' "$shell_json" > "$backup"
       echo "backed up $(current_bar) config to $backup"
     fi
-    # shellcheck disable=SC2016  # $bar/$companions are jq variables
-    edit_shell_json --slurpfile bar "$repo/layouts/default.json" --argjson companions "$companions" \
-      '.bar = $bar[0] | .disabledPlugins = ((.disabledPlugins // []) + $companions | unique)'
+    # shellcheck disable=SC2016  # $bar/$off/$services are jq variables
+    edit_shell_json --slurpfile bar "$repo/layouts/default.json" \
+      --argjson off "$disable_while_active" --argjson services "$slime_services" '
+      .bar = $bar[0]
+      | .disabledPlugins = ((.disabledPlugins // []) + $off | unique)
+      | .plugins = ((.plugins // []) | map(select(.id as $id | $services | map(.id) | index($id) | not))) + $services'
     omarchy restart shell
     echo "switched to slime.bar (undo with: slime-shell restore)"
     ;;
   restore)
     [[ -f $backup ]] || { echo "no backup at $backup" >&2; exit 1; }
-    # shellcheck disable=SC2016  # $saved is a jq variable
-    edit_shell_json --slurpfile saved "$backup" '.bar = $saved[0].bar | .disabledPlugins = $saved[0].disabledPlugins'
+    # shellcheck disable=SC2016  # $saved/$services are jq variables
+    edit_shell_json --slurpfile saved "$backup" --argjson services "$slime_services" '
+      .bar = $saved[0].bar
+      | .disabledPlugins = $saved[0].disabledPlugins
+      | .plugins = ($saved[0].plugins
+          // ((.plugins // []) | map(select(.id as $id | $services | map(.id) | index($id) | not))))'
     omarchy restart shell
     echo "restored $(current_bar)"
     ;;

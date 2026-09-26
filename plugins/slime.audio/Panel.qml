@@ -633,6 +633,10 @@ Panel {
     anchors.fill: parent
     bar: root.bar
     text: root.outputIcon()
+    // Slime Shell: drawn as gear floating in the ooze on the slime bar.
+    iconComponent: root.bar && root.bar.slimeSkin ? slimeIcon : null
+    opticalSize: root.bar && root.bar.slimeSkin ? 26 : Style.bar.iconCanvas
+    slotSize: root.bar && root.bar.slimeSkin ? 32 : Style.bar.iconSlot
     onPressed: function(b) {
       if (b === Qt.RightButton) root.toggleAllMuted()
       else root.toggle()
@@ -645,6 +649,18 @@ Panel {
       if (wheel.steps === 0) return
       var volume = root.setOutputVolume(root.outputVolume + wheel.steps * 0.05)
       root.showVolumeOsd(volume)
+    }
+  }
+
+
+  Component {
+    id: slimeIcon
+    SlimeGear {
+      kind: "horn"
+      bar: root.bar
+      size: parent ? parent.width : 24
+      level: root.outputVolume
+      muted: root.outputMuted || !root.hasOutput
     }
   }
 

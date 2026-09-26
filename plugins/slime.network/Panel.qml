@@ -959,6 +959,10 @@ Panel {
     anchors.fill: parent
     bar: root.bar
     text: root.icon
+    // Slime Shell: drawn as gear floating in the ooze on the slime bar.
+    iconComponent: root.bar && root.bar.slimeSkin ? slimeIcon : null
+    opticalSize: root.bar && root.bar.slimeSkin ? 26 : Style.bar.iconCanvas
+    slotSize: root.bar && root.bar.slimeSkin ? 32 : Style.bar.iconSlot
 
     onPressed: function(b) {
       if (root.opened) root.close()
@@ -976,6 +980,18 @@ Panel {
   // outside-click via an overlay MouseArea + Region mask that lets the bar
   // remain clickable, fade animation, popout coordination). What stays
   // here is the wifi-specific UI inside.
+
+  Component {
+    id: slimeIcon
+    SlimeGear {
+      kind: "orb"
+      bar: root.bar
+      size: parent ? parent.width : 24
+      net: root.kind === "wifi" || root.kind === "ethernet" ? root.kind : "none"
+      level: Math.max(0, root.signalStrength) / 100
+    }
+  }
+
   SlimeKeyboardPanel {
     id: panel
     anchorItem: button

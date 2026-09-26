@@ -343,10 +343,29 @@ Panel {
     bar: root.bar
     text: "󱚣"
     active: root.alarming
+    // Slime Shell: drawn as gear floating in the ooze on the slime bar.
+    iconComponent: root.bar && root.bar.slimeSkin ? slimeIcon : null
+    opticalSize: root.bar && root.bar.slimeSkin ? 26 : Style.bar.iconCanvas
+    slotSize: root.bar && root.bar.slimeSkin ? 32 : Style.bar.iconSlot
     onPressed: function(buttonCode) {
       if (buttonCode === Qt.RightButton) root.launchAgent()
       else if (buttonCode === Qt.MiddleButton) root.selectProvider(root.providerIndex + 1)
       else root.toggle()
+    }
+  }
+
+
+  Component {
+    id: slimeIcon
+    SlimeMonster {
+      variant: 5
+      size: parent ? parent.width : 24
+      mood: root.alarming ? "emote" : "idle"
+      time: root.bar && root.bar.slimeSkin ? root.bar.animTime : 0
+      body: root.bar && root.bar.slimeSkin ? root.bar.monsterBody : "transparent"
+      ink: root.bar && root.bar.slimeSkin ? root.bar.slimeInk : "black"
+      eye: root.bar && root.bar.slimeSkin ? root.bar.paperColor : "white"
+      blush: root.bar && root.bar.slimeSkin ? root.bar.monsterBlush : "pink"
     }
   }
 

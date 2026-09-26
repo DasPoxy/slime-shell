@@ -471,6 +471,10 @@ Panel {
     anchors.fill: parent
     bar: root.bar
     text: Quickshell.screens.length > 1 ? "󰍺" : "󰍹"
+    // Slime Shell: drawn as gear floating in the ooze on the slime bar.
+    iconComponent: root.bar && root.bar.slimeSkin ? slimeIcon : null
+    opticalSize: root.bar && root.bar.slimeSkin ? 26 : Style.bar.iconCanvas
+    slotSize: root.bar && root.bar.slimeSkin ? 32 : Style.bar.iconSlot
     onPressed: function(b) { root.toggle() }
     onWheelMoved: function(delta) {
       if (!root.brightnessAvailable) return
@@ -479,6 +483,17 @@ Panel {
       if (wheel.steps === 0) return
       root.setBrightness(root.brightnessPercent + wheel.steps * 5)
       root.showBrightnessOsd(root.brightnessPercent)
+    }
+  }
+
+
+  Component {
+    id: slimeIcon
+    SlimeGear {
+      kind: "mirror"
+      bar: root.bar
+      size: parent ? parent.width : 24
+      multi: Quickshell.screens.length > 1
     }
   }
 

@@ -1,0 +1,100 @@
+import QtQuick
+
+// Settings: the slime skin (colour, gradient, shading, animation, drips) and
+// shortcuts to the widget settings that live elsewhere.
+Item {
+  id: settings
+
+  property var cc: null
+  readonly property var bar: cc ? cc.bar : null
+
+  implicitHeight: column.implicitHeight
+
+  component ChoiceRow: Column {
+    id: choiceRow
+    property string title
+    property var options: []      // [label, value] pairs
+    property var current
+    signal picked(var value)
+    width: parent ? parent.width : 0
+    spacing: 6
+    CcHeading { cc: settings.cc; text: choiceRow.title }
+    Flow {
+      width: choiceRow.width
+      spacing: 6
+      Repeater {
+        model: choiceRow.options
+        CcButton {
+          required property var modelData
+          cc: settings.cc
+          text: modelData[0]
+          on: choiceRow.current === modelData[1]
+          onClicked: choiceRow.picked(modelData[1])
+        }
+      }
+    }
+  }
+
+  Column {
+    id: column
+    width: parent.width
+    spacing: 14
+
+    ChoiceRow {
+      title: "SLIME COLOUR"
+      options: [["accent", "accent"], ["green", "green"], ["cyan", "cyan"], ["magenta", "magenta"],
+        ["red", "red"], ["yellow", "yellow"], ["foreground", "foreground"]]
+      current: settings.bar.slimeRole
+      onPicked: value => settings.bar.slimeRole = value
+    }
+    ChoiceRow {
+      title: "GRADIENT PARTNER"
+      options: [["auto", "auto"], ["none", "none"], ["magenta", "magenta"], ["cyan", "cyan"],
+        ["green", "green"], ["yellow", "yellow"], ["red", "red"]]
+      current: settings.bar.gradientRole
+      onPicked: value => settings.bar.gradientRole = value
+    }
+    ChoiceRow {
+      title: "SHADING"
+      options: [["soft", 0], ["anime", 1], ["manga", 2], ["print", 3]]
+      current: settings.bar.shadingStyle
+      onPicked: value => settings.bar.shadingStyle = value
+    }
+    ChoiceRow {
+      title: "ANIMATION"
+      options: [["paused", 0], ["30 fps", 30], ["60 fps", 60], ["120 fps", 120]]
+      current: settings.bar.slimeFps
+      onPicked: value => settings.bar.slimeFps = value
+    }
+    ChoiceRow {
+      title: "DRIPS"
+      options: [["dry", 0.4], ["ooze", 1.0], ["gush", 1.7]]
+      current: settings.bar.dripAmount
+      onPicked: value => settings.bar.dripAmount = value
+    }
+
+    CcHeading { cc: settings.cc; text: "WIDGETS" }
+    Flow {
+      width: parent.width
+      spacing: 6
+      CcButton {
+        cc: settings.cc
+        icon: ""; text: "Date & time"
+        onClicked: {
+          var clock = settings.cc.widget("slime.clock-weather")
+          settings.bar.commandCenterOpen = false
+          if (clock) clock.settingsOpen = true
+        }
+      }
+      CcButton {
+        cc: settings.cc
+        icon: ""; text: "Launcher icon"
+        onClicked: {
+          var menu = settings.cc.widget("slime.menu")
+          settings.bar.commandCenterOpen = false
+          if (menu) menu.pickerOpen = true
+        }
+      }
+    }
+  }
+}

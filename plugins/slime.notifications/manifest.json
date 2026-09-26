@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "slime.notifications",
+  "name": "Slime Notifications",
+  "version": "1.0.0",
+  "author": "Slime Shell",
+  "description": "Notification daemon, popups, DND, and history",
+  "kinds": [
+    "service"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml"
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.notifications"
+  }
+}

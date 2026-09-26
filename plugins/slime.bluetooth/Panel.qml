@@ -654,9 +654,24 @@ Panel {
     anchors.fill: parent
     bar: root.bar
     text: root.icon
+    // Slime Shell: drawn as gear floating in the ooze on the slime bar.
+    iconComponent: root.bar && root.bar.slimeSkin ? slimeIcon : null
+    opticalSize: root.bar && root.bar.slimeSkin ? 26 : Style.bar.iconCanvas
+    slotSize: root.bar && root.bar.slimeSkin ? 32 : Style.bar.iconSlot
     onPressed: function(b) {
       if (b === Qt.RightButton) root.toggleBluetooth()
       else root.toggle()
+    }
+  }
+
+
+  Component {
+    id: slimeIcon
+    SlimeGear {
+      kind: "runestone"
+      bar: root.bar
+      size: parent ? parent.width : 24
+      state3: !root.adapter || !root.adapter.enabled ? "off" : (root.connectedDevices.length > 0 ? "connected" : "on")
     }
   }
 
