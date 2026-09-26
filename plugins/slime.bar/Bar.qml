@@ -87,13 +87,15 @@ Item {
   //   runic   fantasy runes: MedievalSharp display
   //   parchment old-print scroll: IM Fell English display
   //   monster horror-poster: Creepster display
+  //   honey   dripping script: Slime Honey Drip (Lobster with drips) display
   property string fontStyle: "system"
   readonly property bool slimeFonts: slimeSkin && fontStyle !== "system" && snigletFont.status === FontLoader.Ready
   property string fontFamily: slimeFonts ? snigletFont.name : Style.font.family
   readonly property string displayFontFamily: {
     if (!slimeFonts) return fontFamily
     var loader = ({ chewy: chewyFont, wetpaint: wetPaintFont, bubble: bubbleFont,
-                    runic: runicFont, parchment: parchmentFont, monster: monsterFont })[fontStyle] || null
+                    runic: runicFont, parchment: parchmentFont, monster: monsterFont,
+                    honey: honeyFont })[fontStyle] || null
     return loader && loader.status === FontLoader.Ready ? loader.name : fontFamily
   }
   // Display faces have a single weight; asking for bold makes Qt smear them.
@@ -106,6 +108,7 @@ Item {
   FontLoader { id: runicFont; source: Qt.resolvedUrl("fonts/MedievalSharp-Regular.ttf") }
   FontLoader { id: parchmentFont; source: Qt.resolvedUrl("fonts/IMFellEnglish-Regular.ttf") }
   FontLoader { id: monsterFont; source: Qt.resolvedUrl("fonts/Creepster-Regular.ttf") }
+  FontLoader { id: honeyFont; source: Qt.resolvedUrl("fonts/SlimeHoneyDrip-Regular.ttf") }
   // Bound to the central Color singleton so the bar tracks shell.toml's
   // [bar] section. Property names kept for the rest of this file's bindings.
   property color themeForeground: slimeSkin ? slimeInk : Color.bar.text

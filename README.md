@@ -127,7 +127,7 @@ Command centre → **Settings** (sections fold open and closed):
 - **Slime** — colour, gradient partner, material, bar position, bar shape,
   draw above/behind windows, slime icon colours (paper, theme, bar gradient), debris (in the bar and drifting behind panels, with the odd trapped adventurer), shading
 - **Font & clock** — system font or a display set (blobby, drippy, bubble,
-  runic, parchment, monster),
+  runic, parchment, monster, honey drip),
   date/time order
 - **Motion** — frame rate, drip style, drip amount
 - **Updates** — check GitHub, update & restart
@@ -155,6 +155,7 @@ git -C ~/Work/slime-shell pull && omarchy restart shell
 | `layouts/default.json` | the bar layout `slime-shell use` installs |
 | `bin/slime-shell` | install / use / restore |
 | `bin/clone-omarchy-plugin` | clone another Omarchy plugin as `slime.<name>` |
+| `tools/make-drip-font.py` | builds the honey-drip font from Lobster |
 | `docs/` | widget reference, tasks guide, pictures |
 | `spike/` | the original standalone prototype |
 
@@ -167,5 +168,6 @@ After editing the shader, recompile it:
 ## Credits
 
 Built on Omarchy's shell plugins (MIT). Fonts: Chewy (Apache-2.0), Rubik Wet
-Paint, Rubik Bubbles, Sniglet, MedievalSharp, IM Fell English and Creepster (SIL OFL) — licences in
+Paint, Rubik Bubbles, Sniglet, MedievalSharp, IM Fell English, Creepster and
+Slime Honey Drip — Lobster with drips added by `tools/make-drip-font.py` (SIL OFL) — licences in
 `plugins/slime.bar/fonts/`.

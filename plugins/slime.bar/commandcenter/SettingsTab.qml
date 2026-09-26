@@ -170,7 +170,7 @@ Item {
       ChoiceRow {
         title: "FONT"
         options: [["system", "system"], ["blobby", "chewy"], ["drippy", "wetpaint"], ["bubble", "bubble"],
-          ["runic", "runic"], ["parchment", "parchment"], ["monster", "monster"]]
+          ["runic", "runic"], ["parchment", "parchment"], ["monster", "monster"], ["honey drip", "honey"]]
         current: settings.bar.fontStyle
         onPicked: value => settings.bar.fontStyle = value
       }
