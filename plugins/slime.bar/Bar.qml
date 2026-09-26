@@ -926,6 +926,18 @@ Item {
     if (activePopout === owner) activePopout = null
   }
 
+  // "Behind windows": while any panel is out (a widget's panel, a hover card,
+  // the command centre) the bar comes up above windows so the panel can be
+  // seen, and sinks back once it has finished closing.
+  property int hoverPeeks: 0
+  readonly property bool panelWantsTop: activePopout !== null || hoverPeeks > 0
+  property bool panelRaised: false
+  onPanelWantsTopChanged: {
+    if (panelWantsTop) { panelLower.stop(); panelRaised = true }
+    else panelLower.restart()
+  }
+  Timer { id: panelLower; interval: 450; onTriggered: root.panelRaised = root.panelWantsTop }
+
   readonly property bool vertical: position === "left" || position === "right"
   readonly property int barSize: slimeSkin ? slimeBarSize : (vertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal)
 
@@ -1969,7 +1981,7 @@ Item {
     // keyboard input for the command centre's text fields, only while it's open
     WlrLayershell.keyboardFocus: root.hoverKeysWindow === barWindow ? WlrKeyboardFocus.Exclusive
       : ccShown ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-    WlrLayershell.layer: root.slimeSkin && root.layerReady && root.slimeLayer === "behind" && !ccShown ? WlrLayer.Bottom : WlrLayer.Top
+    WlrLayershell.layer: root.slimeSkin && root.layerReady && root.slimeLayer === "behind" && !ccShown && !root.panelRaised ? WlrLayer.Bottom : WlrLayer.Top
 
     // ---- Slime skin ----
     // Command centre animation: 0 closed, 1 fully dripped open.

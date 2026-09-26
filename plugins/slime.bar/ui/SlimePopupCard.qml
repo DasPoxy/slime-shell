@@ -105,6 +105,7 @@ PopupWindow {
     height: root.contentHeight + (root.sideBar ? 0 : root.neck)
   }
 
+  Component.onDestruction: if (open && bar && triggerMode === "hover" && "hoverPeeks" in bar) bar.hoverPeeks = Math.max(0, bar.hoverPeeks - 1)
   onOpenChanged: {
     if (slime) {
       dripAnim.stop()
@@ -115,6 +116,10 @@ PopupWindow {
     }
     // a hover card is a passing peek: it mustn't close the command centre or
     // another widget's panel
+    if (bar && triggerMode === "hover" && "hoverPeeks" in bar) {
+      bar.hoverPeeks = Math.max(0, bar.hoverPeeks + (open ? 1 : -1))
+      return
+    }
     if (!bar || triggerMode === "hover") return
     if (open) bar.requestPopout(coordinatorKey)
     else if (bar.activePopout === coordinatorKey) bar.releasePopout(coordinatorKey)
