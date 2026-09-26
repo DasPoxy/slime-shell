@@ -10,18 +10,20 @@ Column {
 
   required property var cc
   property string title: ""
+  property string key: title            // what the open/closed state is saved under
+  property string label: title          // header text (defaults to the title)
   property string kind: "scroll"        // gear shown in the header
   property bool defaultOpen: false
   default property alias content: body.data
 
   readonly property bool open: {
     var map = cc.bar.ccSections
-    return map[title] === undefined ? defaultOpen : map[title]
+    return map[key] === undefined ? defaultOpen : map[key]
   }
 
   function toggle() {
     var map = Object.assign({}, cc.bar.ccSections)
-    map[title] = !open
+    map[key] = !open
     cc.bar.ccSections = map
   }
 
@@ -41,7 +43,7 @@ Column {
       anchors.verticalCenter: parent.verticalCenter
       cc: section.cc
       kind: section.kind
-      label: section.title
+      label: section.label
       size: 24
       active: section.open
       lit: section.open

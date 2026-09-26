@@ -172,79 +172,89 @@ BarWidget {
           }
         }
 
+        // one collapsible section per group; open/closed is remembered
+        // (skin.json) under "chest:<group>", apart from the Settings sections
         Repeater {
-          model: root.plugins
-          Column {
-            id: entry
+          model: [
+            { group: "Slime", kind: "chest", open: true },
+            { group: "Omarchy", kind: "anvil", open: false },
+            { group: "Community", kind: "scroll", open: false }
+          ]
+          CcSection {
+            id: section
             required property var modelData
-            required property int index
-            readonly property bool firstInGroup: index === 0 || root.plugins[index - 1].group !== modelData.group
+            readonly property var items: root.plugins.filter(function(p) { return p.group === section.modelData.group })
+            readonly property int onCount: items.filter(function(p) { return p.on }).length
+            visible: items.length > 0
             width: column.width
-            spacing: 4
+            cc: look
+            title: modelData.group
+            key: "chest:" + modelData.group
+            label: modelData.group + "  ·  " + onCount + "/" + items.length + " on the bar"
+            kind: modelData.kind
+            defaultOpen: modelData.open
 
-            CcHeading {
-              visible: entry.firstInGroup
-              cc: look
-              topPadding: 6
-              text: entry.modelData.group.toUpperCase()
-            }
-
-            Rectangle {
-              width: entry.width
-              height: 34
-              radius: 12
-              color: rowHover.hovered ? Qt.rgba(1, 1, 1, 0.7) : look.wash
-              opacity: root.busyId === entry.modelData.id ? 0.5 : 1
-
-              HoverHandler { id: rowHover }
-
-              // on/off: a coin in the chest (gold) or out of it (hollow)
+            Repeater {
+              model: section.items
               Rectangle {
-                id: coin
-                x: 10
-                anchors.verticalCenter: parent.verticalCenter
-                width: 16; height: 16; radius: 8
-                color: entry.modelData.on ? (root.bar && root.bar.palette.yellow ? root.bar.palette.yellow : "#d9b800") : "transparent"
-                border.color: look.ink
-                border.width: 2
+                id: entry
+                required property var modelData
+                width: section.width - 16
+                height: 34
+                radius: 12
+                color: rowHover.hovered ? Qt.rgba(1, 1, 1, 0.7) : look.wash
+                opacity: root.busyId === entry.modelData.id ? 0.5 : 1
+
+                HoverHandler { id: rowHover }
+
+                // on/off: a gold coin in the chest, or an empty slot
+                Rectangle {
+                  id: coin
+                  x: 10
+                  anchors.verticalCenter: parent.verticalCenter
+                  width: 16; height: 16; radius: 8
+                  color: entry.modelData.on ? (root.bar && root.bar.palette.yellow ? root.bar.palette.yellow : "#d9b800") : "transparent"
+                  border.color: look.ink
+                  border.width: 2
+                  Text {
+                    anchors.centerIn: parent
+                    visible: entry.modelData.on
+                    text: "\uf00c"
+                    color: look.ink
+                    font.family: look.font
+                    font.pixelSize: 8
+                  }
+                }
                 Text {
-                  anchors.centerIn: parent
-                  visible: entry.modelData.on
-                  text: ""
+                  x: coin.x + coin.width + 10
+                  anchors.verticalCenter: parent.verticalCenter
+                  width: parent.width - x - stateLabel.implicitWidth - 20
+                  text: entry.modelData.name
+                  elide: Text.ElideRight
                   color: look.ink
                   font.family: look.font
-                  font.pixelSize: 8
+                  font.pixelSize: 12
+                  font.bold: entry.modelData.on
                 }
-              }
-              Text {
-                x: coin.x + coin.width + 10
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - x - stateLabel.implicitWidth - 20
-                text: entry.modelData.name
-                elide: Text.ElideRight
-                color: look.ink
-                font.family: look.font
-                font.pixelSize: 12
-                font.bold: entry.modelData.on
-              }
-              Text {
-                id: stateLabel
-                anchors.right: parent.right
-                anchors.rightMargin: 12
-                anchors.verticalCenter: parent.verticalCenter
-                text: entry.modelData.on ? "on the bar" : ""
-                color: look.ink
-                font.family: look.font
-                font.pixelSize: 10
-                opacity: 0.6
-              }
-              MouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
-                cursorShape: Qt.PointingHandCursor
-                onClicked: mouse => {
-                  if (mouse.button === Qt.RightButton) root.rightClickOnBar(entry.modelData)
-                  else root.flip(entry.modelData)
+                Text {
+                  id: stateLabel
+                  anchors.right: parent.right
+                  anchors.rightMargin: 12
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: entry.modelData.on ? "on the bar" : ""
+                  color: look.ink
+                  font.family: look.font
+                  font.pixelSize: 10
+                  opacity: 0.6
+                }
+                MouseArea {
+                  anchors.fill: parent
+                  acceptedButtons: Qt.LeftButton | Qt.RightButton
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: mouse => {
+                    if (mouse.button === Qt.RightButton) root.rightClickOnBar(entry.modelData)
+                    else root.flip(entry.modelData)
+                  }
                 }
               }
             }
