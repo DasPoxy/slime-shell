@@ -1022,6 +1022,27 @@ Item {
     return items
   }
 
+  // Which layout entry a slot shows, as an index into layoutEntries(region).
+  // A widget can be on the bar more than once (spacers), so match by rank:
+  // the k-th slot with this id along the bar (on its monitor) is the k-th
+  // entry with that id. Name lookups alone always found the first copy.
+  function slotLayoutIndex(slot) {
+    if (!slot) return -1
+    var win = slotWindow(slot)
+    var same = moduleSlots.filter(function(sl) {
+      return sl && sl.region === slot.region && sl.moduleName === slot.moduleName && sameWindow(slotWindow(sl), win)
+    })
+    same.sort(function(a, b) { return slotAlong(a) - slotAlong(b) })
+    var k = same.indexOf(slot)
+    var entries = layoutEntries(slot.region)
+    for (var i = 0, seen = 0; i < entries.length; i++) {
+      if (!entries[i] || entryId(entries[i]) !== slot.moduleName) continue
+      if (seen === k) return i
+      seen++
+    }
+    return -1
+  }
+
   function slotAlong(slot) {
     try { var p = slot.mapToItem(null, 0, 0); return vertical ? p.y : p.x } catch (e) { return 0 }
   }
@@ -1273,18 +1294,26 @@ Item {
   // (widgets keep their normal spacing; only the pill underneath merges).
   function mergePills(source, target) {
     if (!source || !target || source === target || !root.shell || typeof root.shell.mutateShellConfig !== "function") return
+    var fi = slotLayoutIndex(source), ti = slotLayoutIndex(target)
+    if (fi < 0 || ti < 0) return
     root.shell.mutateShellConfig(function(config) {
-      detachFromPill(config, source.region, source.moduleName)
-      var from = rawLayoutSection(config, source.region), fi = rawEntryIndex(from, source.moduleName)
-      if (fi < 0) return
+      var from = rawLayoutSection(config, source.region)
+      if (!from[fi] || Util.canonicalWidgetId(from[fi].id) !== source.moduleName) return
+      if (fi > 0 && from[fi - 1].pillJoin) {
+        if (from[fi].pillJoin) from[fi - 1].pillJoin = true
+        else delete from[fi - 1].pillJoin
+      }
       var moved = from.splice(fi, 1)[0]
-      var to = rawLayoutSection(config, target.region), ti = rawEntryIndex(to, target.moduleName)
-      if (ti < 0) { from.splice(fi, 0, moved); return }
+      delete moved.pillJoin
+      var to = rawLayoutSection(config, target.region)
+      if (source.region === target.region && fi < ti) ti -= 1
+      if (!to[ti]) return
       if (to[ti].pillJoin) moved.pillJoin = true     // slot into the middle of a longer pill
       to[ti].pillJoin = true
       to.splice(ti + 1, 0, moved)
     })
   }
+
 
   function moduleDropAtScene(scenePoint, sourceSlot) {
     var sourceWindow = root.slotWindow(sourceSlot) || root.barDragWindow
@@ -1349,10 +1378,32 @@ Item {
   }
 
   function dropBarModuleAtTarget(sourceSlot, targetSlot, afterTarget) {
-    if (!sourceSlot || !targetSlot) return false
+    if (!sourceSlot || !targetSlot || !root.shell || typeof root.shell.mutateShellConfig !== "function") return false
+    var from = slotLayoutIndex(sourceSlot), target = slotLayoutIndex(targetSlot)
+    if (from < 0 || target < 0) return false
+    var fromRegion = sourceSlot.region, toRegion = targetSlot.region
+    var to = afterTarget ? target + 1 : target
+    if (fromRegion === toRegion && (to === from || to === from + 1)) return false
 
-    var beforeName = afterTarget ? nextVisibleModuleName(targetSlot.region, targetSlot.moduleName, sourceSlot) : targetSlot.moduleName
-    return dropBarModule(sourceSlot, targetSlot.region, beforeName)
+    var changed = false
+    root.shell.mutateShellConfig(function(config) {
+      var fromEntries = rawLayoutSection(config, fromRegion)
+      var toEntries = rawLayoutSection(config, toRegion)
+      if (!fromEntries[from] || Util.canonicalWidgetId(fromEntries[from].id) !== sourceSlot.moduleName) return
+      // a widget dragged somewhere normally leaves any joined pill it was in
+      if (from > 0 && fromEntries[from - 1].pillJoin) {
+        if (fromEntries[from].pillJoin) fromEntries[from - 1].pillJoin = true
+        else delete fromEntries[from - 1].pillJoin
+      }
+      var moved = fromEntries.splice(from, 1)[0]
+      delete moved.pillJoin
+      if (fromRegion === toRegion && from < to) to -= 1
+      to = Math.max(0, Math.min(toEntries.length, to))
+      toEntries.splice(to, 0, moved)
+      if (to > 0 && toEntries[to - 1].pillJoin) delete toEntries[to - 1].pillJoin   // don't land inside a joined pill
+      changed = true
+    })
+    return changed
   }
 
   function moduleTargetClickable(target) {
