@@ -57,6 +57,14 @@ layout(std140, binding = 0) uniform buf {
     vec4 bulb13;
     vec4 bulb14;
     vec4 bulb15;
+    vec4 bulb16;
+    vec4 bulb17;
+    vec4 bulb18;
+    vec4 bulb19;
+    vec4 bulb20;
+    vec4 bulb21;
+    vec4 bulb22;
+    vec4 bulb23;
 };
 
 const float CELL = 64.0;
@@ -165,14 +173,30 @@ float sdPod(vec2 p, vec4 b, float seed) {
 
 float podsAll(vec2 p) {
     float d = 1e5;
-    d = min(d, sdPod(p, bulb0, 1.0));  d = min(d, sdPod(p, bulb1, 2.0));
-    d = min(d, sdPod(p, bulb2, 3.0));  d = min(d, sdPod(p, bulb3, 4.0));
-    d = min(d, sdPod(p, bulb4, 5.0));  d = min(d, sdPod(p, bulb5, 6.0));
-    d = min(d, sdPod(p, bulb6, 7.0));  d = min(d, sdPod(p, bulb7, 8.0));
-    d = min(d, sdPod(p, bulb8, 9.0));  d = min(d, sdPod(p, bulb9, 10.0));
-    d = min(d, sdPod(p, bulb10, 11.0)); d = min(d, sdPod(p, bulb11, 12.0));
-    d = min(d, sdPod(p, bulb12, 13.0)); d = min(d, sdPod(p, bulb13, 14.0));
-    d = min(d, sdPod(p, bulb14, 15.0)); d = min(d, sdPod(p, bulb15, 16.0));
+    d = min(d, sdPod(p, bulb0, 1.0));
+    d = min(d, sdPod(p, bulb1, 2.0));
+    d = min(d, sdPod(p, bulb2, 3.0));
+    d = min(d, sdPod(p, bulb3, 4.0));
+    d = min(d, sdPod(p, bulb4, 5.0));
+    d = min(d, sdPod(p, bulb5, 6.0));
+    d = min(d, sdPod(p, bulb6, 7.0));
+    d = min(d, sdPod(p, bulb7, 8.0));
+    d = min(d, sdPod(p, bulb8, 9.0));
+    d = min(d, sdPod(p, bulb9, 10.0));
+    d = min(d, sdPod(p, bulb10, 11.0));
+    d = min(d, sdPod(p, bulb11, 12.0));
+    d = min(d, sdPod(p, bulb12, 13.0));
+    d = min(d, sdPod(p, bulb13, 14.0));
+    d = min(d, sdPod(p, bulb14, 15.0));
+    d = min(d, sdPod(p, bulb15, 16.0));
+    d = min(d, sdPod(p, bulb16, 17.0));
+    d = min(d, sdPod(p, bulb17, 18.0));
+    d = min(d, sdPod(p, bulb18, 19.0));
+    d = min(d, sdPod(p, bulb19, 20.0));
+    d = min(d, sdPod(p, bulb20, 21.0));
+    d = min(d, sdPod(p, bulb21, 22.0));
+    d = min(d, sdPod(p, bulb22, 23.0));
+    d = min(d, sdPod(p, bulb23, 24.0));
     return d;
 }
 
@@ -210,14 +234,30 @@ float dripEdge(float x) {
     if (barShape < 0.5) return barEdge(x);
     float e = -1.0;
     if (barShape < 1.5) {
-        e = max(e, podBottom(bulb0, x, 0.0));  e = max(e, podBottom(bulb1, x, 0.0));
-        e = max(e, podBottom(bulb2, x, 0.0));  e = max(e, podBottom(bulb3, x, 0.0));
-        e = max(e, podBottom(bulb4, x, 0.0));  e = max(e, podBottom(bulb5, x, 0.0));
-        e = max(e, podBottom(bulb6, x, 0.0));  e = max(e, podBottom(bulb7, x, 0.0));
-        e = max(e, podBottom(bulb8, x, 0.0));  e = max(e, podBottom(bulb9, x, 0.0));
-        e = max(e, podBottom(bulb10, x, 0.0)); e = max(e, podBottom(bulb11, x, 0.0));
-        e = max(e, podBottom(bulb12, x, 0.0)); e = max(e, podBottom(bulb13, x, 0.0));
-        e = max(e, podBottom(bulb14, x, 0.0)); e = max(e, podBottom(bulb15, x, 0.0));
+        e = max(e, podBottom(bulb0, x, 0.0));
+        e = max(e, podBottom(bulb1, x, 0.0));
+        e = max(e, podBottom(bulb2, x, 0.0));
+        e = max(e, podBottom(bulb3, x, 0.0));
+        e = max(e, podBottom(bulb4, x, 0.0));
+        e = max(e, podBottom(bulb5, x, 0.0));
+        e = max(e, podBottom(bulb6, x, 0.0));
+        e = max(e, podBottom(bulb7, x, 0.0));
+        e = max(e, podBottom(bulb8, x, 0.0));
+        e = max(e, podBottom(bulb9, x, 0.0));
+        e = max(e, podBottom(bulb10, x, 0.0));
+        e = max(e, podBottom(bulb11, x, 0.0));
+        e = max(e, podBottom(bulb12, x, 0.0));
+        e = max(e, podBottom(bulb13, x, 0.0));
+        e = max(e, podBottom(bulb14, x, 0.0));
+        e = max(e, podBottom(bulb15, x, 0.0));
+        e = max(e, podBottom(bulb16, x, 0.0));
+        e = max(e, podBottom(bulb17, x, 0.0));
+        e = max(e, podBottom(bulb18, x, 0.0));
+        e = max(e, podBottom(bulb19, x, 0.0));
+        e = max(e, podBottom(bulb20, x, 0.0));
+        e = max(e, podBottom(bulb21, x, 0.0));
+        e = max(e, podBottom(bulb22, x, 0.0));
+        e = max(e, podBottom(bulb23, x, 0.0));
         return e;
     }
     e = max(podBottom(group0, x, 0.0), podBottom(group2, x, 0.0));
@@ -389,6 +429,14 @@ vec2 mapScene(vec2 p) {
     bs = bulb(p, bulb13, 14.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
     bs = bulb(p, bulb14, 15.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
     bs = bulb(p, bulb15, 16.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
+    bs = bulb(p, bulb16, 17.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
+    bs = bulb(p, bulb17, 18.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
+    bs = bulb(p, bulb18, 19.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
+    bs = bulb(p, bulb19, 20.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
+    bs = bulb(p, bulb20, 21.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
+    bs = bulb(p, bulb21, 22.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
+    bs = bulb(p, bulb22, 23.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
+    bs = bulb(p, bulb23, 24.0); d = smin(d, bs.x, 9.0); hl = min(hl, bs.y);
 
     if (openProgress > 0.001) d = smin(d, openPanel(p, ci, hl), 26.0);
     if (material > 0.5 && material < 1.5) d = min(d, teethRow(p));
@@ -425,6 +473,14 @@ float labelZone(vec2 p) {
     l = max(l, labelOf(p, bulb13));
     l = max(l, labelOf(p, bulb14));
     l = max(l, labelOf(p, bulb15));
+    l = max(l, labelOf(p, bulb16));
+    l = max(l, labelOf(p, bulb17));
+    l = max(l, labelOf(p, bulb18));
+    l = max(l, labelOf(p, bulb19));
+    l = max(l, labelOf(p, bulb20));
+    l = max(l, labelOf(p, bulb21));
+    l = max(l, labelOf(p, bulb22));
+    l = max(l, labelOf(p, bulb23));
     return l;
 }
 

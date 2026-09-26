@@ -8,9 +8,11 @@ import "../slime.bar/commandcenter"
 // A gap in the Slime bar. Settings (shell.json, also reachable by
 // right-clicking the gap):
 //   size   width in px (default 16), same key as Omarchy's spacer
-//   deco   "gap"   plain ooze, no bulb (default)
+//   deco   "gap"   plain ooze, no bulb
 //          "lump"  the ooze sags into a bulb here, with drips
-//          "eye"   a spare eyeball floats in the gap, looking around
+//          "eye"   a spare eyeball floats in the gap, looking around (default,
+//                  so a freshly added spacer is visible)
+// Hovering shows a dashed outline and the size, so plain gaps can be found.
 // Scroll over the gap to resize it.
 BarWidget {
   id: root
@@ -18,7 +20,7 @@ BarWidget {
 
   readonly property bool slime: !!bar && bar.slimeSkin === true
   readonly property int span: Math.max(4, Number(setting("size", 16)))
-  readonly property string deco: setting("deco", "gap")
+  readonly property string deco: setting("deco", "eye")
   // The bar skips bulbs for widgets that set this, so a plain gap is just ooze.
   readonly property bool slimeNoBulb: deco !== "lump"
   property bool menuOpen: false
@@ -55,6 +57,27 @@ BarWidget {
       color: root.slime ? root.bar.slimeInk : "black"
     }
   }
+
+  // hover hint: where the gap is and how big
+  Rectangle {
+    anchors.fill: parent
+    anchors.margins: 3
+    visible: root.slime && (spacerHover.hovered || root.menuOpen)
+    radius: 6
+    color: "transparent"
+    border.color: root.bar ? root.bar.slimeInk : "black"
+    border.width: 1.5
+    opacity: 0.6
+    Text {
+      anchors.centerIn: parent
+      visible: root.span >= 22
+      text: root.span
+      color: root.bar ? root.bar.slimeInk : "black"
+      font.pixelSize: 9
+      font.bold: true
+    }
+  }
+  HoverHandler { id: spacerHover }
 
   MouseArea {
     anchors.fill: parent

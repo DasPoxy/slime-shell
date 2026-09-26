@@ -306,6 +306,12 @@ Item {
     function layer(where: string): void { root.slimeLayer = where === "behind" ? "behind" : "above" }
     // Open the command centre on a tab: home, system, wallpapers, tasks, settings.
     function tab(name: string): void { root.ccTab = name; root.commandCenterOpen = root.slimeSkin }
+    // Keybind-friendly: open on that tab, or close if it's already showing it.
+    function toggleTab(name: string): void {
+      if (root.commandCenterOpen && root.ccTab === name) { root.commandCenterOpen = false; return }
+      root.ccTab = name
+      root.commandCenterOpen = root.slimeSkin
+    }
   }
 
   Behavior on barForeground { enabled: root.foregroundAnimationEnabled; ColorAnimation { duration: 420; easing.type: Easing.InOutCubic } }
@@ -1584,7 +1590,7 @@ Item {
           groups[slot.region] = g ? { x0: Math.min(g.x0, at), x1: Math.max(g.x1, at + len) } : { x0: at, x1: at + len }
         if (slot.moduleName === "slime.clock-weather") ccCenterX = at + len / 2
         if (slot.activeItem && slot.activeItem.slimeNoBulb === true) continue   // e.g. plain spacers
-        if (out.length < 16) out.push(Qt.vector4d(at, y, len, h))
+        if (out.length < 24) out.push(Qt.vector4d(at, y, len, h))
       }
       bulbRects = out
       root.sharedBulbRects = out
@@ -1659,6 +1665,14 @@ Item {
       property vector4d bulb13: barWindow.bulbRects[13] || barWindow.noBulb
       property vector4d bulb14: barWindow.bulbRects[14] || barWindow.noBulb
       property vector4d bulb15: barWindow.bulbRects[15] || barWindow.noBulb
+      property vector4d bulb16: barWindow.bulbRects[16] || barWindow.noBulb
+      property vector4d bulb17: barWindow.bulbRects[17] || barWindow.noBulb
+      property vector4d bulb18: barWindow.bulbRects[18] || barWindow.noBulb
+      property vector4d bulb19: barWindow.bulbRects[19] || barWindow.noBulb
+      property vector4d bulb20: barWindow.bulbRects[20] || barWindow.noBulb
+      property vector4d bulb21: barWindow.bulbRects[21] || barWindow.noBulb
+      property vector4d bulb22: barWindow.bulbRects[22] || barWindow.noBulb
+      property vector4d bulb23: barWindow.bulbRects[23] || barWindow.noBulb
     }
 
     // detritus drifting through the bar, fading out behind widgets

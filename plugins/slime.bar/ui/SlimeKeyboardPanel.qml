@@ -464,6 +464,14 @@ PanelWindow {
     property vector4d bulb13: bulbs[13] || noBulb
     property vector4d bulb14: bulbs[14] || noBulb
     property vector4d bulb15: bulbs[15] || noBulb
+    property vector4d bulb16: bulbs[16] || noBulb
+    property vector4d bulb17: bulbs[17] || noBulb
+    property vector4d bulb18: bulbs[18] || noBulb
+    property vector4d bulb19: bulbs[19] || noBulb
+    property vector4d bulb20: bulbs[20] || noBulb
+    property vector4d bulb21: bulbs[21] || noBulb
+    property vector4d bulb22: bulbs[22] || noBulb
+    property vector4d bulb23: bulbs[23] || noBulb
   }
 
   // --- card ----------------------------------------------------------------

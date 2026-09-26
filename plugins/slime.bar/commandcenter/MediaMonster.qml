@@ -67,6 +67,14 @@ Item {
       property vector4d bulb13: Qt.vector4d(0, 0, 0, 0)
       property vector4d bulb14: Qt.vector4d(0, 0, 0, 0)
       property vector4d bulb15: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb16: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb17: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb18: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb19: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb20: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb21: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb22: Qt.vector4d(0, 0, 0, 0)
+      property vector4d bulb23: Qt.vector4d(0, 0, 0, 0)
 
       readonly property var bar: monster.cc.bar
       property real blobMode: 1
