@@ -94,7 +94,7 @@ Nothing is bound for you. Suggested lines for `~/.config/hypr/bindings.lua`
 (unbind anything already on those keys first with `hl.unbind("...")`):
 
 ```lua
-o.bind("SUPER + SHIFT + C", "Slime command centre", "omarchy-shell slime-shell toggleTab home")
+o.bind("SUPER + ALT + C",   "Slime command centre", "omarchy-shell slime-shell toggleTab home")
 o.bind("SUPER + R",         "Slime launcher",       "omarchy-shell slime-launcher apps")
 o.bind("SUPER + ALT + S",   "Slime settings",       "omarchy-shell slime-shell toggleTab settings")
 o.bind("SUPER + ALT + M",   "Slime system monitor", "omarchy-shell slime-shell toggleTab system")
