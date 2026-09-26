@@ -352,15 +352,16 @@ vec3 celShade(vec2 p, vec2 scene, vec3 base, bool screentone) {
     col = mix(col, dark, shadow2);
 
     if (screentone) {
-        // Screentone only where it earns its place: nothing in the light,
-        // halftone dots across the shadow side, and cross-hatching in the core
-        // shadow and along the rim for emphasis. Panel contents stay clean.
+        // Screentone weighted toward the shadows: fine pinpricks across the lit
+        // body, growing dots down the shadow side, hatching through the shadow
+        // and crossed in the core and along the rim. Panel contents stay clean.
         float calm = labelZone(p);
         float inPanel = step(barHeight + 8.0, p.y) * step(panelRect.x, p.x) * step(p.x, panelRect.x + panelRect.z);
         calm = max(calm, inPanel * smoothstep(-12.0, -22.0, d));
 
-        float tone = mix(0.0, 0.32, shadow1);
-        tone = mix(tone, 0.4, shadow2);
+        float tone = mix(0.13, 0.3, shadow1);
+        tone = mix(tone, 0.42, shadow2);
+        tone *= mix(1.0, 0.55, litEdge * (1.0 - shadow1));   // thinner still on the lit rim
         tone *= 1.0 - calm;
         vec2 q = mat2(0.7071, -0.7071, 0.7071, 0.7071) * p / 6.0;
         float dist = length(fract(q) - 0.5);
@@ -373,7 +374,7 @@ vec3 celShade(vec2 p, vec2 scene, vec3 base, bool screentone) {
         float v = dot(p, vec2(0.8, 0.6)) / 4.2;
         float lines1 = clamp((0.14 - abs(fract(u) - 0.5)) * 5.0 + 0.5, 0.0, 1.0);
         float lines2 = clamp((0.12 - abs(fract(v) - 0.5)) * 5.0 + 0.5, 0.0, 1.0);
-        float hatch = lines1 * shadow2 + lines2 * shadow2 * rim;
+        float hatch = lines1 * mix(shadow1 * 0.45, 1.0, shadow2) + lines2 * shadow2 * max(rim, 0.5);
         col = mix(col, ink, clamp(hatch, 0.0, 1.0) * 0.7 * (1.0 - calm));
     }
 
