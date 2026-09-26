@@ -11,8 +11,11 @@ import "Fuzzy.js" as Fuzzy
 // The Slime app launcher. Clicked on the bar it drips out of the launcher
 // monster; summoned by keybind it floats in the middle of the screen
 // (`floating`). Type to fuzzy-search apps and Omarchy's menu commands
-// (every action in the Omarchy menu, plus your menu extensions); start with
-// ">" to search commands only. Arrows / Tab move, Enter runs, Esc closes.
+// (every action in the Omarchy menu, plus your menu extensions) and files
+// (index-files.sh: ~ and mounted drives minus backups and game libraries,
+// cached in ~/.cache/slime-shell, filtered with fzf); start with ">" for
+// commands only or "/" for files only. Arrows / Tab move, Enter runs or opens,
+// Esc closes.
 // Apps come from Omarchy's app library (same hidden entries and launching as
 // the Omarchy launcher), falling back to Quickshell's desktop entries.
 SlimeKeyboardPanel {
@@ -29,7 +32,11 @@ SlimeKeyboardPanel {
   readonly property bool slime: !!bar && bar.slimeSkin === true
   readonly property color ink: slime ? bar.slimeInk : Color.foreground
   readonly property bool commandsOnly: query.indexOf(">") === 0
-  readonly property string term: commandsOnly ? query.slice(1).trim() : query.trim()
+  readonly property bool filesOnly: query.indexOf("/") === 0
+  readonly property string term: commandsOnly || filesOnly ? query.slice(1).trim() : query.trim()
+  property var files: []                // [{path, name, dir}] from fzf
+  readonly property string home: Quickshell.env("HOME")
+  readonly property string fileIndex: (Quickshell.env("XDG_CACHE_HOME") || home + "/.cache") + "/slime-shell/files.txt"
 
   readonly property var allApps: {
     if (library) return library.sortedEntries("")
@@ -48,18 +55,69 @@ SlimeKeyboardPanel {
   }
 
   readonly property var apps: {
-    if (commandsOnly) return []
+    if (commandsOnly || filesOnly) return []
     if (term === "") return allApps
     return rank(allApps, function(e) {
       return [nameFor(e), (e.genericName || "") + " " + (e.keywords ? e.keywords.join(" ") : "") + " " + (e.comment || "")]
     }, 12)
   }
   readonly property var cmds: {
+    if (filesOnly) return []
     if (term === "" && !commandsOnly) return []
     if (term === "") return commands.slice(0, 40)
     return rank(commands, function(c) { return [c.label, c.path + " " + c.label, c.keywords] }, commandsOnly ? 40 : 8)
   }
-  readonly property int total: apps.length + cmds.length
+  readonly property int total: apps.length + cmds.length + files.length
+
+  // ---- files: index with fd on open, filter with fzf as you type ----------------
+  // refresh the index in the background when it's over 10 minutes old
+  property Process fileIndexer: Process {
+    command: ["bash", Qt.resolvedUrl("index-files.sh").toString().replace("file://", ""), "10"]
+    onExited: drawer.fileFilterTimer.restart()
+  }
+
+  property Process fileFilter: Process {
+    property string forTerm: ""
+    stdout: StdioCollector {
+      onStreamFinished: {
+        if (drawer.fileFilter.forTerm !== drawer.term) return   // stale
+        var home = drawer.home
+        drawer.files = text.split("\n").filter(function(l) { return l !== "" }).map(function(p) {
+          var i = p.lastIndexOf("/")
+          var dir = p.slice(0, i)
+          if (dir.indexOf(home) === 0) dir = "~" + dir.slice(home.length)
+          return { path: p, name: p.slice(i + 1), dir: dir }
+        })
+      }
+    }
+  }
+  property Timer fileFilterTimer: Timer {
+    interval: 120
+    onTriggered: {
+      var wanted = drawer.filesOnly ? drawer.term.length >= 1 : drawer.term.length >= 3
+      if (!wanted) { drawer.files = []; return }
+      drawer.fileFilter.forTerm = drawer.term
+      drawer.fileFilter.command = ["bash", "-c", "fzf --filter=\"$1\" < \"$2\" 2>/dev/null | head -n \"$3\"",
+        "filter", drawer.term, drawer.fileIndex, drawer.filesOnly ? "40" : "5"]
+      drawer.fileFilter.running = true
+    }
+  }
+  function openFile(f, folder) {
+    if (!f) return
+    widget.appsOpen = false
+    Quickshell.execDetached(["uwsm-app", "--", "xdg-open", folder ? f.path.slice(0, f.path.lastIndexOf("/")) : f.path])
+  }
+  function fileGlyph(name) {
+    var ext = name.slice(name.lastIndexOf(".") + 1).toLowerCase()
+    if (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].indexOf(ext) >= 0) return "\uf1c5"
+    if (["mp4", "mkv", "webm", "mov", "avi"].indexOf(ext) >= 0) return "\uf1c8"
+    if (["mp3", "flac", "ogg", "wav", "m4a", "opus"].indexOf(ext) >= 0) return "\uf1c7"
+    if (["pdf"].indexOf(ext) >= 0) return "\uf1c1"
+    if (["zip", "tar", "gz", "xz", "7z", "rar", "zst"].indexOf(ext) >= 0) return "\uf1c6"
+    if (["md", "txt", "org", "rst"].indexOf(ext) >= 0) return "\uf15c"
+    if (["qml", "js", "ts", "py", "rs", "sh", "lua", "c", "cpp", "h", "go", "json", "toml", "yaml", "yml", "css", "html"].indexOf(ext) >= 0) return "\uf1c9"
+    return "\uf15b"
+  }
 
   // held as a property: the panel's default children are its card content
   property Process commandLoader: Process {
@@ -87,7 +145,8 @@ SlimeKeyboardPanel {
   }
   function activate(i) {
     if (i < apps.length) launch(apps[i])
-    else runCommand(cmds[i - apps.length])
+    else if (i < apps.length + cmds.length) runCommand(cmds[i - apps.length])
+    else openFile(files[i - apps.length - cmds.length], false)
   }
   // Grid-aware movement: left/right step, up/down jump a row inside the apps
   // grid and one row at a time through the commands.
@@ -102,8 +161,12 @@ SlimeKeyboardPanel {
     scroller.reveal(selected)
   }
 
-  onQueryChanged: { selected = 0; scroller.contentY = 0 }
-  onOpenChanged: if (open) { query = ""; search.text = ""; selected = 0; scroller.contentY = 0; drawer.commandLoader.running = true }
+  onQueryChanged: { selected = 0; scroller.contentY = 0; fileFilterTimer.restart() }
+  onOpenChanged: if (open) {
+    query = ""; search.text = ""; selected = 0; scroller.contentY = 0; files = []
+    drawer.commandLoader.running = true
+    drawer.fileIndexer.running = true
+  }
 
   contentWidth: fittedContentWidth(Style.space(580))
   contentHeight: fittedContentHeight(header.height + 12 + searchBox.height + 12 + cell * 1.15 * 4 + 4)
@@ -141,8 +204,9 @@ SlimeKeyboardPanel {
       Text {
         x: headMonster.width + 10
         anchors.verticalCenter: parent.verticalCenter
-        text: drawer.query === "" ? drawer.allApps.length + " apps  ·  type > for commands"
-          : drawer.apps.length + " apps · " + drawer.cmds.length + " commands"
+        text: drawer.query === "" ? drawer.allApps.length + " apps  ·  > commands  ·  / files"
+          : drawer.filesOnly ? drawer.files.length + " files"
+          : drawer.apps.length + " apps · " + drawer.cmds.length + " commands" + (drawer.files.length ? " · " + drawer.files.length + " files" : "")
         color: drawer.ink
         font.family: drawer.bar && drawer.bar.displayFontFamily ? drawer.bar.displayFontFamily : look.font
         font.weight: drawer.bar ? drawer.bar.displayWeight : Font.Black
@@ -176,7 +240,7 @@ SlimeKeyboardPanel {
       Text {
         x: 14
         anchors.verticalCenter: parent.verticalCenter
-        text: drawer.commandsOnly ? "" : ""
+        text: drawer.commandsOnly ? "" : drawer.filesOnly ? "\uf07c" : ""
         color: drawer.ink
         font.family: look.font
         font.pixelSize: 14
@@ -232,7 +296,8 @@ SlimeKeyboardPanel {
       function reveal(i) {
         var top, h
         if (i < drawer.apps.length) { top = Math.floor(i / drawer.columns) * drawer.cell * 1.15; h = drawer.cell * 1.15 }
-        else { top = appGrid.height + (drawer.apps.length ? 12 : 0) + cmdHeading.height + 6 + (i - drawer.apps.length) * 34; h = 34 }
+        else if (i < drawer.apps.length + drawer.cmds.length) { top = appGrid.height + (drawer.apps.length ? 12 : 0) + cmdHeading.height + 6 + (i - drawer.apps.length) * 34; h = 34 }
+        else { top = results.implicitHeight - (drawer.total - i) * 40; h = 40 }
         if (top < contentY) contentY = top
         else if (top + h > contentY + height) contentY = top + h - height
       }
@@ -353,6 +418,76 @@ SlimeKeyboardPanel {
               anchors.fill: parent
               cursorShape: Qt.PointingHandCursor
               onClicked: drawer.runCommand(row.modelData)
+            }
+          }
+        }
+
+        CcHeading {
+          visible: drawer.files.length > 0
+          cc: look
+          text: "FILES"
+        }
+        Repeater {
+          model: drawer.files
+          Rectangle {
+            id: fileRow
+            required property var modelData
+            required property int index
+            readonly property bool current: drawer.apps.length + drawer.cmds.length + index === drawer.selected
+            width: results.width
+            height: 34
+            radius: 12
+            color: fileRow.current ? Qt.rgba(1, 1, 1, 0.7) : (fileHover.hovered ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(1, 1, 1, 0.18))
+            border.color: fileRow.current ? drawer.ink : "transparent"
+            border.width: 2
+            HoverHandler { id: fileHover }
+            Text {
+              id: fileIcon
+              x: 12
+              width: 18
+              anchors.verticalCenter: parent.verticalCenter
+              text: drawer.fileGlyph(fileRow.modelData.name)
+              color: drawer.ink
+              font.family: look.font
+              font.pixelSize: 14
+            }
+            Column {
+              x: fileIcon.x + fileIcon.width + 8
+              width: parent.width - x - folderButton.width - 16
+              anchors.verticalCenter: parent.verticalCenter
+              Text {
+                width: parent.width
+                elide: Text.ElideMiddle
+                text: fileRow.modelData.name
+                color: drawer.ink
+                font.family: look.font
+                font.pixelSize: 12
+                font.bold: true
+              }
+              Text {
+                width: parent.width
+                elide: Text.ElideMiddle
+                text: fileRow.modelData.dir
+                color: drawer.ink
+                opacity: 0.6
+                font.family: look.font
+                font.pixelSize: 10
+              }
+            }
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: drawer.openFile(fileRow.modelData, false)
+            }
+            CcButton {
+              id: folderButton
+              anchors.right: parent.right
+              anchors.rightMargin: 8
+              anchors.verticalCenter: parent.verticalCenter
+              cc: look
+              icon: "\uf07b"
+              fontSize: 11
+              onClicked: drawer.openFile(fileRow.modelData, true)
             }
           }
         }

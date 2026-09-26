@@ -33,9 +33,9 @@ pills, islands, notch) and a **shading** style (soft, anime, manga, print):
   picker), bluetooth, network, audio, display, power, keyboard layout,
   system update, spacers. See **[docs/widgets.md](docs/widgets.md)** for what
   every click does.
-- **Launcher** — fuzzy app search plus every Omarchy menu command (`>` for
-  commands only); drips from the bar when clicked, floats centred when
-  summoned by keybind.
+- **Launcher** — fuzzy search over apps, every Omarchy menu command (`>` for
+  commands only) and your files (`/` for files only); drips from the bar when
+  clicked, floats centred when summoned by keybind.
 - **Notifications** — toasts drip out of the bar (top bar).
 - **Tasks** — checkboxes from your notes (Envy, `~/Notes`, or any folder):
   [docs/tasks.md](docs/tasks.md).

@@ -18,9 +18,17 @@ A slime monster (or other icon).
 | Right click | icon picker (6 monsters, potion, skull, chest, orb, pack, candle, Omarchy logo) |
 | Keybind | `omarchy-shell slime-launcher apps` opens it centred on screen |
 
-In the launcher: type to fuzzy-search apps and Omarchy commands, start with
-`>` for commands only, arrows/Tab to move, Enter to run, Esc to close. The
-*Omarchy menu* button opens Omarchy's own menu.
+In the launcher: type to fuzzy-search apps, Omarchy commands and files (top 5
+files once you've typed 3 letters). Start with `>` for commands only or `/`
+for files only. Arrows/Tab to move, Enter to run or open, Esc to close. Each
+file has a folder button to open where it lives. The *Omarchy menu* button
+opens Omarchy's own menu.
+
+The file index covers `~` and mounted drives (`/mnt`, `/run/media`), skips
+backups (Timeshift), Steam/game libraries, Wine prefixes, mod folders and
+caches, and is cached in `~/.cache/slime-shell/files.txt`, refreshed in the
+background when older than 10 minutes. Add your own skips (fd exclude globs,
+one per line) to `~/.config/omarchy/slime-shell/file-search-ignore`.
 
 ### Workspaces — `slime.workspaces`
 ![Workspaces menu](images/workspaces-menu.png)
