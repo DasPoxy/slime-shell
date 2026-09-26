@@ -30,6 +30,8 @@ import QtQuick.Shapes
 //        "book"       spellbook (memory)       lit = glowing rune
 //        "potion"     bubbling flask           lit = bubbling
 //        "skull"      grinning skull           lit = glowing eyes
+//        "lich"       crowned lich with a staff    lit = casting: arm raised,
+//                     eyes and hand blazing (the media widget's spellcaster)
 Item {
   id: root
 
@@ -524,6 +526,59 @@ Item {
       Rectangle { visible: root.lit; x: 8; y: 9.2; width: 1.8; height: 1.8; radius: 0.9; color: root.glow; opacity: root.pulse }
       Rectangle { visible: root.lit; x: 14.2; y: 9.2; width: 1.8; height: 1.8; radius: 0.9; color: root.glow; opacity: root.pulse }
       GearPath { d: "M16.2 4.4 L15 6.6 L16.4 7.4"; line: 0.7 }                                                              // crack
+    }
+
+
+    // ==================================================================== lich
+    Item {
+      id: lich
+      anchors.fill: parent
+      visible: root.kind === "lich"
+      readonly property color robe: Qt.darker(root.pal.blue || "#3f74ff", 2.2)
+      readonly property color robeLight: Qt.darker(root.pal.blue || "#3f74ff", 1.5)
+      readonly property color spell: root.pal.bright_magenta || root.pal.magenta || "#ff69c1"
+      // casting: the arm lifts and sways with the spell
+      readonly property real lift: root.lit ? 2.6 + Math.sin(root.time * 5) * 0.8 : 0
+
+      // staff with a crystal, behind the body
+      GearPath { d: "M5.2 5.6 L3.6 22.6"; stroke: root.leather; line: 1.8 }
+      GearPath { d: "M5.2 5.6 L3.8 3.4 M5.2 5.6 L6.8 3.6"; stroke: root.leather; line: 1 }
+      Rectangle {
+        x: 5.3 - 1.9; y: 3.6 - 1.9; width: 3.8; height: 3.8; radius: 1.9
+        color: root.crystal; border.color: root.ink; border.width: 0.8
+        opacity: root.lit ? root.pulse : 0.85
+      }
+      // robe and hood
+      GearPath { d: "M12 2.6 Q17 3 17.6 8.4 L20.2 21.6 Q12 23.2 3.8 21.6 L6.4 8.4 Q7 3 12 2.6 Z"; fill: lich.robe }
+      GearPath { d: "M7.6 21.4 L9 14.6 M16.4 21.4 L15 14.6 M12 22.1 L12 15.4"; stroke: lich.robeLight; line: 0.8 }   // folds
+      GearPath { d: "M9 7.8 Q12 4.8 15 7.8 L14.6 12.6 Q12 13.8 9.4 12.6 Z"; fill: root.ink; line: 0.8 }             // hood shadow
+      // skull face in the hood
+      GearPath { d: "M12 6.8 Q14.2 6.8 14.2 9.3 Q14.2 11.2 13.2 11.6 L13.2 12.6 L10.8 12.6 L10.8 11.6 Q9.8 11.2 9.8 9.3 Q9.8 6.8 12 6.8 Z"; fill: root.paper; line: 0.7 }
+      Rectangle { x: 10.6; y: 8.6; width: 1.4; height: 1.4; radius: 0.7; color: root.lit ? lich.spell : root.glow; opacity: root.pulse }
+      Rectangle { x: 12.2; y: 8.6; width: 1.4; height: 1.4; radius: 0.7; color: root.lit ? lich.spell : root.glow; opacity: root.pulse }
+      GearPath { d: "M11.4 11.8 L11.4 12.4 M12.6 11.8 L12.6 12.4"; line: 0.5 }                                        // teeth
+      // crown
+      GearPath { d: "M8.6 4.6 L9.2 1.8 L10.6 3.6 L12 1 L13.4 3.6 L14.8 1.8 L15.4 4.6 Q12 3.6 8.6 4.6 Z"; fill: root.gold; line: 0.9 }
+      Rectangle { x: 11.4; y: 2.6; width: 1.2; height: 1.2; radius: 0.6; color: lich.spell; border.color: root.ink; border.width: 0.4 }
+      // casting arm: sleeve out to a bony hand
+      GearPath {
+        d: "M15.4 11 Q18.4 " + (11.6 - lich.lift) + " 20.4 " + (10.2 - lich.lift) + " L21 " + (12.2 - lich.lift) + " Q18.6 " + (14 - lich.lift) + " 16 14.4 Z"
+        fill: lich.robeLight
+        line: 1
+      }
+      GearPath {   // bony fingers splayed
+        d: "M20.8 " + (10.6 - lich.lift) + " L22.8 " + (9.2 - lich.lift) + " M21.2 " + (11.2 - lich.lift) + " L23.4 " + (10.8 - lich.lift) + " M20.8 " + (11.8 - lich.lift) + " L22.6 " + (12.6 - lich.lift)
+        stroke: root.paper
+        line: 0.9
+      }
+      // the spell gathering in his palm
+      Rectangle {
+        visible: root.lit
+        x: 22.6 - width / 2; y: 10.6 - lich.lift - height / 2
+        width: 3.6 + root.pulse * 1.6; height: width; radius: width / 2
+        color: lich.spell
+        opacity: 0.55 * root.pulse
+      }
     }
 
   }

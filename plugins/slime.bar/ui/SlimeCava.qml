@@ -13,6 +13,10 @@ Item {
   property bool active: true
   property int bars: 12
   property color fill: "black"
+  // Optional colours spread left→right across the bars (a gradient); when
+  // empty the bars are a flat `fill`.
+  property var colors: []
+  property real colorAlpha: 1
   property color outline: "transparent"
   property real outlineWidth: 0
   property real gap: 2
@@ -70,6 +74,7 @@ Item {
     preferredRendererType: Shape.CurveRenderer
     ShapePath {
       fillColor: viz.fill
+      fillGradient: viz.colors.length > 1 ? barGradient : null
       strokeColor: viz.outline
       strokeWidth: viz.outlineWidth
       joinStyle: ShapePath.RoundJoin
@@ -99,6 +104,23 @@ Item {
     }
   }
 
+  // five fixed stops sampling `colors` evenly (bound, so theme changes follow)
+  function colorAt(f) {
+    if (colors.length === 0) return fill
+    var c = Qt.color(colors[Math.min(colors.length - 1, Math.round(f * (colors.length - 1)))])
+    return Qt.rgba(c.r, c.g, c.b, colorAlpha)
+  }
+  LinearGradient {
+    id: barGradient
+    x1: 0; y1: 0
+    x2: viz.width; y2: 0
+    GradientStop { position: 0.0; color: viz.colorAt(0.0) }
+    GradientStop { position: 0.25; color: viz.colorAt(0.25) }
+    GradientStop { position: 0.5; color: viz.colorAt(0.5) }
+    GradientStop { position: 0.75; color: viz.colorAt(0.75) }
+    GradientStop { position: 1.0; color: viz.colorAt(1.0) }
+  }
+
   // a bubble popping off the loudest bar
   Rectangle {
     readonly property int peak: {
@@ -113,7 +135,7 @@ Item {
     x: (peak + 0.5) * viz.width / viz.bars - width / 2
     y: viz.height - (viz.levels[peak] || 0) * viz.height - height - 2
     color: "transparent"
-    border.color: viz.fill
+    border.color: viz.colors.length > 0 && peak >= 0 ? viz.colorAt(peak / Math.max(1, viz.bars - 1)) : viz.fill
     border.width: 1
   }
 }

@@ -91,7 +91,13 @@ Item {
       active: monster.playing
       bars: 24
       gap: 3
-      fill: Qt.rgba(monster.ink.r, monster.ink.g, monster.ink.b, 0.16)
+      fill: monster.ink
+      // theme colours sweeping across the goo, bright but see-through so
+      // the track text on top stays readable
+      readonly property var pal: monster.cc.bar.palette || ({})
+      colors: [pal.bright_magenta || "#ff69c1", pal.bright_blue || "#6695ff", pal.bright_cyan || "#10ffd9",
+        pal.bright_green || "#3dff41", pal.bright_yellow || "#e4cc00", pal.bright_red || "#ff5155"]
+      colorAlpha: 0.5
       opacity: monster.playing ? 1 : 0
       Behavior on opacity { NumberAnimation { duration: 500 } }
     }
