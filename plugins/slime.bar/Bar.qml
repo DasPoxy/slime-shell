@@ -258,7 +258,7 @@ Item {
     case "rain": return Qt.vector4d(2.4, 0.55, 0, 1.35)
     case "tar": return Qt.vector4d(0.22, 1.8, 0, 0.6)
     case "frozen": return Qt.vector4d(1, 1, 1, 1)
-    case "stringy": return Qt.vector4d(0.75, 1, 0, 1)
+    case "stringy": return Qt.vector4d(0.75, 1, 0, 1.3)
     case "lava": return Qt.vector4d(0.45, 1.15, 0, 0.8)
     default: return Qt.vector4d(1, 1, 0, 1)
     }

@@ -124,6 +124,20 @@ float barEdge(float x) {
 // One drip hanging from edgeY: it slowly stretches, lets a droplet go, and
 // the neck snaps back up. `scale` shrinks drips on a hs-open panel.
 // Returns (shape distance, distance to its sparkle highlights).
+// Where drip `seed` hangs its tip right now (xy) and how much of it is still
+// attached (z: 1 hanging, falling to 0 as it lets go). Mirrors drip()'s timing
+// so the stringy style can web neighbouring drips together.
+vec3 dripTip(float cx, float edgeY, float seed, float scale) {
+    float speed = (0.06 + 0.09 * hash(seed + 1.0)) * dripStyle.x;
+    float s = fract(time * speed + hash(seed + 2.0));
+    if (dripStyle.z > 0.5) s = 0.35 + 0.42 * hash(seed + 2.0);
+    float maxLen = scale * min(dripAmount, 2.1) * (12.0 + 48.0 * hash(seed + 3.0));
+    if (dripExtra.y > 0.5) maxLen *= 0.15 + 1.7 * vnoise(vec2(seed * 3.1, time * 0.12));
+    float grow = smoothstep(0.0, 0.8, s);
+    float release = smoothstep(0.8, 1.0, s);
+    return vec3(cx, edgeY + maxLen * grow * grow * (1.0 - release), 1.0 - release);
+}
+
 vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
     float speed = (0.06 + 0.09 * hash(seed + 1.0)) * dripStyle.x;
     float s = fract(time * speed + hash(seed + 2.0));
@@ -187,16 +201,16 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
     // ---- stringy: extra thin strands from the edge to the bulb, sagging a
     // little, that stretch after the drop and snap one by one
     if (dripExtra.x > 0.5) {
-        for (int j = 0; j < 3; j++) {
+        for (int j = 0; j < 4; j++) {
             float fj = float(j);
-            if (hash(seed * 7.0 + fj) < 0.3) continue;
+            if (hash(seed * 7.0 + fj) < 0.12) continue;
             float root0 = cx + (hash(seed * 3.0 + fj * 1.7) - 0.5) * (neck * 5.0 + 10.0);
             float snapAt = 0.2 + 0.7 * hash(seed + fj * 2.3);    // how far the drop falls before it snaps
             if (release > 0.0 && fall > snapAt) continue;
             vec2 end = release > 0.0 ? drop : tip + vec2((hash(seed + fj) - 0.5) * bulb, -bulb * 0.4);
             vec2 a0 = vec2(root0, edgeY - 2.0);
             vec2 mid = mix(a0, end, 0.5) + vec2(0.0, 4.0 + 3.0 * hash(seed + fj * 9.1));   // sag
-            float w = (0.7 + 0.5 * hash(seed + fj * 4.4)) * (release > 0.0 ? 1.0 - fall / snapAt : 1.0);
+            float w = (1.4 + 1.1 * hash(seed + fj * 4.4)) * (release > 0.0 ? 1.0 - fall / snapAt : 1.0);
             d = min(d, min(sdSegment(p, a0, mid, w), sdSegment(p, mid, end, w)));
         }
     }
@@ -401,13 +415,27 @@ vec2 bulb(vec2 p, vec4 b, float seed) {
     float hl = 1e5;
     float bottom = c.y + hs.y - 3.0;
     float span = max(hs.x - hs.y * 0.6, 4.0);
+    vec3 tips[2];
+    int n = 0;
     for (int k = 0; k < 2; k++) {
         float sk = seed * 17.0 + float(k) * 5.0 + 200.0;
-        if (k == 1 && hash(sk + 0.5) < 0.5) break;
+        if (k == 1 && hash(sk + 0.5) < (dripExtra.x > 0.5 && dripExtra.x < 1.5 ? 0.15 : 0.5)) break;
         float x = c.x + (hash(sk) * 2.0 - 1.0) * span;
         vec2 dr = drip(p, x, bottom, sk, 0.75);
         d = smin(d, dr.x, 7.0);
         hl = min(hl, dr.y);
+        tips[k] = dripTip(x, bottom, sk, 0.75);
+        n++;
+    }
+    // stringy: a sagging web between the belly's two drips
+    if (n == 2 && dripExtra.x > 0.5 && dripExtra.x < 1.5 && abs(tips[0].x - tips[1].x) > 8.0) {
+        float live = min(tips[0].z, tips[1].z) * smoothstep(2.0, 10.0, max(tips[0].y, tips[1].y) - bottom);
+        if (live > 0.05) {
+            vec2 a0 = vec2(tips[0].x, mix(bottom, tips[0].y, 0.5)), b0 = vec2(tips[1].x, mix(bottom, tips[1].y, 0.6));
+            vec2 mid = mix(a0, b0, 0.5) + vec2(0.0, (6.0 + 6.0 * hash(seed + 8.0)) * live);
+            float w = (1.1 + 0.6 * hash(seed + 9.0)) * live;
+            d = smin(d, min(sdSegment(p, a0, mid, w), sdSegment(p, mid, b0, w)), 3.0);
+        }
     }
     return vec2(d, hl);
 }
@@ -501,6 +529,38 @@ vec2 mapScene(vec2 p) {
         vec2 dr = drip(p, cx, edge, i, 1.0);
         d = smin(d, dr.x, 12.0);
         hl = min(hl, dr.y);
+    }
+
+    // stringy: sagging webs strung between neighbouring drips, hanging from
+    // partway down each one and thinning away as either drip lets go
+    if (dripExtra.x > 0.5 && dripExtra.x < 1.5) {
+        float dens = 1.0 - 0.7 * dripStyle.w * max(1.0, dripAmount * 0.55);
+        // each drip webs to the next drip along, across at most one empty cell
+        for (int k = -2; k <= 0; k++) {
+            float i = ci + float(k);
+            if (hash(i * 3.7 + 11.0) < dens) continue;
+            float n = i + 1.0;
+            if (hash(n * 3.7 + 11.0) < dens) n += 1.0;
+            if (hash(n * 3.7 + 11.0) < dens) continue;
+            if (hash(i * 5.3 + 2.0) > 0.85) continue;
+            float xa = (i + 0.5 + (hash(i) - 0.5) * 0.6) * CELL;
+            float xb = (n + 0.5 + (hash(n) - 0.5) * 0.6) * CELL;
+            float ea = dripEdge(xa), eb = dripEdge(xb);
+            if (ea < 0.0 || eb < 0.0) continue;
+            vec3 ta = dripTip(xa, ea, i, 1.0), tb = dripTip(xb, eb, n, 1.0);
+            // one or two strands per pair, anchored at different heights
+            for (int j = 0; j < 2; j++) {
+                float fj = float(j);
+                if (j == 1 && hash(i * 9.1 + 4.0) < 0.5) continue;
+                float fa = 0.35 + 0.4 * hash(i * 2.9 + fj), fb = 0.35 + 0.4 * hash(i * 6.1 + fj);
+                vec2 a0 = vec2(xa, mix(ea, ta.y, fa)), b0 = vec2(xb, mix(eb, tb.y, fb));
+                float live = min(ta.z, tb.z) * smoothstep(2.0, 12.0, max(ta.y - ea, tb.y - eb));
+                if (live < 0.05) continue;
+                vec2 mid = mix(a0, b0, 0.5) + vec2(0.0, (8.0 + 10.0 * hash(i + fj * 3.3)) * live);
+                float w = (1.1 + 0.7 * hash(i * 4.2 + fj)) * live;
+                d = smin(d, min(sdSegment(p, a0, mid, w), sdSegment(p, mid, b0, w)), 3.0);
+            }
+        }
     }
 
     d = smin(d, eggShape(p), 8.0);
