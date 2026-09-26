@@ -125,7 +125,7 @@ omarchy-shell slime-clock settings
 Command centre → **Settings** (sections fold open and closed):
 
 - **Slime** — colour, gradient partner, material, bar position, bar shape,
-  draw above/behind windows, bar debris, shading
+  draw above/behind windows, debris (in the bar and drifting behind panels, with the odd trapped adventurer), shading
 - **Font & clock** — system font or a slime set (blobby, drippy, bubble),
   date/time order
 - **Motion** — frame rate, drip style, drip amount

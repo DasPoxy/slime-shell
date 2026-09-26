@@ -305,6 +305,13 @@ PopupWindow {
       NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
     }
 
+    // bits adrift in the ooze behind the content (the "bar debris" setting)
+    SlimePanelDebris {
+      anchors.fill: parent
+      bar: root.bar
+      active: root.open && root.slime
+    }
+
     Item {
       id: contentHolder
       anchors.fill: parent

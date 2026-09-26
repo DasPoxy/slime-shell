@@ -2142,6 +2142,17 @@ Item {
       }
     }
 
+    // debris adrift in the command centre's ooze, behind its content
+    SlimePanelDebris {
+      x: commandCenter.x - 12 * barWindow.ccScale
+      y: commandCenter.y - 8 * barWindow.ccScale
+      width: (commandCenter.width + 24) * barWindow.ccScale
+      height: (commandCenter.implicitHeight + 16) * barWindow.ccScale
+      bar: root
+      active: root.commandCenterOpen
+      opacity: commandCenter.opacity
+    }
+
     // ---- Command centre (fades in once the ooze has settled) ----
     CommandCenter {
       id: commandCenter
