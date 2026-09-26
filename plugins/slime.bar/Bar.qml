@@ -1833,6 +1833,68 @@ Item {
     }
   }
 
+  // The slime scene (one SDF shader for bar, drips, bulbs, command centre):
+  // the bar window draws the strip, the skin window everything past it. Both
+  // share every uniform, so the goo runs seamlessly across the seam.
+  component SlimeScene: ShaderEffect {
+    required property var win
+    fragmentShader: Qt.resolvedUrl("shaders/slime.frag.qsb")
+    // every shader uniform set explicitly: unset ones are not guaranteed to be 0
+    property vector4d cullRect: Qt.vector4d(0, 0, 0, 0)
+    property real clipTop: -100000
+    property real poolDepth: 0
+    property vector2d origin: Qt.vector2d(0, 0)
+    property real blobMode: 0
+    property real orient: root.orientId
+    property vector2d screenSize: win.screen ? Qt.vector2d(win.screen.width, win.screen.height) : Qt.vector2d(0, 0)
+
+    property real time: root.animTime
+    property real barHeight: root.barSize
+    property real openProgress: win.ccProgress
+    property real dripAmount: root.dripLevel
+    property real shadingStyle: root.shadingStyle
+    property vector2d resolution: Qt.vector2d(width, height)
+    property vector4d panelRect: Qt.vector4d(win.ccPanelX, 0, win.ccAlong, win.ccAway)
+    property color slimeColor: root.slimeColor
+    property color slimeColor2: root.slimeColor2
+    property color paperColor: root.paperColor
+    property real barShape: root.barShapeId
+    property real material: root.materialId
+    property vector4d dripStyle: root.dripStyleVec
+    // drip-zone depth: falling goo shrinks away before it, and past it only
+    // the command centre's column is drawn (the window is taller while it's open)
+    property vector4d dripExtra: Qt.vector4d(root.dripExtraVec.x, root.dripExtraVec.y,
+      root.barSize + win.dripRoom, root.barSize + win.dripRoom)
+    property vector4d eggDrip: root.eggDrip
+    property vector4d group0: win.groupRects[0] || win.noBulb
+    property vector4d group1: win.groupRects[1] || win.noBulb
+    property vector4d group2: win.groupRects[2] || win.noBulb
+    property vector4d bulb0: win.bulbRects[0] || win.noBulb
+    property vector4d bulb1: win.bulbRects[1] || win.noBulb
+    property vector4d bulb2: win.bulbRects[2] || win.noBulb
+    property vector4d bulb3: win.bulbRects[3] || win.noBulb
+    property vector4d bulb4: win.bulbRects[4] || win.noBulb
+    property vector4d bulb5: win.bulbRects[5] || win.noBulb
+    property vector4d bulb6: win.bulbRects[6] || win.noBulb
+    property vector4d bulb7: win.bulbRects[7] || win.noBulb
+    property vector4d bulb8: win.bulbRects[8] || win.noBulb
+    property vector4d bulb9: win.bulbRects[9] || win.noBulb
+    property vector4d bulb10: win.bulbRects[10] || win.noBulb
+    property vector4d bulb11: win.bulbRects[11] || win.noBulb
+    property vector4d bulb12: win.bulbRects[12] || win.noBulb
+    property vector4d bulb13: win.bulbRects[13] || win.noBulb
+    property vector4d bulb14: win.bulbRects[14] || win.noBulb
+    property vector4d bulb15: win.bulbRects[15] || win.noBulb
+    property vector4d bulb16: win.bulbRects[16] || win.noBulb
+    property vector4d bulb17: win.bulbRects[17] || win.noBulb
+    property vector4d bulb18: win.bulbRects[18] || win.noBulb
+    property vector4d bulb19: win.bulbRects[19] || win.noBulb
+    property vector4d bulb20: win.bulbRects[20] || win.noBulb
+    property vector4d bulb21: win.bulbRects[21] || win.noBulb
+    property vector4d bulb22: win.bulbRects[22] || win.noBulb
+    property vector4d bulb23: win.bulbRects[23] || win.noBulb
+    }
+
   component BarPanel: PanelWindow {
     id: barWindow
 
@@ -1842,8 +1904,9 @@ Item {
     // textures — which measures ~150ms against ~20ms to tear down. Parking
     // keeps the surface alive, so showing is only a margin change.
     visible: !remapGuard.remapping
-    // The window is taller than the bar when the slime skin is on (room for
-    // drips and the command centre), so reserve exactly the bar's thickness.
+    // Exactly the bar: third-party widget panels (Omarchy's PopupCard and
+    // friends) measure and place themselves from this window's size. The
+    // drips and the command centre live in skinWindow, just past the bar.
     exclusionMode: root.barHidden ? ExclusionMode.Ignore : ExclusionMode.Normal
     exclusiveZone: root.barSize
 
@@ -1866,8 +1929,7 @@ Item {
       right: root.position === "right" || !root.vertical
     }
 
-    // Thicker than the bar when skinned: room for drips and the command centre.
-    readonly property real thickness: root.slimeSkin ? root.barSize + skinRoom : root.barSize
+    readonly property real thickness: root.barSize
     implicitWidth: root.vertical ? thickness : 0
     implicitHeight: root.vertical ? 0 : thickness
     color: root.slimeSkin || root.transparent ? "transparent" : root.background
@@ -2027,85 +2089,20 @@ Item {
     Component.onCompleted: Qt.callLater(updateBulbs)
 
     mask: root.slimeSkin ? slimeMask : null
-    property Region slimeMask: Region {
-      item: barStrip
-      Region { item: ccHit }
-    }
+    property Region slimeMask: Region { item: barStrip }
 
-    Item {
-      id: ccHit
-      readonly property real away: root.commandCenterOpen ? barWindow.ccAway : 0
-      x: root.vertical ? (root.position === "left" ? root.barSize : barWindow.width - root.barSize - away) : barWindow.ccPanelX
-      y: root.vertical ? barWindow.ccPanelX : (root.position === "bottom" ? barWindow.height - root.barSize - away : root.barSize)
-      width: root.vertical ? away : barWindow.ccAlong
-      height: root.vertical ? barWindow.ccAlong : away
-    }
-
-    ShaderEffect {
-      id: slimeShader
-      visible: root.slimeSkin
+    // the goo of the bar strip itself; skinWindow draws everything past it
+    SlimeScene {
       anchors.fill: parent
-      fragmentShader: Qt.resolvedUrl("shaders/slime.frag.qsb")
-      // every shader uniform set explicitly: unset ones are not guaranteed to be 0
-      property vector4d cullRect: Qt.vector4d(0, 0, 0, 0)
-      property real clipTop: -100000
-      property real poolDepth: 0
-      property vector2d origin: barWindow.screenOrigin
-      property real blobMode: 0
-      property real orient: root.orientId
-      property vector2d screenSize: barWindow.screen ? Qt.vector2d(barWindow.screen.width, barWindow.screen.height) : Qt.vector2d(0, 0)
-
-      property real time: root.animTime
-      property real barHeight: root.barSize
-      property real openProgress: barWindow.ccProgress
-      property real dripAmount: root.dripLevel
-      property real shadingStyle: root.shadingStyle
-      property vector2d resolution: Qt.vector2d(width, height)
-      property vector4d panelRect: Qt.vector4d(barWindow.ccPanelX, 0, barWindow.ccAlong, barWindow.ccAway)
-      property color slimeColor: root.slimeColor
-      property color slimeColor2: root.slimeColor2
-      property color paperColor: root.paperColor
-      property real barShape: root.barShapeId
-      property real material: root.materialId
-      property vector4d dripStyle: root.dripStyleVec
-      // drip-zone depth: falling goo shrinks away before it, and past it only
-      // the command centre's column is drawn (the window is taller while it's open)
-      property vector4d dripExtra: Qt.vector4d(root.dripExtraVec.x, root.dripExtraVec.y,
-        root.barSize + barWindow.dripRoom, root.barSize + barWindow.dripRoom)
-      property vector4d eggDrip: root.eggDrip
-      property vector4d group0: barWindow.groupRects[0] || barWindow.noBulb
-      property vector4d group1: barWindow.groupRects[1] || barWindow.noBulb
-      property vector4d group2: barWindow.groupRects[2] || barWindow.noBulb
-      property vector4d bulb0: barWindow.bulbRects[0] || barWindow.noBulb
-      property vector4d bulb1: barWindow.bulbRects[1] || barWindow.noBulb
-      property vector4d bulb2: barWindow.bulbRects[2] || barWindow.noBulb
-      property vector4d bulb3: barWindow.bulbRects[3] || barWindow.noBulb
-      property vector4d bulb4: barWindow.bulbRects[4] || barWindow.noBulb
-      property vector4d bulb5: barWindow.bulbRects[5] || barWindow.noBulb
-      property vector4d bulb6: barWindow.bulbRects[6] || barWindow.noBulb
-      property vector4d bulb7: barWindow.bulbRects[7] || barWindow.noBulb
-      property vector4d bulb8: barWindow.bulbRects[8] || barWindow.noBulb
-      property vector4d bulb9: barWindow.bulbRects[9] || barWindow.noBulb
-      property vector4d bulb10: barWindow.bulbRects[10] || barWindow.noBulb
-      property vector4d bulb11: barWindow.bulbRects[11] || barWindow.noBulb
-      property vector4d bulb12: barWindow.bulbRects[12] || barWindow.noBulb
-      property vector4d bulb13: barWindow.bulbRects[13] || barWindow.noBulb
-      property vector4d bulb14: barWindow.bulbRects[14] || barWindow.noBulb
-      property vector4d bulb15: barWindow.bulbRects[15] || barWindow.noBulb
-      property vector4d bulb16: barWindow.bulbRects[16] || barWindow.noBulb
-      property vector4d bulb17: barWindow.bulbRects[17] || barWindow.noBulb
-      property vector4d bulb18: barWindow.bulbRects[18] || barWindow.noBulb
-      property vector4d bulb19: barWindow.bulbRects[19] || barWindow.noBulb
-      property vector4d bulb20: barWindow.bulbRects[20] || barWindow.noBulb
-      property vector4d bulb21: barWindow.bulbRects[21] || barWindow.noBulb
-      property vector4d bulb22: barWindow.bulbRects[22] || barWindow.noBulb
-      property vector4d bulb23: barWindow.bulbRects[23] || barWindow.noBulb
+      visible: root.slimeSkin
+      win: barWindow
+      origin: barWindow.screenOrigin
     }
 
     // detritus drifting through the bar, fading out behind widgets
     SlimeDebris {
       visible: root.slimeSkin && root.barDebris && root.material !== "plain" && !root.vertical
-      y: root.position === "bottom" ? barWindow.height - root.barSize : 0
+      y: 0
       width: barWindow.width
       height: root.barSize
       bar: root
@@ -2129,33 +2126,10 @@ Item {
       }
     }
 
-    // the easter-egg captive, drawn inside the egg drip's bulb
-    SlimeCaptive {
-      readonly property var tip: root.eggTip
-      visible: tip !== null && root.slimeSkin
-      readonly property real bx: tip ? tip.x : 0
-      readonly property real by: tip ? tip.y : 0
-      // bar space -> window
-      x: (root.position === "left" ? by : root.position === "right" ? barWindow.width - by : bx) - width / 2
-      y: (root.position === "bottom" ? barWindow.height - by : root.vertical ? bx : by) - height / 2
-      size: 25
-      kind: root.eggKind
-      time: root.animTime
-      ink: root.slimeInk
-      paper: root.paperColor
-      goo: root.slimeColor
-      pal: root.palette
-    }
-    Binding { target: root; property: "eggSpan"; value: barWindow.barLength }
-
     Item {
       id: barStrip
-      // the bar itself, against its screen edge; the rest of the window is
-      // room for drips and the command centre
-      x: root.slimeSkin && root.position === "right" ? parent.width - root.barSize : 0
-      y: root.slimeSkin && root.position === "bottom" ? parent.height - root.barSize : 0
-      width: root.slimeSkin && root.vertical ? root.barSize : parent.width
-      height: root.slimeSkin && !root.vertical ? root.barSize : parent.height
+      // the bar itself (the whole window)
+      anchors.fill: parent
 
       Loader {
         anchors.fill: parent
@@ -2173,44 +2147,120 @@ Item {
       }
     }
 
-    // debris adrift in the command centre's ooze, behind its content
-    SlimePanelDebris {
-      x: commandCenter.x - 12 * barWindow.ccScale
-      y: commandCenter.y - 8 * barWindow.ccScale
-      width: (commandCenter.width + 24) * barWindow.ccScale
-      height: (commandCenter.implicitHeight + 16) * barWindow.ccScale
-      bar: root
-      active: root.commandCenterOpen
-      opacity: commandCenter.opacity
-    }
+    // ---- Skin: drips, the command centre, the egg — in their own window just
+    // past the bar, one fixed size (resizing a surface on screen makes it
+    // jump for a frame), click-through except where the command centre is.
+    PanelWindow {
+      id: skinWindow
+      screen: barWindow.screen
+      visible: root.slimeSkin && barWindow.visible
+      color: "transparent"
+      surfaceFormat.opaque: false
+      exclusionMode: ExclusionMode.Ignore
+      WlrLayershell.namespace: "omarchy-bar-skin"
+      WlrLayershell.keyboardFocus: barWindow.ccShown ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+      WlrLayershell.layer: barWindow.WlrLayershell.layer
 
-    // ---- Command centre (fades in once the ooze has settled) ----
-    CommandCenter {
-      id: commandCenter
-      // laid out landscape on every edge; sits just off the bar
-      x: root.position === "left" ? root.barSize + 20 * barWindow.ccScale
-        : root.position === "right" ? barWindow.width - root.barSize - (20 + width) * barWindow.ccScale
-        : barWindow.ccPanelX + 24 * barWindow.ccScale
-      y: root.position === "bottom" ? barWindow.height - root.barSize - (20 + implicitHeight) * barWindow.ccScale
-        : root.vertical ? barWindow.ccPanelX + 22 * barWindow.ccScale
-        : root.barSize + 20 * barWindow.ccScale
-      width: root.commandCenterWidth - 48
-      scale: barWindow.ccScale
-      transformOrigin: Item.TopLeft
-      bar: root
-      maxHeight: (barWindow.ccMaxHeight - 44) / barWindow.ccScale
-      shown: barWindow.ccShown
-      opacity: Math.max(0, (barWindow.ccProgress - 0.8) / 0.2)
-      visible: root.slimeSkin && opacity > 0
-      onImplicitHeightChanged: if (shown) {
-        root.commandCenterHeightTarget = Math.max(160, (implicitHeight + 44) * barWindow.ccScale)
-        root.commandCenterHeight = root.commandCenterHeightTarget
+      readonly property real depth: barWindow.skinRoom
+      implicitWidth: root.vertical ? depth : 0
+      implicitHeight: root.vertical ? 0 : depth
+      anchors {
+        top: root.position === "top" || root.vertical
+        bottom: root.position === "bottom" || root.vertical
+        left: root.position === "left" || !root.vertical
+        right: root.position === "right" || !root.vertical
+      }
+      // right past the bar (and parked off-screen with it when it hides)
+      readonly property real edgeMargin: root.barHidden ? -(depth + root.barSize) : root.barSize
+      margins {
+        top: root.position === "top" ? skinWindow.edgeMargin : 0
+        bottom: root.position === "bottom" ? skinWindow.edgeMargin : 0
+        left: root.position === "left" ? skinWindow.edgeMargin : 0
+        right: root.position === "right" ? skinWindow.edgeMargin : 0
+      }
+      // this window's top-left on the screen
+      readonly property vector2d screenOrigin: Qt.vector2d(
+        root.position === "left" ? root.barSize : root.position === "right" && screen ? screen.width - root.barSize - width : 0,
+        root.position === "top" ? root.barSize : root.position === "bottom" && screen ? screen.height - root.barSize - height : 0)
+      // bar space (distance from the bar's screen edge) -> this window
+      function awayToLocal(away) {
+        var d = away - root.barSize
+        return root.position === "bottom" ? height - d : root.position === "right" ? width - d : d
+      }
+
+      mask: Region { item: ccHit }
+
+      Item {
+        id: ccHit
+        readonly property real away: root.commandCenterOpen ? barWindow.ccAway : 0
+        x: root.vertical ? (root.position === "left" ? 0 : skinWindow.width - away) : barWindow.ccPanelX
+        y: root.vertical ? barWindow.ccPanelX : (root.position === "bottom" ? skinWindow.height - away : 0)
+        width: root.vertical ? away : barWindow.ccAlong
+        height: root.vertical ? barWindow.ccAlong : away
+      }
+
+      SlimeScene {
+        anchors.fill: parent
+        win: barWindow
+        origin: skinWindow.screenOrigin
+      }
+
+      // the easter-egg captive, drawn inside the egg drip's bulb
+      SlimeCaptive {
+        readonly property var tip: root.eggTip
+        visible: tip !== null && root.slimeSkin
+        readonly property real bx: tip ? tip.x : 0
+        readonly property real by: tip ? skinWindow.awayToLocal(tip.y) : 0
+        x: (root.vertical ? by : bx) - width / 2
+        y: (root.vertical ? bx : by) - height / 2
+        size: 25
+        kind: root.eggKind
+        time: root.animTime
+        ink: root.slimeInk
+        paper: root.paperColor
+        goo: root.slimeColor
+        pal: root.palette
+      }
+
+      // debris adrift in the command centre's ooze, behind its content
+      SlimePanelDebris {
+        x: commandCenter.x - 12 * barWindow.ccScale
+        y: commandCenter.y - 8 * barWindow.ccScale
+        width: (commandCenter.width + 24) * barWindow.ccScale
+        height: (commandCenter.implicitHeight + 16) * barWindow.ccScale
+        bar: root
+        active: root.commandCenterOpen
+        opacity: commandCenter.opacity
+      }
+
+      // ---- Command centre (fades in once the ooze has settled) ----
+      CommandCenter {
+        id: commandCenter
+        // laid out landscape on every edge; sits just off the bar
+        x: root.position === "left" ? 20 * barWindow.ccScale
+          : root.position === "right" ? skinWindow.width - (20 + width) * barWindow.ccScale
+          : barWindow.ccPanelX + 24 * barWindow.ccScale
+        y: root.position === "bottom" ? skinWindow.height - (20 + implicitHeight) * barWindow.ccScale
+          : root.vertical ? barWindow.ccPanelX + 22 * barWindow.ccScale
+          : 20 * barWindow.ccScale
+        width: root.commandCenterWidth - 48
+        scale: barWindow.ccScale
+        transformOrigin: Item.TopLeft
+        bar: root
+        maxHeight: (barWindow.ccMaxHeight - 44) / barWindow.ccScale
+        shown: barWindow.ccShown
+        opacity: Math.max(0, (barWindow.ccProgress - 0.8) / 0.2)
+        visible: root.slimeSkin && opacity > 0
+        onImplicitHeightChanged: if (shown) {
+          root.commandCenterHeightTarget = Math.max(160, (implicitHeight + 44) * barWindow.ccScale)
+          root.commandCenterHeight = root.commandCenterHeightTarget
+        }
       }
     }
 
-    // Clicking anywhere outside the bar closes the command centre.
+    // Clicking anywhere outside the bar or the command centre closes it.
     HyprlandFocusGrab {
-      windows: [barWindow]
+      windows: [barWindow, skinWindow]
       active: root.commandCenterOpen
       onCleared: root.commandCenterOpen = false
     }
