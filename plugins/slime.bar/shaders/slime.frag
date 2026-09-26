@@ -100,6 +100,13 @@ float smin(float a, float b, float k) {
     return mix(b, a, h) - k * h * (1.0 - h);
 }
 
+// A segment whose thickness runs from ra at a to rb at b.
+float sdTaper(vec2 p, vec2 a, vec2 b, float ra, float rb) {
+    vec2 pa = p - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-4), 0.0, 1.0);
+    return length(pa - ba * h) - mix(ra, rb, h);
+}
+
 float sdSegment(vec2 p, vec2 a, vec2 b, float r) {
     vec2 pa = p - a, ba = b - a;
     float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
@@ -202,7 +209,9 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
 
     vec2 top = vec2(cx, edgeY - 6.0);
     vec2 tip = vec2(cx, edgeY + len);
-    float d = sdSegment(p, top, tip, neck * (1.0 - 0.6 * release));
+    bool stringy = dripExtra.x > 0.5;
+    // stringy goo necks down as it stretches
+    float d = sdSegment(p, top, tip, neck * (1.0 - 0.6 * release) * (stringy ? 1.0 - 0.4 * grow : 1.0));
     d = smin(d, length(p - tip) - bulb, 8.0);
 
     // Anime wet-look sparkle: a tilted oval up-left on the bulb, a dot below.
@@ -216,28 +225,55 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
     if (release > 0.0) {
         float dr = (neck + 6.0) * (1.0 - 0.5 * fall);
         dr *= fadeOut(drop.y + dr);
-        d = min(d, length(p - drop) - dr);
-        hl = min(hl, sdEllipse(p, drop + vec2(-0.35, -0.3) * dr, vec2(0.18, 0.32) * dr));
+        // stringy: once free of its strands the glob breaks up, droplets
+        // drifting apart as they fall
+        float split = stringy ? smoothstep(0.3, 0.75, fall) : 0.0;
+        if (split > 0.0) {
+            float dd = 1e5;
+            for (int q = 0; q < 4; q++) {
+                float fq = float(q);
+                vec2 o = vec2((hash(seed + fq * 3.7) - 0.5) * 64.0, hash(seed + fq * 5.1) * 26.0 - 6.0) * split;
+                float rq = dr * mix(0.8, 0.3 + 0.3 * hash(seed + fq * 1.9), split);
+                dd = smin(dd, length(p - drop - o) - rq, 7.0 * (1.0 - split) + 0.1);
+            }
+            d = min(d, dd);
+        } else {
+            d = min(d, length(p - drop) - dr);
+            hl = min(hl, sdEllipse(p, drop + vec2(-0.35, -0.3) * dr, vec2(0.18, 0.32) * dr));
+        }
     }
 
-    // ---- stringy: extra thin strands from the edge to the bulb, sagging a
-    // little, that stretch after the drop and snap one by one
-    if (dripExtra.x > 0.5) {
+    // ---- stringy: extra strands from the edge to the bulb, sagging a little.
+    // They taper thinner in the middle as the glob stretches away, snap one by
+    // one early in its fall, and the broken ends spring back up to the edge.
+    if (stringy) {
         for (int j = 0; j < 4; j++) {
             float fj = float(j);
             if (hash(seed * 7.0 + fj) < 0.12) continue;
             float root0 = cx + (hash(seed * 3.0 + fj * 1.7) - 0.5) * (neck * 5.0 + 10.0);
-            float snapAt = 0.2 + 0.7 * hash(seed + fj * 2.3);    // how far the drop falls before it snaps
-            if (release > 0.0 && fall > snapAt) continue;
-            vec2 end = release > 0.0 ? drop : tip + vec2((hash(seed + fj) - 0.5) * bulb, -bulb * 0.4);
+            float snapAt = 0.08 + 0.3 * hash(seed + fj * 2.3);   // how far the drop falls before it snaps
             vec2 a0 = vec2(root0, edgeY - 2.0);
-            vec2 mid = mix(a0, end, 0.5) + vec2(0.0, 4.0 + 3.0 * hash(seed + fj * 9.1));   // sag
+            float base = 1.8 + 1.4 * hash(seed + fj * 4.4);
+            float sagY = 4.0 + 3.0 * hash(seed + fj * 9.1);
+            if (release > 0.0 && fall > snapAt) {
+                // recoil: what's left on the bar shortens and fattens back in
+                float k = clamp((fall - snapAt) / 0.22, 0.0, 1.0);
+                if (k >= 1.0) continue;
+                vec2 dropS = vec2(cx, edgeY + maxLen + snapAt * snapAt * 240.0);
+                vec2 midS = mix(a0, dropS, 0.5) + vec2(0.0, sagY);
+                vec2 tail = mix(midS, a0, k * k * (3.0 - 2.0 * k));
+                d = min(d, sdTaper(p, a0, tail, base * 0.8, max(0.5, base * 0.25 * (1.0 - k))));
+                continue;
+            }
+            vec2 end = release > 0.0 ? drop : tip + vec2((hash(seed + fj) - 0.5) * bulb, -bulb * 0.4);
+            vec2 mid = mix(a0, end, 0.5) + vec2(0.0, sagY);
             // snap before the drop shrinks away near the window's edge (a
             // hairline with nothing on the end still draws its outline)
-            float fo = fadeOut(end.y + 40.0);
-            if (fo < 0.6) continue;
-            float w = (1.4 + 1.1 * hash(seed + fj * 4.4)) * (release > 0.0 ? 1.0 - 0.5 * fall / snapAt : 1.0);
-            d = min(d, min(sdSegment(p, a0, mid, w), sdSegment(p, mid, end, w)));
+            if (fadeOut(end.y + 40.0) < 0.6) continue;
+            float st = clamp(0.65 * grow + 0.35 * (release > 0.0 ? fall / snapAt : 0.0), 0.0, 1.0);
+            float wRoot = base * (1.0 - 0.3 * st);
+            float wMid = max(0.5, base * (1.0 - 0.78 * st));
+            d = min(d, min(sdTaper(p, a0, mid, wRoot, wMid), sdTaper(p, mid, end, wMid, wRoot * 0.75)));
         }
     }
     return vec2(d, hl);

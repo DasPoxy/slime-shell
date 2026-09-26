@@ -215,12 +215,14 @@ Item {
   // dripAmount -1 means "variable" (each drip waxes and wanes).
   property string dripStyle: "drip"
 
-  // ---- Easter egg: now and then a gnome or goblin (a skeleton on bone) gets
-  // stuck in a fat drip, struggles, and falls off with it. ~4% every 20 s.
+  // ---- Easter egg: now and then a little adventurer (gnome, goblin,
+  // skeleton, knight, wizard or priest) gets stuck in a fat drip, struggles,
+  // and falls off with it. Any of them on any material. ~4% every 20 s.
   property vector4d eggDrip: Qt.vector4d(0, 0, 0, 0)   // x, edge y, start, active
   property string eggKind: "gnome"
-  function startEgg() {
-    if (!slimeSkin || material === "plain" || eggDrip.w > 0) return
+  readonly property var eggKinds: ["gnome", "goblin", "skeleton", "knight", "wizard", "priest"]
+  function startEgg(kind) {
+    if (!slimeSkin || eggDrip.w > 0) return
     var rects = barShape === "pills" ? sharedBulbRects : (barShape === "classic" ? [] : sharedGroupRects)
     rects = rects.filter(function(r) { return r && r.z > 0 })
     var x, edge
@@ -232,7 +234,7 @@ Item {
       x = 120 + Math.random() * Math.max(100, eggSpan - 240)
       edge = barSize
     }
-    eggKind = material === "bone" ? "skeleton" : (Math.random() < 0.5 ? "gnome" : "goblin")
+    eggKind = eggKinds.indexOf(kind) >= 0 ? kind : eggKinds[Math.floor(Math.random() * eggKinds.length)]
     eggDrip = Qt.vector4d(x, edge, animTime, 1)
   }
   property real eggSpan: 1920       // bar length, set by the bar window
@@ -240,7 +242,7 @@ Item {
     interval: 20000
     repeat: true
     running: root.slimeSkin && root.slimeFps > 0
-    onTriggered: if (Math.random() < 0.04) root.startEgg()
+    onTriggered: if (Math.random() < 0.04) root.startEgg("")
   }
   // where the creature is, in bar space (matches eggShape() in the shader)
   readonly property var eggTip: {
@@ -362,7 +364,8 @@ Item {
     function material(name: string): void { root.material = name }
     function drip(style: string): void { root.dripStyle = style }
     // (shh) summon the easter egg now
-    function egg(): void { root.startEgg() }
+    function egg(): void { root.startEgg("") }
+    function eggAs(kind: string): void { root.startEgg(kind) }
     function layer(where: string): void { root.slimeLayer = where === "behind" ? "behind" : "above" }
     function toggleLayer(): void { root.slimeLayer = root.slimeLayer === "behind" ? "above" : "behind" }
     // Open the command centre on a tab: home, system, wallpapers, tasks, startup, settings.

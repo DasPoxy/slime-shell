@@ -1,13 +1,14 @@
 import QtQuick
 import QtQuick.Shapes
 
-// A little creature stuck in a drip (the bar's easter egg): a gnome, a goblin
-// or a skeleton, flailing inside a see-through film of the slime colour.
+// A little creature stuck in a drip (the bar's easter egg): a gnome, goblin,
+// skeleton, knight, wizard or priest, flailing inside a see-through film of
+// the slime colour.
 // Drawn on a 24×24 grid scaled to `size`.
 Item {
   id: root
 
-  property string kind: "gnome"      // gnome, goblin, skeleton
+  property string kind: "gnome"      // gnome, goblin, skeleton, knight, wizard, priest
   property real size: 24
   property real time: 0
   property color ink: "black"
@@ -18,7 +19,14 @@ Item {
   readonly property real flail: Math.sin(time * 9)
   readonly property color red: pal.red || "#ff1720"
   readonly property color green: pal.green || "#1be33a"
-  readonly property color skin: kind === "goblin" ? Qt.darker(green, 1.15) : kind === "skeleton" ? paper : "#f2c2a0"
+  readonly property color gold: pal.yellow || "#f5c518"
+  readonly property color purple: pal.magenta || "#8a4dff"
+  readonly property color steel: "#aeb6bf"
+  readonly property color skin: kind === "goblin" ? Qt.darker(green, 1.15) : kind === "skeleton" ? paper : kind === "knight" ? steel : "#f2c2a0"
+  readonly property var bodyFill: ({ gnome: "#3f74ff", goblin: "#7a5230", skeleton: paper, knight: steel, wizard: purple, priest: paper })
+  // hand positions (the arms flail)
+  readonly property real rhx: 20 + flail
+  readonly property real rhy: 9 - flail * 2
 
   implicitWidth: size
   implicitHeight: size
@@ -52,7 +60,15 @@ Item {
         stroke: root.kind === "skeleton" ? root.ink : root.ink }
     // body
     P { d: "M8 13 Q12 11.4 16 13 L16.6 20 Q12 21.4 7.4 20 Z"
-        fill: root.kind === "gnome" ? "#3f74ff" : root.kind === "goblin" ? "#7a5230" : root.paper }
+        fill: root.bodyFill[root.kind] || root.paper }
+    // knight: red tabard and a sword brandished in one hand
+    P { visible: root.kind === "knight"; d: "M10.4 13.2 L13.6 13.2 L13.8 20.8 L10.2 20.8 Z"; fill: root.red; line: 0.8 }
+    P { visible: root.kind === "knight"; d: "M" + root.rhx + " " + root.rhy + " L" + (root.rhx + 1.2) + " " + (root.rhy - 6); line: 1.3 }
+    P { visible: root.kind === "knight"; d: "M" + (root.rhx - 1.3) + " " + (root.rhy - 1) + " L" + (root.rhx + 1.5) + " " + (root.rhy - 0.6); line: 1.1 }
+    // wizard: a few stars on the robe
+    P { visible: root.kind === "wizard"; d: "M10 16 l0.4 0.9 l0.9 0.1 l-0.7 0.6 l0.2 0.9 l-0.8 -0.5 l-0.8 0.5 l0.2 -0.9 l-0.7 -0.6 l0.9 -0.1 Z"; fill: root.gold; line: 0.5 }
+    // priest: a gold stole
+    P { visible: root.kind === "priest"; d: "M10.2 13 L10.8 20.8 M13.8 13 L13.2 20.8"; stroke: root.gold; line: 1.5 }
     P { visible: root.kind === "skeleton"; d: "M9 15 L15 15 M9 17 L15 17 M9.4 19 L14.6 19 M12 13 L12 20.4"; line: 0.8 }   // ribs
     // head
     Rectangle {
@@ -64,13 +80,25 @@ Item {
     // gnome beard and hat
     P { visible: root.kind === "gnome"; d: "M8 11.6 Q12 19 16 11.6 Q12 13.4 8 11.6 Z"; fill: root.paper }
     P { visible: root.kind === "gnome"; d: "M6.6 7.8 Q12 5.8 17.4 7.8 L13 0.6 Z"; fill: root.red }
-    // eyes: wide with panic (sockets for the skeleton)
-    Rectangle { x: 9.2; y: 8.6; width: 2.2; height: 2.4; radius: 1.1; color: root.kind === "skeleton" ? root.ink : root.paper; border.color: root.ink; border.width: 0.6
+    // knight's helm: a visor slit and a plume
+    Rectangle { visible: root.kind === "knight"; x: 8.4; y: 9.2; width: 7.2; height: 1.5; radius: 0.6; color: root.ink }
+    P { visible: root.kind === "knight"; d: "M12 11.4 L12 13.6"; line: 0.7 }
+    P { visible: root.kind === "knight"; d: "M12 6.2 Q12.6 1.2 17.4 1.4 Q14.2 3 13.6 6.3 Z"; fill: root.red; line: 0.8 }
+    // wizard: long beard and a crooked pointed hat with a star
+    P { visible: root.kind === "wizard"; d: "M8.2 11.4 Q12 23 15.8 11.4 Q12 13.6 8.2 11.4 Z"; fill: root.paper }
+    P { visible: root.kind === "wizard"; d: "M8 7.2 Q10.6 2.4 13 -1.2 Q13.2 0.6 16 7.2 Z"; fill: root.purple }
+    P { visible: root.kind === "wizard"; d: "M4.8 7.6 Q12 5.2 19.2 7.6 Q12 9 4.8 7.6 Z"; fill: root.purple }
+    P { visible: root.kind === "wizard"; d: "M12.6 3.2 l0.3 0.7 l0.7 0.1 l-0.5 0.5 l0.1 0.7 l-0.6 -0.4 l-0.6 0.4 l0.1 -0.7 l-0.5 -0.5 l0.7 -0.1 Z"; fill: root.gold; line: 0.4 }
+    // priest: a mitre with a gold cross
+    P { visible: root.kind === "priest"; d: "M8.4 7.6 L8.6 2.6 Q12 -0.8 15.4 2.6 L15.6 7.6 Q12 6.8 8.4 7.6 Z"; fill: root.paper }
+    P { visible: root.kind === "priest"; d: "M12 1.6 L12 6.2 M10.6 3.4 L13.4 3.4"; stroke: root.gold; line: 1.1 }
+    // eyes: wide with panic (sockets for the skeleton; hidden behind the knight's visor)
+    Rectangle { visible: root.kind !== "knight"; x: 9.2; y: 8.6; width: 2.2; height: 2.4; radius: 1.1; color: root.kind === "skeleton" ? root.ink : root.paper; border.color: root.ink; border.width: 0.6
       Rectangle { visible: root.kind !== "skeleton"; x: 0.6; y: 0.7; width: 1; height: 1; radius: 0.5; color: root.ink } }
-    Rectangle { x: 12.6; y: 8.6; width: 2.2; height: 2.4; radius: 1.1; color: root.kind === "skeleton" ? root.ink : root.paper; border.color: root.ink; border.width: 0.6
+    Rectangle { visible: root.kind !== "knight"; x: 12.6; y: 8.6; width: 2.2; height: 2.4; radius: 1.1; color: root.kind === "skeleton" ? root.ink : root.paper; border.color: root.ink; border.width: 0.6
       Rectangle { visible: root.kind !== "skeleton"; x: 0.6; y: 0.7; width: 1; height: 1; radius: 0.5; color: root.ink } }
     // mouth: an "o" of alarm (or teeth)
-    Rectangle { visible: root.kind !== "gnome"; x: 11; y: 12; width: 2; height: 1.6 + Math.abs(root.flail); radius: 1; color: root.ink }
+    Rectangle { visible: ["goblin", "skeleton", "priest"].indexOf(root.kind) >= 0; x: 11; y: 12; width: 2; height: 1.6 + Math.abs(root.flail); radius: 1; color: root.ink }
   }
 
   // the goo film over them, so they read as *inside* the drip
