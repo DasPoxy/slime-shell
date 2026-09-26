@@ -82,7 +82,7 @@ omarchy-shell slime-shell toggle | open | close | tab <name> | toggleTab <name>
 omarchy-shell slime-shell material slime|sinew|bone|plain
 omarchy-shell slime-shell shape classic|pills|islands|notch
 omarchy-shell slime-shell shading 0|1|2|3        # soft, anime, manga, print
-omarchy-shell slime-shell drip drip|honey|rain|tar|frozen
+omarchy-shell slime-shell drip drip|honey|rain|tar|frozen|stringy|lava
 omarchy-shell slime-shell layer above|behind     # draw over or behind windows
 omarchy-shell slime-shell toggleLayer           # flip between the two
 omarchy-shell slime-shell color <theme role>     # accent, green, cyan, …

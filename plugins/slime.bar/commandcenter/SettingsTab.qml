@@ -151,13 +151,14 @@ Item {
       }
       ChoiceRow {
         title: "DRIP STYLE"
-        options: [["drip", "drip"], ["honey", "honey"], ["rain", "rain"], ["tar", "tar"], ["frozen", "frozen"]]
+        options: [["drip", "drip"], ["honey", "honey"], ["rain", "rain"], ["tar", "tar"], ["frozen", "frozen"],
+          ["stringy", "stringy"], ["lava lamp", "lava"]]
         current: settings.bar.dripStyle
         onPicked: value => settings.bar.dripStyle = value
       }
       ChoiceRow {
         title: "DRIP AMOUNT"
-        options: [["dry", 0.4], ["ooze", 1.0], ["gush", 1.7]]
+        options: [["dry", 0.4], ["ooze", 1.0], ["gush", 1.7], ["torrent", 2.6], ["variable", -1]]
         current: settings.bar.dripAmount
         onPicked: value => settings.bar.dripAmount = value
       }

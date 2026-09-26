@@ -35,6 +35,7 @@ layout(std140, binding = 0) uniform buf {
     float blobMode;   // 1 = no bar: just a free-standing blob in panelRect
     float barShape;   // 0 classic strip, 1 pills, 2 islands, 3 notch
     vec4 dripStyle;   // speed x, thickness x, frozen (1 = hang still), density x
+    vec4 dripExtra;   // x: shape 0 drip / 1 stringy / 2 mitosis; y: variable amount 0/1
     vec4 eggDrip;     // easter egg: x along the bar, edge y, start time, active
     float material;   // 0 slime, 1 sinew, 2 bone, 3 plain
     float orient;     // which screen edge the bar is on: 0 top, 1 bottom, 2 left, 3 right
@@ -128,8 +129,36 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
     float s = fract(time * speed + hash(seed + 2.0));
     // frozen: each drip hangs at its own length and never lets go
     if (dripStyle.z > 0.5) s = 0.35 + 0.42 * hash(seed + 2.0);
-    float maxLen = scale * dripAmount * (12.0 + 48.0 * hash(seed + 3.0));
+    float maxLen = scale * min(dripAmount, 2.1) * (12.0 + 48.0 * hash(seed + 3.0));
+    // variable amount: each drip swells and dries up on its own slow cycle
+    if (dripExtra.y > 0.5) maxLen *= 0.15 + 1.7 * vnoise(vec2(seed * 3.1, time * 0.12));
     float neck = (3.5 + 4.0 * hash(seed + 4.0)) * dripStyle.y;
+    float hl = 1e5;
+
+    // ---- mitosis / lava lamp: a blob buds off the edge, pinches its neck
+    // shut, splits away and sinks slowly, wobbling, then dissolves
+    if (dripExtra.x > 1.5) {
+        float r = (8.0 + 7.0 * hash(seed + 5.0)) * dripStyle.y * (0.6 + 0.4 * scale) * clamp(dripAmount, 0.5, 1.6);
+        float bud = smoothstep(0.0, 0.45, s);                     // swelling
+        float pinch = smoothstep(0.35, 0.62, s);                  // neck closing
+        float sink = max(0.0, s - 0.62) / 0.38;                   // after the split
+        float wob = sin(time * 1.7 + seed * 5.0) * 3.0 * sink;
+        vec2 c = vec2(cx + wob, edgeY + r * (0.2 + 1.3 * bud) + sink * sink * maxLen * 2.4);
+        float br = r * (0.35 + 0.65 * bud) * (1.0 - 0.3 * sink);
+        // stretched tall while it pinches, rounding off once it floats free
+        float stretch = 1.0 + 0.35 * pinch * (1.0 - sink);
+        vec2 q = p - c;
+        float d = (length(vec2(q.x * stretch, q.y / stretch)) - br) / stretch;
+        // the neck: a waist that thins to nothing, pulling into two lobes
+        if (pinch < 1.0) {
+            float waist = mix(br * 0.9, 0.0, pinch);
+            d = smin(d, sdSegment(p, vec2(cx, edgeY - 4.0), c, waist), 6.0 * (1.0 - pinch) + 0.5);
+        }
+        // a sister lobe left behind on the edge, drawn back in
+        if (pinch > 0.0 && sink < 0.35) d = smin(d, length(p - vec2(cx, edgeY + 1.0)) - br * 0.5 * (1.0 - sink * 2.8), 4.0);
+        if (br > 5.0) hl = sdEllipse(p, c + vec2(-0.38, -0.3) * br, vec2(0.16, 0.3) * br);
+        return vec2(d, hl);
+    }
 
     float grow = smoothstep(0.0, 0.8, s);
     float release = smoothstep(0.8, 1.0, s);
@@ -142,18 +171,34 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
     d = smin(d, length(p - tip) - bulb, 8.0);
 
     // Anime wet-look sparkle: a tilted oval up-left on the bulb, a dot below.
-    float hl = 1e5;
     if (bulb > 5.0) {
         hl = sdEllipse(p, tip + vec2(-0.38, -0.3) * bulb, vec2(0.16, 0.3) * bulb);
         hl = min(hl, length(p - (tip + vec2(0.3, 0.42) * bulb)) - 0.1 * bulb);
     }
 
+    float fall = release > 0.0 ? (s - 0.8) / 0.2 : 0.0;
+    vec2 drop = vec2(cx, edgeY + maxLen + fall * fall * 240.0);
     if (release > 0.0) {
-        float fall = (s - 0.8) / 0.2;
-        vec2 drop = vec2(cx, edgeY + maxLen + fall * fall * 240.0);
         float dr = (neck + 6.0) * (1.0 - 0.5 * fall);
         d = min(d, length(p - drop) - dr);
         hl = min(hl, sdEllipse(p, drop + vec2(-0.35, -0.3) * dr, vec2(0.18, 0.32) * dr));
+    }
+
+    // ---- stringy: extra thin strands from the edge to the bulb, sagging a
+    // little, that stretch after the drop and snap one by one
+    if (dripExtra.x > 0.5) {
+        for (int j = 0; j < 3; j++) {
+            float fj = float(j);
+            if (hash(seed * 7.0 + fj) < 0.3) continue;
+            float root0 = cx + (hash(seed * 3.0 + fj * 1.7) - 0.5) * (neck * 5.0 + 10.0);
+            float snapAt = 0.2 + 0.7 * hash(seed + fj * 2.3);    // how far the drop falls before it snaps
+            if (release > 0.0 && fall > snapAt) continue;
+            vec2 end = release > 0.0 ? drop : tip + vec2((hash(seed + fj) - 0.5) * bulb, -bulb * 0.4);
+            vec2 a0 = vec2(root0, edgeY - 2.0);
+            vec2 mid = mix(a0, end, 0.5) + vec2(0.0, 4.0 + 3.0 * hash(seed + fj * 9.1));   // sag
+            float w = (0.7 + 0.5 * hash(seed + fj * 4.4)) * (release > 0.0 ? 1.0 - fall / snapAt : 1.0);
+            d = min(d, min(sdSegment(p, a0, mid, w), sdSegment(p, mid, end, w)));
+        }
     }
     return vec2(d, hl);
 }
@@ -448,7 +493,8 @@ vec2 mapScene(vec2 p) {
 
     for (int k = -1; k <= 1; k++) {
         float i = ci + float(k);
-        if (hash(i * 3.7 + 11.0) < 1.0 - 0.7 * dripStyle.w) continue;
+        // torrent (amount > 1.8) packs more drips in as well as lengthening them
+        if (hash(i * 3.7 + 11.0) < 1.0 - 0.7 * dripStyle.w * max(1.0, dripAmount * 0.55)) continue;
         float cx = (i + 0.5 + (hash(i) - 0.5) * 0.6) * CELL;
         float edge = dripEdge(cx);
         if (edge < 0.0) continue;

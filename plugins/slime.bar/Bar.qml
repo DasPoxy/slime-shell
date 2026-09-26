@@ -209,7 +209,10 @@ Item {
   // plain don't drip; plain also drops the floating debris.
   property string material: "slime"
   // How the drips move: "drip" (default), "honey" (slow, thick), "rain" (fast,
-  // thin, many), "tar" (crawling, fat, few), "frozen" (hang still).
+  // thin, many), "tar" (crawling, fat, few), "frozen" (hang still),
+  // "stringy" (hang by several strands that snap as the drop falls),
+  // "lava" (lava lamp: blobs bud off, pinch apart and sink).
+  // dripAmount -1 means "variable" (each drip waxes and wanes).
   property string dripStyle: "drip"
 
   // ---- Easter egg: now and then a gnome or goblin (a skeleton on bone) gets
@@ -255,11 +258,14 @@ Item {
     case "rain": return Qt.vector4d(2.4, 0.55, 0, 1.35)
     case "tar": return Qt.vector4d(0.22, 1.8, 0, 0.6)
     case "frozen": return Qt.vector4d(1, 1, 1, 1)
+    case "stringy": return Qt.vector4d(0.75, 1, 0, 1)
+    case "lava": return Qt.vector4d(0.45, 1.15, 0, 0.8)
     default: return Qt.vector4d(1, 1, 0, 1)
     }
   }
   readonly property real materialId: ["slime", "sinew", "bone", "plain"].indexOf(material)
-  readonly property real dripLevel: material === "bone" || material === "plain" ? 0 : dripAmount
+  readonly property real dripLevel: material === "bone" || material === "plain" ? 0 : (dripAmount < 0 ? 1.2 : dripAmount)
+  readonly property vector4d dripExtraVec: Qt.vector4d(dripStyle === "stringy" ? 1 : dripStyle === "lava" ? 2 : 0, dripAmount < 0 ? 1 : 0, 0, 0)
   readonly property real barShapeId: ["classic", "pills", "islands", "notch"].indexOf(barShape)
   // Latest left/centre/right section extents, for overlays (see sharedBulbRects).
   property var sharedGroupRects: []
@@ -1878,6 +1884,7 @@ Item {
       property real barShape: root.barShapeId
       property real material: root.materialId
       property vector4d dripStyle: root.dripStyleVec
+      property vector4d dripExtra: root.dripExtraVec
       property vector4d eggDrip: root.eggDrip
       property vector4d group0: barWindow.groupRects[0] || barWindow.noBulb
       property vector4d group1: barWindow.groupRects[1] || barWindow.noBulb
