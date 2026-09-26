@@ -89,6 +89,13 @@ Item {
         onPicked: value => settings.bar.material = value
       }
       ChoiceRow {
+        title: "BAR POSITION"
+        options: [["top", "top"], ["bottom", "bottom"], ["left", "left"], ["right", "right"]]
+        current: settings.bar.position
+        // same path as `omarchy bar position`, so shell.json stays the source of truth
+        onPicked: value => Quickshell.execDetached(["omarchy", "bar", "position", value])
+      }
+      ChoiceRow {
         title: "BAR SHAPE"
         options: [["classic", "classic"], ["pills", "pills"], ["islands", "islands"], ["notch", "notch"]]
         current: settings.bar.barShape
@@ -143,7 +150,13 @@ Item {
         onPicked: value => settings.bar.slimeFps = value
       }
       ChoiceRow {
-        title: "DRIPS"
+        title: "DRIP STYLE"
+        options: [["drip", "drip"], ["honey", "honey"], ["rain", "rain"], ["tar", "tar"], ["frozen", "frozen"]]
+        current: settings.bar.dripStyle
+        onPicked: value => settings.bar.dripStyle = value
+      }
+      ChoiceRow {
+        title: "DRIP AMOUNT"
         options: [["dry", 0.4], ["ooze", 1.0], ["gush", 1.7]]
         current: settings.bar.dripAmount
         onPicked: value => settings.bar.dripAmount = value
@@ -212,22 +225,33 @@ Item {
       Flow {
         width: parent.width
         spacing: 6
-        CcButton {
-          cc: settings.cc
-          icon: "\uf017"; text: "Date & time"
-          onClicked: {
-            var clock = settings.cc.widget("slime.clock-weather")
-            settings.bar.commandCenterOpen = false
-            if (clock) clock.settingsOpen = true
-          }
-        }
-        CcButton {
-          cc: settings.cc
-          icon: "\uf1b0"; text: "Launcher icon"
-          onClicked: {
-            var menu = settings.cc.widget("slime.menu")
-            settings.bar.commandCenterOpen = false
-            if (menu) menu.pickerOpen = true
+        // each opens that widget's own settings panel on the bar
+        Repeater {
+          model: [
+            ["\uf017", "Date & time", "slime.clock-weather", "settingsOpen"],
+            ["\uf1b0", "Launcher icon", "slime.menu", "pickerOpen"],
+            ["\uf009", "Workspaces", "slime.workspaces", "menuOpen"],
+            ["\uf001", "Media (lich)", "slime.media", "settingsOpen"],
+            ["\uf07b", "Treasure chest", "slime.plugins", "open()"],
+            ["\uf337", "Spacers", "slime.spacer", "menuOpen"]
+          ]
+          CcButton {
+            required property var modelData
+            readonly property var target: settings.cc.widget(modelData[2])
+            visible: !!target && target.visible !== false
+            cc: settings.cc
+            icon: modelData[0]
+            text: modelData[1]
+            onClicked: {
+              settings.bar.commandCenterOpen = false
+              var t = target, prop = modelData[3]
+              // after the command centre starts closing, so the panel isn't
+              // closed again by the one-dropdown-at-a-time rule
+              Qt.callLater(function() {
+                if (prop === "open()") t.open()
+                else t[prop] = true
+              })
+            }
           }
         }
       }

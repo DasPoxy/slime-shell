@@ -34,6 +34,7 @@ layout(std140, binding = 0) uniform buf {
     vec2 origin;      // this window's top-left on the screen
     float blobMode;   // 1 = no bar: just a free-standing blob in panelRect
     float barShape;   // 0 classic strip, 1 pills, 2 islands, 3 notch
+    vec4 dripStyle;   // speed x, thickness x, frozen (1 = hang still), density x
     float material;   // 0 slime, 1 sinew, 2 bone, 3 plain
     float orient;     // which screen edge the bar is on: 0 top, 1 bottom, 2 left, 3 right
     vec2 screenSize;  // for bottom / right bars
@@ -122,10 +123,12 @@ float barEdge(float x) {
 // the neck snaps back up. `scale` shrinks drips on a hs-open panel.
 // Returns (shape distance, distance to its sparkle highlights).
 vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
-    float speed = 0.06 + 0.09 * hash(seed + 1.0);
+    float speed = (0.06 + 0.09 * hash(seed + 1.0)) * dripStyle.x;
     float s = fract(time * speed + hash(seed + 2.0));
+    // frozen: each drip hangs at its own length and never lets go
+    if (dripStyle.z > 0.5) s = 0.35 + 0.42 * hash(seed + 2.0);
     float maxLen = scale * dripAmount * (12.0 + 48.0 * hash(seed + 3.0));
-    float neck = 3.5 + 4.0 * hash(seed + 4.0);
+    float neck = (3.5 + 4.0 * hash(seed + 4.0)) * dripStyle.y;
 
     float grow = smoothstep(0.0, 0.8, s);
     float release = smoothstep(0.8, 1.0, s);
@@ -395,7 +398,7 @@ vec2 mapScene(vec2 p) {
 
     for (int k = -1; k <= 1; k++) {
         float i = ci + float(k);
-        if (hash(i * 3.7 + 11.0) < 0.3) continue;
+        if (hash(i * 3.7 + 11.0) < 1.0 - 0.7 * dripStyle.w) continue;
         float cx = (i + 0.5 + (hash(i) - 0.5) * 0.6) * CELL;
         float edge = dripEdge(cx);
         if (edge < 0.0) continue;

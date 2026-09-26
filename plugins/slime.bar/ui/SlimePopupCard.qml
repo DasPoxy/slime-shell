@@ -249,6 +249,7 @@ PopupWindow {
     // the bar's physical shape, so this window's drips line up with it
     property real barShape: root.slime ? root.bar.barShapeId : 0
     property real material: root.slime ? root.bar.materialId : 0
+    property vector4d dripStyle: root.slime ? root.bar.dripStyleVec : Qt.vector4d(1, 1, 0, 1)
     property vector4d group0: root.slime && root.bar.sharedGroupRects[0] ? root.bar.sharedGroupRects[0] : noBulb
     property vector4d group1: root.slime && root.bar.sharedGroupRects[1] ? root.bar.sharedGroupRects[1] : noBulb
     property vector4d group2: root.slime && root.bar.sharedGroupRects[2] ? root.bar.sharedGroupRects[2] : noBulb

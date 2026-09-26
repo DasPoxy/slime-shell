@@ -208,6 +208,18 @@ Item {
   // What the bar is made of: "slime", "sinew", "bone" or "plain". Bone and
   // plain don't drip; plain also drops the floating debris.
   property string material: "slime"
+  // How the drips move: "drip" (default), "honey" (slow, thick), "rain" (fast,
+  // thin, many), "tar" (crawling, fat, few), "frozen" (hang still).
+  property string dripStyle: "drip"
+  readonly property vector4d dripStyleVec: {
+    switch (dripStyle) {
+    case "honey": return Qt.vector4d(0.45, 1.45, 0, 0.9)
+    case "rain": return Qt.vector4d(2.4, 0.55, 0, 1.35)
+    case "tar": return Qt.vector4d(0.22, 1.8, 0, 0.6)
+    case "frozen": return Qt.vector4d(1, 1, 1, 1)
+    default: return Qt.vector4d(1, 1, 0, 1)
+    }
+  }
   readonly property real materialId: ["slime", "sinew", "bone", "plain"].indexOf(material)
   readonly property real dripLevel: material === "bone" || material === "plain" ? 0 : dripAmount
   readonly property real barShapeId: ["classic", "pills", "islands", "notch"].indexOf(barShape)
@@ -218,7 +230,7 @@ Item {
   // Saved to ~/.config/omarchy/slime-shell/skin.json, loaded on start and
   // written (debounced) whenever one of these changes.
   readonly property var skinKeys: ["slimeRole", "gradientRole", "shadingStyle", "slimeFps", "dripAmount",
-    "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material"]
+    "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material", "dripStyle"]
   property bool skinLoaded: false
   // A layer change made while the bar surface is still being set up is lost,
   // so "behind" only takes effect once the bar has been mapped for a moment.
@@ -262,6 +274,7 @@ Item {
   onBarDebrisChanged: skinSaveTimer.restart()
   onBarShapeChanged: skinSaveTimer.restart()
   onMaterialChanged: skinSaveTimer.restart()
+  onDripStyleChanged: skinSaveTimer.restart()
   onCcTabChanged: skinSaveTimer.restart()
   onCcSectionsChanged: skinSaveTimer.restart()
   property bool commandCenterOpen: false
@@ -303,6 +316,7 @@ Item {
     // Draw the slime "above" windows or "behind" them.
     function shape(name: string): void { root.barShape = name }
     function material(name: string): void { root.material = name }
+    function drip(style: string): void { root.dripStyle = style }
     function layer(where: string): void { root.slimeLayer = where === "behind" ? "behind" : "above" }
     // Open the command centre on a tab: home, system, wallpapers, tasks, settings.
     function tab(name: string): void { root.ccTab = name; root.commandCenterOpen = root.slimeSkin }
@@ -1646,6 +1660,7 @@ Item {
       property color paperColor: root.paperColor
       property real barShape: root.barShapeId
       property real material: root.materialId
+      property vector4d dripStyle: root.dripStyleVec
       property vector4d group0: barWindow.groupRects[0] || barWindow.noBulb
       property vector4d group1: barWindow.groupRects[1] || barWindow.noBulb
       property vector4d group2: barWindow.groupRects[2] || barWindow.noBulb

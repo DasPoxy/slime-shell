@@ -136,9 +136,10 @@ BarWidget {
     // user's size; the button keeps the click, hover and tooltip wiring.
     text: ""
     hasVisualContent: true
-    // side bars: stacked hours over minutes, no date or weather
+    // side bars stack everything: weather, hours over minutes, then the date
+    // (date first when the clock order says so)
     fixedWidth: root.vertical ? -1 : Math.ceil(label.implicitWidth) + Style.space(18)
-    fixedHeight: root.vertical ? Math.ceil(label.implicitHeight) + 14 : -1
+    fixedHeight: root.vertical ? Math.ceil(stack.implicitHeight) + 14 : -1
 
     onPressed: function(b) {
       if (b === Qt.RightButton) root.toggleWeatherPanel()
@@ -148,17 +149,54 @@ BarWidget {
 
     Text {
       id: label
+      visible: !root.vertical
       anchors.centerIn: parent
-      text: root.vertical
-        ? Qt.formatTime(clock.date, root.hour24 ? "HH" : "h") + "\n" + Qt.formatTime(clock.date, "mm")
-        : (root.weatherText !== "" ? root.weatherText + "   " + root.timeText : root.timeText)
-      horizontalAlignment: Text.AlignHCenter
-      lineHeight: 0.85
+      text: root.weatherText !== "" ? root.weatherText + "   " + root.timeText : root.timeText
       color: button.foreground
       // the slime display face when one is picked (Settings > Font & clock)
       font.family: root.bar && root.bar.displayFontFamily ? root.bar.displayFontFamily : button.fontFamily
       font.pixelSize: root.fontSize
       font.weight: root.bar && root.bar.slimeFonts ? root.bar.displayWeight : root.fontWeight
+    }
+
+    Column {
+      id: stack
+      visible: root.vertical
+      anchors.centerIn: parent
+      spacing: 3
+      readonly property bool dateFirst: !!root.bar && !root.bar.clockTimeFirst && root.datePattern !== ""
+      readonly property string family: root.bar && root.bar.displayFontFamily ? root.bar.displayFontFamily : button.fontFamily
+      readonly property int weight: root.bar && root.bar.slimeFonts ? root.bar.displayWeight : root.fontWeight
+
+      component Small: Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        color: button.foreground
+        font.family: button.fontFamily
+        font.pixelSize: 11
+        font.bold: true
+      }
+
+      Small {
+        visible: root.weatherText !== ""
+        text: root.weatherText.replace(" ", "\n")
+        horizontalAlignment: Text.AlignHCenter
+        font.pixelSize: 13
+      }
+      Small { visible: stack.dateFirst; text: Qt.formatDate(clock.date, "ddd") }
+      Small { visible: stack.dateFirst; text: Qt.formatDate(clock.date, "d MMM") }
+      Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        text: Qt.formatTime(clock.date, root.hour24 ? "HH" : "h") + "\n" + Qt.formatTime(clock.date, "mm")
+        horizontalAlignment: Text.AlignHCenter
+        lineHeight: 0.85
+        color: button.foreground
+        font.family: stack.family
+        font.pixelSize: Math.min(root.fontSize, 20)
+        font.weight: stack.weight
+      }
+      Small { visible: !root.hour24; text: Qt.formatTime(clock.date, "AP") }
+      Small { visible: !stack.dateFirst && root.datePattern !== ""; text: Qt.formatDate(clock.date, "ddd") }
+      Small { visible: !stack.dateFirst && root.datePattern !== ""; text: Qt.formatDate(clock.date, "d MMM") }
     }
   }
 

@@ -6,12 +6,14 @@ import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "../slime.bar/ui"
+import "../slime.bar/commandcenter"
 
 // Slime Shell now-playing widget: a lich conjuring the music — the ooze
 // visualizer pours out of his raised hand in the theme's colours while
 // something plays — followed by previous / play / next as bobbing cream
 // bubbles. Hover the lich for the track, click him for the command centre,
-// scroll over him to skip tracks. Hidden when nothing is playing.
+// scroll over him to skip tracks, right-click him for settings. Hidden when
+// nothing is playing.
 // Settings (shell.json):
 //   visualizer  true/false (default true)
 BarWidget {
@@ -36,6 +38,17 @@ BarWidget {
   // the spell's colours, from the theme
   readonly property var spellColors: [pal.bright_magenta || "#ff69c1", pal.magenta || "#f52e9b",
     pal.bright_blue || "#6695ff", pal.bright_cyan || "#10ffd9", pal.bright_yellow || "#e4cc00"]
+
+  property bool settingsOpen: false
+  function close() { settingsOpen = false }
+  function saveSetting(key, value) {
+    var entry = { id: root.moduleName }
+    for (var k in root.settings) if (k !== "id") entry[k] = root.settings[k]
+    entry[key] = value
+    root.settings = entry
+    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
+      root.bar.shell.updateEntryInline(root.moduleName, entry)
+  }
 
   visible: hasMedia
   implicitWidth: !hasMedia ? 0 : vertical ? barSize : row.implicitWidth + 14
@@ -79,8 +92,13 @@ BarWidget {
       }
       MouseArea {
         anchors.fill: parent
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
-        onClicked: if (root.slime) { root.bar.ccTab = "home"; root.bar.commandCenterOpen = true }
+        onClicked: mouse => {
+          if (!root.slime) return
+          if (mouse.button === Qt.RightButton) root.settingsOpen = !root.settingsOpen
+          else { root.bar.ccTab = "home"; root.bar.commandCenterOpen = true }
+        }
         onWheel: wheel => { if (!root.player) return; if (wheel.angleDelta.y > 0) root.player.previous(); else root.player.next() }
       }
     }
@@ -165,6 +183,46 @@ BarWidget {
             onClicked: if (root.player) root.player[control.modelData]()
           }
         }
+      }
+    }
+  }
+
+  QtObject {
+    id: look
+    readonly property var bar: root.bar
+    readonly property color ink: root.ink
+    readonly property color slime: root.slime ? root.bar.slimeColor : Color.accent
+    readonly property string font: root.bar ? root.bar.fontFamily : Style.font.family
+  }
+
+  SlimePopupCard {
+    id: settingsCard
+    anchorItem: root
+    owner: root
+    bar: root.bar
+    open: root.settingsOpen
+    contentWidth: Style.space(240)
+    contentHeight: settingsCard.fittedContentHeight(settingsColumn.implicitHeight)
+
+    Column {
+      id: settingsColumn
+      anchors.fill: parent
+      spacing: 8
+      CcHeading { cc: look; text: "THE LICH'S SPELL (VISUALIZER)" }
+      Flow {
+        width: parent.width
+        spacing: 6
+        CcButton { cc: look; text: "casting"; on: root.showViz; onClicked: root.saveSetting("visualizer", true) }
+        CcButton { cc: look; text: "resting"; on: !root.showViz; onClicked: root.saveSetting("visualizer", false) }
+      }
+      Text {
+        width: parent.width
+        wrapMode: Text.Wrap
+        text: "Left-click the lich for the command centre, scroll over him to skip tracks."
+        color: look.ink
+        font.family: look.font
+        font.pixelSize: 10
+        opacity: 0.7
       }
     }
   }
