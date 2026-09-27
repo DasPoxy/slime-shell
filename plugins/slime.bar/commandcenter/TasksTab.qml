@@ -80,14 +80,44 @@ Item {
     names.sort()
     var rows = []
     names.forEach(function(n) {
-      rows.push({ kind: "group", name: n })
-      byGroup[n].forEach(function(t) { rows.push({ kind: "todo", t: t }) })
+      var shut = groupCollapsed(n)
+      rows.push({ kind: "group", name: n, count: byGroup[n].length, collapsed: shut })
+      if (!shut) byGroup[n].forEach(function(t) { rows.push({ kind: "todo", t: t }) })
     })
-    if (loose.length && names.length) rows.push({ kind: "group", name: "" })
-    loose.forEach(function(t) { rows.push({ kind: "todo", t: t }) })
+    // loose todos get a heading (and can fold away) only beside real groups
+    var looseShut = names.length > 0 && groupCollapsed("")
+    if (loose.length && names.length) rows.push({ kind: "group", name: "", count: loose.length, collapsed: looseShut })
+    if (!looseShut) loose.forEach(function(t) { rows.push({ kind: "todo", t: t }) })
     return rows
   }
   readonly property var todoOrder: todoRows.filter(function(r) { return r.kind === "todo" }).map(function(r) { return r.t.id })
+
+  // ---- folding groups (remembered with the command centre's other sections) --
+  function groupCollapsed(name) { return !!(bar && bar.ccSections && bar.ccSections["tasks-group:" + name]) }
+  function setGroupCollapsed(name, shut) {
+    if (!bar) return
+    var m = Object.assign({}, bar.ccSections)
+    if (shut) m["tasks-group:" + name] = true
+    else delete m["tasks-group:" + name]
+    bar.ccSections = m
+  }
+  // the keyboard cursor in the todo list: a todo's id, or "g:<group>" when
+  // it's resting on a group heading ("" = on the selected todo)
+  property string cursor: ""
+  readonly property string cursorKey: cursor !== "" ? cursor : selectedId
+  readonly property var todoNav: todoRows.map(function(r) { return r.kind === "group" ? "g:" + r.name : r.t.id })
+  function moveCursor(d) {
+    if (todoNav.length === 0) return
+    var i = todoNav.indexOf(cursorKey)
+    var key = todoNav[Math.max(0, Math.min(todoNav.length - 1, i < 0 ? 0 : i + d))]
+    if (key.indexOf("g:") === 0) cursor = key
+    else { cursor = ""; selectedId = key }
+  }
+  function toggleGroup(name) {
+    var shut = !groupCollapsed(name)
+    setGroupCollapsed(name, shut)
+    if (shut && selected && (selected.group || "") === name) cursor = "g:" + name
+  }
 
   // Task Log tab: most recently active first
   readonly property var logOrder: {
@@ -282,9 +312,22 @@ Item {
     if (k === Qt.Key_Escape && showHelp) { showHelp = false; event.accepted = true; return }
     if (tab === "todo") {
       var t = selected
-      if (pane === "list") {
+      if (pane === "list" && cursor !== "") {
+        // resting on a group heading
+        var gname = cursor.slice(2)
+        if (up || down) moveCursor(up ? -1 : 1)
+        else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z") toggleGroup(gname)
+        else if (k === Qt.Key_Right || txt === "l") { if (groupCollapsed(gname)) setGroupCollapsed(gname, false) }
+        else if (k === Qt.Key_Left || txt === "h") { if (!groupCollapsed(gname)) setGroupCollapsed(gname, true) }
+        else if (txt === "n") newInput.forceActiveFocus()
+        else if (txt === "f") showDone = !showDone
+        else return
+      } else if (pane === "list") {
+        var hasHead = t && todoNav.indexOf("g:" + (t.group || "")) >= 0
         if ((up || down) && (event.modifiers & Qt.ShiftModifier)) nudgeTodo(up ? -1 : 1)
-        else if (up || down) select(up ? -1 : 1, todoOrder)
+        else if (up || down) moveCursor(up ? -1 : 1)
+        // fold this todo's group away and rest on its heading
+        else if ((k === Qt.Key_Left || txt === "h" || txt === "z") && hasHead) toggleGroup(t.group || "")
         else if (k === Qt.Key_Right || k === Qt.Key_Return || k === Qt.Key_Enter || txt === "l") {
           if (t && t.subs.length) { pane = "subs"; subIndex = Math.min(subIndex, t.subs.length - 1) } else if (t) subInput.forceActiveFocus()
         }
@@ -851,7 +894,8 @@ Item {
         model: tasks.todoRows
         currentIndex: {
           for (var i = 0; i < tasks.todoRows.length; i++)
-            if (tasks.todoRows[i].kind === "todo" && tasks.todoRows[i].t.id === tasks.selectedId) return i
+            if (tasks.todoRows[i].kind === "group" ? "g:" + tasks.todoRows[i].name === tasks.cursorKey
+                : tasks.todoRows[i].t.id === tasks.cursorKey) return i
           return -1
         }
         highlightFollowsCurrentItem: false
@@ -869,13 +913,37 @@ Item {
           required property int index
           width: todoList.width
           height: modelData.kind === "group" ? 24 : 38
-          // group header
-          Row {
+          // group header: click (or Enter / Space / ← → on it) folds it
+          Rectangle {
             visible: row.modelData.kind === "group"
-            spacing: 6
-            anchors.verticalCenter: parent.verticalCenter
-            Rectangle { width: 12; height: 12; radius: 6; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(row.modelData.name); border.color: tasks.cc.ink; border.width: 1.2; visible: row.modelData.name !== "" }
-            CcHeading { cc: tasks.cc; text: !row.modelData.name ? "NO GROUP" : row.modelData.name.toUpperCase() }
+            anchors.fill: parent
+            radius: 9
+            readonly property bool here: row.modelData.kind === "group" && tasks.cursor === "g:" + row.modelData.name && tasks.pane === "list"
+            color: here ? Qt.rgba(1, 1, 1, 0.6) : headMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.25) : "transparent"
+            border.color: tasks.cc.ink
+            border.width: here ? 2 : 0
+            Row {
+              x: 6
+              spacing: 6
+              anchors.verticalCenter: parent.verticalCenter
+              Text { anchors.verticalCenter: parent.verticalCenter; text: row.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 9 }
+              Rectangle { width: 12; height: 12; radius: 6; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(row.modelData.name); border.color: tasks.cc.ink; border.width: 1.2; visible: !!row.modelData.name }
+              CcHeading { cc: tasks.cc; anchors.verticalCenter: parent.verticalCenter; text: !row.modelData.name ? "NO GROUP" : row.modelData.name.toUpperCase() }
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: !!row.modelData.collapsed
+                text: row.modelData.count + (row.modelData.count === 1 ? " todo" : " todos")
+                color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 10
+              }
+            }
+            MouseArea {
+              id: headMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              enabled: row.modelData.kind === "group"
+              onClicked: { tasks.pane = "list"; tasks.cursor = "g:" + row.modelData.name; tasks.toggleGroup(row.modelData.name); tasks.forceActiveFocus() }
+            }
           }
           // a todo
           Rectangle {
@@ -887,7 +955,7 @@ Item {
             radius: 12
             color: tasks.armedDelete !== "" && t && tasks.armedDelete === t.id ? Qt.rgba(1, 0.4, 0.4, 0.6) : sel ? Qt.rgba(1, 1, 1, 0.72) : tasks.cc.wash
             border.color: tasks.cc.ink
-            border.width: sel ? (tasks.pane === "list" ? 2.4 : 1.4) : 0
+            border.width: sel ? (tasks.pane === "list" && tasks.cursor === "" ? 2.4 : 1.4) : 0
             Rectangle { x: 0; width: 6; height: parent.height; radius: 3; color: parent.t ? tasks.colorOf(parent.t.group) : "transparent" }
             Rectangle {
               id: doneBox
@@ -948,8 +1016,10 @@ Item {
                   var r = rows[i], it = todoList.itemAtIndex(i)
                   if (r.kind === "group") {
                     // on a group's heading: to the top of that group
-                    var first = rows[i + 1]
-                    if (first && first.kind === "todo") tasks.placeTodo(tasks.dragTodo, first.t.id, false, r.name)
+                    var first = null
+                    for (var q = 0; q < tasks.todos.length && !first; q++)
+                      if ((tasks.todos[q].group || "") === r.name && tasks.todos[q].id !== tasks.dragTodo) first = tasks.todos[q]
+                    if (first) tasks.placeTodo(tasks.dragTodo, first.id, false, r.name)
                   } else {
                     tasks.placeTodo(tasks.dragTodo, r.t.id, p.y > it.y + it.height / 2, r.t.group || "")
                   }
@@ -958,6 +1028,7 @@ Item {
                 tasks.dropY = -1
               }
               onClicked: mouse => {
+                tasks.cursor = ""
                 tasks.selectedId = parent.t.id
                 tasks.pane = "list"
                 tasks.forceActiveFocus()
@@ -1645,7 +1716,8 @@ Item {
           ["", [["Tab / 1 2 3", "switch tabs"], ["?", "this help"], ["Esc", "back out, or close the command centre"]]],
           ["TODO · LIST", [["↑ ↓  j k", "pick a todo"], ["→  Enter", "open its sub-todos"], ["n", "new todo"], ["a", "add a sub-todo"],
                            ["Space", "mark finished"], ["e  F2", "rename"], ["g", "group menu"], ["A", "archive"], ["d d", "delete"], ["f", "show / hide finished"],
-                           ["J K  Shift ↑↓", "move a todo"], ["drag", "move (into another group, too)"]]],
+                           ["J K  Shift ↑↓", "move a todo"], ["drag", "move (into another group, too)"],
+                           ["←  z  (or click a heading)", "fold its group"], ["Enter  Space  →  on a heading", "fold / unfold"]]],
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space  Enter", "to do → in progress → done"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
           ["TASK LOG", [["↑ ↓", "pick a todo"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],

@@ -27,7 +27,9 @@ Everything is keyboard driven — press **?** in the tab for the full list:
 - Todo: **↑↓** pick · **→/Enter** open sub-todos · **n** new · **a** add sub-todo ·
   **Space** finish / cycle a sub-todo · **e** rename/edit · **g** group menu ·
   **A** archive · **d d** delete · **f** show/hide finished ·
-  **J/K** or **Shift+↑↓** move the todo / sub-todo
+  **J/K** or **Shift+↑↓** move the todo / sub-todo · **←** / **z** fold the
+  todo's group (**Enter/Space/→** on a heading unfolds it; headings are
+  clickable too, and stay folded across restarts)
 - Task Log: **↑↓** pick · **→/Enter** into the lanes, then **→/Space** move a
   sub-todo on and **←** back · **w** write in the log (about the sub-todo
   picked in the lanes) · **PgUp/PgDn** scroll
