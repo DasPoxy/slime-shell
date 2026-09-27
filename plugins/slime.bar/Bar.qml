@@ -255,6 +255,18 @@ Item {
     var e = oppositeEdge, v = e === "left" || e === "right"
     return v ? (i ? "bottom" : "top") + "-" + e : e + "-" + (i ? "right" : "left")
   }
+  // the dock melting into the bar at one of its ends: how far along the bar
+  // (from its start, x / its end, y) the bar leaves off its drips there
+  readonly property vector4d dockBracketVec: {
+    var v = dockEdgeEff === "left" || dockEdgeEff === "right"
+    if (!dockEnabled || !slimeSkin || v === vertical) return Qt.vector4d(0, 0, 0, 0)
+    var barEnd = v ? (position === "top" ? "start" : position === "bottom" ? "end" : "")
+                   : (position === "left" ? "start" : position === "right" ? "end" : "")
+    if (barEnd === "" || dockAlign !== barEnd) return Qt.vector4d(0, 0, 0, 0)
+    var reach = dockIconSize + 20 + 70
+    var atStart = dockEdgeEff === "left" || dockEdgeEff === "top"
+    return Qt.vector4d(atStart ? reach : 0, atStart ? 0 : reach, 0, 0)
+  }
   readonly property string dockCorner: {
     if (!dockEnabled || !cornerSlime || dockAlign === "center") return ""
     var e = dockEdgeEff, v = e === "left" || e === "right", first = dockAlign === "start"
@@ -2068,6 +2080,7 @@ Item {
     property vector4d cava2: root.cava2
     property vector4d cava3: root.cava3
     property vector4d cavaOpts: root.cavaOpts
+    property vector4d dockBracket: barShape < 3.5 ? root.dockBracketVec : Qt.vector4d(0, 0, 0, 0)
     }
 
   component BarPanel: PanelWindow {
@@ -2445,108 +2458,6 @@ Item {
       }
     }
 
-    // ---- SlimeS-Dock ----
-    // The bar's own scene with the dock shape (5) on the dock's edge, so it
-    // wears the bar's material, colour, shading and drips; the icons, menu and
-    // add-apps panel are dock/DockContent.qml. Everything here is in bar space:
-    // `along` the edge from the screen's start, `away` from the edge.
-    QtObject {
-      id: dockWin
-      readonly property var screen: barWindow.screen
-      readonly property string edge: root.dockEdgeEff
-      readonly property bool vert: edge === "left" || edge === "right"
-      readonly property real len: screen ? (vert ? screen.height : screen.width) : 1920
-      readonly property int s: root.dockIconSize
-      readonly property int gap: 10
-      readonly property int count: root.dockItems.length + 1          // + the add button
-      readonly property real dockLen: count * s + (count + 1) * gap
-      readonly property bool mergeStart: root.dockCorner !== "" && root.dockAlign === "start"
-      readonly property bool mergeEnd: root.dockCorner !== "" && root.dockAlign === "end"
-      readonly property real a0: root.dockAlign === "start" ? (mergeStart ? 44 : 24)
-        : root.dockAlign === "end" ? len - dockLen - (mergeEnd ? 44 : 24)
-        : Math.round((len - dockLen) / 2)
-      readonly property real thick: s + 20
-      readonly property real panelW: 460
-      readonly property real panelH: 400
-      readonly property real panelX: Math.max(10, Math.min(len - panelW - 10, a0 + dockLen / 2 - panelW / 2))
-      readonly property real dripRoom: Math.min(barWindow.dripRoom, 170)
-      // the right-click menu: a smaller drip hanging from its icon
-      readonly property real menuW: 230
-      readonly property real menuH: 166
-      readonly property real menuX: Math.max(10, Math.min(len - menuW - 10,
-        a0 + gap + s / 2 + Math.max(0, dockContent.menuFor) * (s + gap) - menuW / 2))
-      // the window along [w0, w1], always deep enough for the panel: it never
-      // resizes as a menu or panel opens and shuts (a resize made the dock jump)
-      // (room for a menu hanging from the first or last icon, too)
-      readonly property real w0: mergeStart ? 0 : Math.max(0, Math.min(a0 - menuW / 2, panelX) - 70)
-      readonly property real w1: mergeEnd ? len : Math.min(len, Math.max(a0 + dockLen + menuW / 2, panelX + panelW) + 70)
-      readonly property real depth: thick + dripRoom + panelH + 40
-      property real panelProgress: 0
-      readonly property bool menuBlob: dockContent.blob === "menu"
-      readonly property real ccProgress: panelProgress
-      readonly property real ccPanelX: menuBlob ? menuX : panelX
-      readonly property real ccAlong: menuBlob ? menuW : panelW
-      readonly property real ccAway: menuBlob ? menuH : panelH
-      readonly property vector4d noBulb: Qt.vector4d(0, 0, 0, 0)
-      readonly property var bulbRects: []
-      readonly property var groupRects: [mergeStart ? Qt.vector4d(0, 0, 1, 1) : noBulb,
-        Qt.vector4d(a0, 4, dockLen, s + 8), mergeEnd ? Qt.vector4d(0, 0, 1, 1) : noBulb]
-    }
-    PanelWindow {
-      id: dockWindow
-      screen: barWindow.screen
-      visible: root.dockEnabled && root.slimeSkin && barWindow.visible
-      color: "transparent"
-      surfaceFormat.opaque: false
-      WlrLayershell.namespace: "slime-dock"
-      WlrLayershell.layer: WlrLayer.Top
-      WlrLayershell.keyboardFocus: dockContent.panelOpen || dockContent.menuIndex >= 0 ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-      // shown for good, it keeps windows off its strip; hidden, it floats over them
-      exclusionMode: root.dockAutoHide ? ExclusionMode.Ignore : ExclusionMode.Normal
-      exclusiveZone: root.dockAutoHide ? 0 : dockWin.thick
-      readonly property string edge: dockWin.edge
-      readonly property bool vert: dockWin.vert
-      implicitWidth: vert ? dockWin.depth : dockWin.w1 - dockWin.w0
-      implicitHeight: vert ? dockWin.w1 - dockWin.w0 : dockWin.depth
-      anchors {
-        top: edge === "top" || vert
-        bottom: edge === "bottom"
-        left: edge === "left" || !vert
-        right: edge === "right"
-      }
-      // the bar's reserved strip pushes a side dock's window along; take it back off
-      readonly property real barPush: vert && root.position === "top" ? root.barSize : !vert && root.position === "left" ? root.barSize : 0
-      margins { left: vert ? 0 : dockWin.w0 - barPush; top: vert ? dockWin.w0 - barPush : 0 }
-      mask: Region { item: dockContent.hotArea }
-      readonly property real sw: screen ? screen.width : 0
-      readonly property real sh: screen ? screen.height : 0
-      SlimeScene {
-        anchors.fill: parent
-        win: dockWin
-        // tucked away: the drips draw back in as it slides off, and once it's
-        // gone nothing is drawn at all
-        visible: dockContent.reveal > 0.01
-        dripAmount: root.dripLevel * dockContent.reveal
-        orient: ({ top: 0, bottom: 1, left: 2, right: 3 })[dockWindow.edge]
-        barShape: 5
-        barHeight: dockWin.thick
-        eggDrip: Qt.vector4d(0, 0, 0, 0)
-        dripExtra: Qt.vector4d(root.dripExtraVec.x, root.dripExtraVec.y, dockWin.depth, dockWin.thick + dockWin.dripRoom)
-        // tucked away: the whole scene slides out past the edge
-        readonly property real off: dockContent.hideOffset
-        origin: Qt.vector2d(
-          (dockWindow.edge === "right" ? dockWindow.sw - dockWindow.width - off : dockWindow.edge === "left" ? off : dockWin.w0),
-          (dockWindow.edge === "bottom" ? dockWindow.sh - dockWindow.height - off : dockWindow.edge === "top" ? off : dockWin.w0))
-      }
-      DockContent {
-        id: dockContent
-        anchors.fill: parent
-        bar: root
-        geo: dockWin
-        win: dockWindow
-      }
-    }
-
     // ---- Drips: a window exactly as deep as the drips hang, just past the
     // bar. It only changes size when the drip settings change (so no jump),
     // and being small it's cheap to redraw every frame — a full-screen
@@ -2608,6 +2519,124 @@ Item {
         paper: root.paperColor
         goo: root.slimeColor
         pal: root.palette
+      }
+    }
+
+    // ---- SlimeS-Dock ----
+    // The bar's own scene with the dock shape (5) on the dock's edge, so it
+    // wears the bar's material, colour, shading and drips; the icons, menu and
+    // add-apps panel are dock/DockContent.qml. Everything here is in bar space:
+    // `along` the edge from the screen's start, `away` from the edge.
+    QtObject {
+      id: dockWin
+      readonly property var screen: barWindow.screen
+      readonly property string edge: root.dockEdgeEff
+      readonly property bool vert: edge === "left" || edge === "right"
+      readonly property real len: screen ? (vert ? screen.height : screen.width) : 1920
+      readonly property int s: root.dockIconSize
+      readonly property int gap: 10
+      readonly property int count: root.dockItems.length + 1          // + the add button
+      readonly property real dockLen: count * s + (count + 1) * gap
+      readonly property bool mergeStart: root.dockCorner !== "" && root.dockAlign === "start"
+      readonly property bool mergeEnd: root.dockCorner !== "" && root.dockAlign === "end"
+      // on a side edge, the end that meets the bar ("start" / "end" / ""): a
+      // dock pushed to that end sits just past the bar and melts into it
+      readonly property string barEnd: vert ? (root.position === "top" ? "start" : root.position === "bottom" ? "end" : "")
+        : (root.position === "left" ? "start" : root.position === "right" ? "end" : "")
+      readonly property bool barStart: barEnd === "start" && root.dockAlign === "start"
+      readonly property bool barFinish: barEnd === "end" && root.dockAlign === "end"
+      readonly property real bs: root.barSize
+      readonly property real barLen: screen ? (root.vertical ? screen.height : screen.width) : 1920
+      readonly property real lo: barStart ? bs + 10 : 10
+      readonly property real hi: barFinish ? len - bs - 10 : len - 10
+      readonly property real a0: root.dockAlign === "start" ? (barStart ? bs + 16 : mergeStart ? 44 : 24)
+        : root.dockAlign === "end" ? len - dockLen - (barFinish ? bs + 16 : mergeEnd ? 44 : 24)
+        : Math.round((len - dockLen) / 2)
+      readonly property real thick: s + 20
+      readonly property real panelW: 460
+      readonly property real panelH: 400
+      readonly property real panelX: Math.max(lo, Math.min(hi - panelW, a0 + dockLen / 2 - panelW / 2))
+      readonly property real dripRoom: Math.min(barWindow.dripRoom, 170)
+      // the right-click menu: a smaller drip hanging from its icon
+      readonly property real menuW: 230
+      readonly property real menuH: 166
+      readonly property real menuX: Math.max(lo, Math.min(hi - menuW,
+        a0 + gap + s / 2 + Math.max(0, dockContent.menuFor) * (s + gap) - menuW / 2))
+      // the window along [w0, w1], always deep enough for the panel: it never
+      // resizes as a menu or panel opens and shuts (a resize made the dock jump)
+      // (room for a menu hanging from the first or last icon, too)
+      // (melting into the bar: from a few px inside the bar, to cover its outline there)
+      readonly property real w0: mergeStart ? 0 : barStart ? bs - 3 : Math.max(0, Math.min(a0 - menuW / 2, panelX) - 70)
+      readonly property real w1: mergeEnd ? len : barFinish ? len - bs + 3 : Math.min(len, Math.max(a0 + dockLen + menuW / 2, panelX + panelW) + 70)
+      readonly property real depth: thick + dripRoom + panelH + 40
+      property real panelProgress: 0
+      readonly property bool menuBlob: dockContent.blob === "menu"
+      readonly property real ccProgress: panelProgress
+      readonly property real ccPanelX: menuBlob ? menuX : panelX
+      readonly property real ccAlong: menuBlob ? menuW : panelW
+      readonly property real ccAway: menuBlob ? menuH : panelH
+      readonly property vector4d noBulb: Qt.vector4d(0, 0, 0, 0)
+      readonly property var bulbRects: []
+      // ends: x 0 a corner blob, x 1 the bar (y = its thickness) to melt into
+      readonly property var groupRects: [mergeStart ? Qt.vector4d(0, 0, 1, 1) : barStart ? Qt.vector4d(1, bs, 1, 1) : noBulb,
+        Qt.vector4d(a0, 4, dockLen, s + 8), mergeEnd ? Qt.vector4d(0, 0, 1, 1) : barFinish ? Qt.vector4d(1, bs, 1, 1) : noBulb]
+    }
+    PanelWindow {
+      id: dockWindow
+      screen: barWindow.screen
+      visible: root.dockEnabled && root.slimeSkin && barWindow.visible
+      color: "transparent"
+      surfaceFormat.opaque: false
+      WlrLayershell.namespace: "slime-dock"
+      WlrLayershell.layer: WlrLayer.Top
+      WlrLayershell.keyboardFocus: dockContent.panelOpen || dockContent.menuIndex >= 0 ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+      // shown for good, it keeps windows off its strip; hidden, it floats over them
+      exclusionMode: root.dockAutoHide ? ExclusionMode.Ignore : ExclusionMode.Normal
+      exclusiveZone: root.dockAutoHide ? 0 : dockWin.thick
+      readonly property string edge: dockWin.edge
+      readonly property bool vert: dockWin.vert
+      implicitWidth: vert ? dockWin.depth : dockWin.w1 - dockWin.w0
+      implicitHeight: vert ? dockWin.w1 - dockWin.w0 : dockWin.depth
+      anchors {
+        top: edge === "top" || vert
+        bottom: edge === "bottom"
+        left: edge === "left" || !vert
+        right: edge === "right"
+      }
+      // the bar's reserved strip pushes a side dock's window along; take it back off
+      readonly property real barPush: vert && root.position === "top" ? root.barSize : !vert && root.position === "left" ? root.barSize : 0
+      margins { left: vert ? 0 : dockWin.w0 - barPush; top: vert ? dockWin.w0 - barPush : 0 }
+      mask: Region { item: dockContent.hotArea }
+      readonly property real sw: screen ? screen.width : 0
+      readonly property real sh: screen ? screen.height : 0
+      SlimeScene {
+        anchors.fill: parent
+        win: dockWin
+        // tucked away: the drips draw back in as it slides off, and once it's
+        // gone nothing is drawn at all
+        visible: dockContent.reveal > 0.01
+        dripAmount: root.dripLevel * dockContent.reveal
+        // melting into the bar: the gradient carries on from the bar's at the join
+        dockBracket: Qt.vector4d(0, 0, dockWin.barStart || dockWin.barFinish
+          ? ((dockWindow.edge === "left" || dockWindow.edge === "top") ? 30 : dockWin.barLen - 30) - (dockWin.barStart ? dockWin.bs : dockWin.len - dockWin.bs)
+          : 0, 0)
+        orient: ({ top: 0, bottom: 1, left: 2, right: 3 })[dockWindow.edge]
+        barShape: 5
+        barHeight: dockWin.thick
+        eggDrip: Qt.vector4d(0, 0, 0, 0)
+        dripExtra: Qt.vector4d(root.dripExtraVec.x, root.dripExtraVec.y, dockWin.depth, dockWin.thick + dockWin.dripRoom)
+        // tucked away: the whole scene slides out past the edge
+        readonly property real off: dockContent.hideOffset
+        origin: Qt.vector2d(
+          (dockWindow.edge === "right" ? dockWindow.sw - dockWindow.width - off : dockWindow.edge === "left" ? off : dockWin.w0),
+          (dockWindow.edge === "bottom" ? dockWindow.sh - dockWindow.height - off : dockWindow.edge === "top" ? off : dockWin.w0))
+      }
+      DockContent {
+        id: dockContent
+        anchors.fill: parent
+        bar: root
+        geo: dockWin
+        win: dockWindow
       }
     }
 

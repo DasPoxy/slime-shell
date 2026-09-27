@@ -91,6 +91,7 @@ Item {
       property vector4d cava2: bar ? bar.cava2 : Qt.vector4d(0, 0, 0, 0)
       property vector4d cava3: bar ? bar.cava3 : Qt.vector4d(0, 0, 0, 0)
       property vector4d cavaOpts: bar ? bar.cavaOpts : Qt.vector4d(0, 0, 0, 0)
+      property vector4d dockBracket: Qt.vector4d(0, 0, 0, 0)
       property vector4d eggDrip: Qt.vector4d(0, 0, 0, 0)
       property vector4d group0: Qt.vector4d(0, 0, 0, 0)
       property vector4d group1: Qt.vector4d(0, 0, 0, 0)

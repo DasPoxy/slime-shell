@@ -77,6 +77,8 @@ layout(std140, binding = 0) uniform buf {
     vec4 cava2;
     vec4 cava3;
     vec4 cavaOpts;    // cava: x bars across the bar, y mirrored, z reach, w thickness (0s: defaults)
+    vec4 dockBracket; // the dock melting into the bar: no bar drips within x of its start / y of its end;
+                      // on the dock itself, z shifts its gradient to match the bar's
 };
 
 const float CELL = 64.0;
@@ -468,17 +470,22 @@ float dockShape(vec2 p) {
         float lip = max(p.y - 4.0 - 1.5 * sin(p.x * 0.03 + time), abs(p.x - c.x) - hs.x - 36.0);
         d = smin(body, lip, 16.0);
     }
-    if (group0.z > 0.0) d = smin(d, cornerBlob(p, vec2(0.0), 0.0), 26.0);
-    if (group2.z > 0.0) d = smin(d, cornerBlob(p, vec2(cornerLen(), 0.0), 3.0), 26.0);
+    // x 1: the bar runs across this end (y = its thickness): melt into its
+    // underside with a fat fillet, one slime bracketing the corner
+    float reach = group1.y + group1.w + PAD + 40.0;
+    if (group0.z > 0.0) d = group0.x > 0.5 ? smin(d, max(p.x - group0.y, p.y - reach), 30.0)
+                                           : smin(d, cornerBlob(p, vec2(0.0), 0.0), 26.0);
+    if (group2.z > 0.0) d = group2.x > 0.5 ? smin(d, max(cornerLen() - group2.y - p.x, p.y - reach), 30.0)
+                                           : smin(d, cornerBlob(p, vec2(cornerLen(), 0.0), 3.0), 26.0);
     return d;
 }
 float dockEdge(float x) {
     float e = -1.0;
     if (group1.z > 0.0 && x > group1.x - PAD && x < group1.x + group1.z + PAD) e = group1.y + group1.w + PAD;
     float r = CORNER_R * 0.92;
-    if (group0.z > 0.0 && x < r - 8.0) e = max(e, sqrt(r * r - x * x) - 3.0);
+    if (group0.z > 0.0 && group0.x < 0.5 && x < r - 8.0) e = max(e, sqrt(r * r - x * x) - 3.0);
     float dx = cornerLen() - x;
-    if (group2.z > 0.0 && dx < r - 8.0) e = max(e, sqrt(r * r - dx * dx) - 3.0);
+    if (group2.z > 0.0 && group2.x < 0.5 && dx < r - 8.0) e = max(e, sqrt(r * r - dx * dx) - 3.0);
     return e;
 }
 
@@ -791,6 +798,11 @@ vec2 mapScene(vec2 p) {
     return r;
 }
 
+// where the dock melts into the bar, the bar holds its drips back
+bool dockHides(float x) {
+    return (dockBracket.x > 0.0 && x < dockBracket.x) || (dockBracket.y > 0.0 && x > cornerLen() - dockBracket.y);
+}
+
 vec2 mapSceneBody(vec2 p) {
     if (blobMode > 0.5) return mapBlob(p);
     float d = baseShape(p);
@@ -804,6 +816,7 @@ vec2 mapSceneBody(vec2 p) {
         for (int k = -1; k <= 1; k++) {
             float i = bi + float(k);
             float cx = (i + 0.5) * sp;
+            if (dockHides(cx)) continue;
             float edge = dripEdge(cx);
             if (edge < 0.0) continue;
             vec2 dr = drip(p, cx, edge, i, 1.0);
@@ -816,6 +829,7 @@ vec2 mapSceneBody(vec2 p) {
         // torrent (amount > 1.8) packs more drips in as well as lengthening them
         if (hash(i * 3.7 + 11.0) < 1.0 - 0.7 * dripStyle.w * max(1.0, dripAmount * 0.55)) continue;
         float cx = (i + 0.5 + (hash(i) - 0.5) * 0.6) * CELL;
+        if (dockHides(cx)) continue;
         float edge = dripEdge(cx);
         if (edge < 0.0) continue;
         vec2 dr = drip(p, cx, edge, i, 1.0);
@@ -1346,7 +1360,9 @@ void main() {
 
     // Two-colour theme gradient that drifts slowly along the bar and leans
     // toward the partner colour as the ooze hangs lower.
-    float gt = 0.45 + 0.35 * sin(p.x * 0.0022 + time * 0.12) + (p.y - barHeight) / 220.0;
+    // (the dock: z shifts its gradient to carry on from the bar's where they meet)
+    float gx = p.x + (barShape > 4.5 ? dockBracket.z : 0.0);
+    float gt = 0.45 + 0.35 * sin(gx * 0.0022 + time * 0.12) + (p.y - barHeight) / 220.0;
     vec3 base = mix(slimeColor.rgb, slimeColor2.rgb, smoothstep(0.0, 1.0, gt));
     // materials start from the theme colour and push it toward their stuff
     if (material > 0.5 && material < 1.5) base = toneShift(base, 0.985, 0.75, 1.05, 0.95);          // flesh

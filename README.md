@@ -115,7 +115,7 @@ falls off with it, or turns up trapped in a panel's ooze.
   clicked, floats centred when summoned by keybind.
 - **Dock** (SlimeS-Dock) — apps, folders and files in a lump of the bar's
   own slime on any edge the bar isn't on, dripping like the bar. Centred or
-  at either end (where it melts into the corner slime), optionally hidden
+  at either end (where it melts into the bar or the corner slime), optionally hidden
   until hovered — hidden, it draws nothing at all. **+** oozes out a panel to
   search and add apps; drag folders and files onto it; right-click an icon
   for a slime menu to launch, move or remove it:
@@ -231,8 +231,9 @@ Command centre → **Settings** (sections fold open and closed):
   and slime patches in the corners across from the bar, mirroring its look
 - **Dock** (SlimeS-Dock) — a dock of apps, folders and files made of the bar's own
   slime, on any screen edge the bar isn't on (move the bar onto it and the
-  dock moves across); centred or at either end, where it melts into the
-  corner slime; optionally hidden until hovered; three icon sizes. The **+**
+  dock moves across); centred or at either end — at the end next to the bar
+  it sits just past the bar and melts into it, one slime bracketing the
+  corner; at the far end it melts into the corner slime; optionally hidden until hovered; three icon sizes. The **+**
   on the dock oozes out a panel to search apps and add or remove them
   (↑↓, Enter, Esc); drag folders or files onto the dock to pin them;
   right-click an icon for a little drip of a menu to launch, move or remove

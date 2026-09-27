@@ -267,6 +267,7 @@ PopupWindow {
     property vector4d cava2: root.bar ? root.bar.cava2 : Qt.vector4d(0, 0, 0, 0)
     property vector4d cava3: root.bar ? root.bar.cava3 : Qt.vector4d(0, 0, 0, 0)
     property vector4d cavaOpts: root.bar ? root.bar.cavaOpts : Qt.vector4d(0, 0, 0, 0)
+    property vector4d dockBracket: root.bar ? root.bar.dockBracketVec : Qt.vector4d(0, 0, 0, 0)
     property vector4d eggDrip: Qt.vector4d(0, 0, 0, 0)
     property vector4d group0: root.slime && root.bar.sharedGroupRects[0] ? root.bar.sharedGroupRects[0] : noBulb
     property vector4d group1: root.slime && root.bar.sharedGroupRects[1] ? root.bar.sharedGroupRects[1] : noBulb
