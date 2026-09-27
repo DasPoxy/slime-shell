@@ -4,7 +4,9 @@
 // distance field, blended with smooth-min so everything reads as a single
 // body of ooze. Coordinates are window pixels, y pointing down.
 //
-// shadingStyle: 0 = soft (smooth lighting), 1 = anime (cel bands, ink line,
+// shadingStyle: 4 = cel (clean three-tone cel shading, crisp outline),
+// 5 = sketch (coloured pencil: hatching, wobbly overshooting outlines);
+// 0 = soft (smooth lighting), 1 = anime (cel bands, ink line,
 // hard wet highlights), 2 = manga (anime + halftone screentone everywhere),
 // 3 = print (risograph/mural: jagged hue-shifted shadows, terminator ink,
 // hatching, halftone transitions, paper grain, misregistered colour plate).
@@ -876,6 +878,84 @@ vec3 softShade(vec2 p, float d, vec3 base) {
     return col * (1.0 + grain * (1.3 - diffuse * 0.6));
 }
 
+// Surface normal of the goo as a dome (shared by the lit styles).
+vec3 domeNormal(vec2 p, float d) {
+    vec2 g = vec2(mapScene(p + vec2(1.0, 0.0)).x - d, mapScene(p + vec2(0.0, 1.0)).x - d);
+    float depth = clamp(-d / 10.0, 0.0, 1.0);
+    float dome = sqrt(1.0 - (1.0 - depth) * (1.0 - depth));
+    return normalize(vec3(g * (1.0 - dome) * 1.6, dome + 0.08));
+}
+
+// Cel (4): clean, graphic cel shading — three flat tones from real lighting,
+// a crisp even ink outline, a thin rim light on the lit edge and one hard
+// highlight. No texture, grain or glints.
+vec3 cleanCel(vec2 p, float d, vec3 base) {
+    vec3 n = domeNormal(p, d);
+    vec3 L = normalize(vec3(-0.35, -0.6, 0.72));
+    vec3 H = normalize(L + vec3(0.0, 0.0, 1.0));
+    float diff = max(dot(n, L), 0.0);
+    float spec = pow(max(dot(n, H), 0.0), 40.0);
+    vec3 light = min(base * 1.22 + 0.08, vec3(1.0));
+    vec3 shade = base * vec3(0.55, 0.58, 0.78);
+    vec3 ink = mix(base * 0.1, vec3(0.03, 0.02, 0.07), 0.7);
+    // hard band edges, anti-aliased over about a pixel
+    float aa = 0.04;
+    float inShade = 1.0 - smoothstep(0.55 - aa, 0.55 + aa, diff);
+    float inLight = smoothstep(0.9 - aa, 0.9 + aa, diff);
+    vec3 col = mix(base, shade, inShade);
+    col = mix(col, light, inLight * (1.0 - inShade));
+    // rim light: a thin bright line just inside the lit side of the edge
+    float rimBand = fill(-(d + 4.2)) * (1.0 - fill(-(d + 2.6)));
+    float litSide = smoothstep(0.2, 0.6, dot(normalize(n.xy + 1e-4), -normalize(L.xy)));
+    col = mix(col, light * 1.05, rimBand * litSide * 0.9);
+    // one hard highlight
+    col = mix(col, vec3(1.0), smoothstep(0.55, 0.6, spec) * step(d, -3.0));
+    // crisp outline of even weight
+    col = mix(col, ink, smoothstep(-3.0, -2.0, d));
+    return col;
+}
+
+// Sketch (5): coloured pencil on paper. A pale pencil fill, graphite hatching
+// that thickens into cross-hatching in shadow, and two or three wobbly,
+// overshooting outline strokes (drawn a little outside the goo too).
+vec4 sketchShade(vec2 p, float d, vec3 base) {
+    vec3 n = domeNormal(p, d);
+    vec3 L = normalize(vec3(-0.35, -0.6, 0.72));
+    float diff = max(dot(n, L), 0.0);
+    vec3 paper = mix(paperColor.rgb, vec3(0.97, 0.95, 0.9), 0.5);
+    vec3 graphite = vec3(0.16, 0.15, 0.17);
+    // pencil fill: colour laid on lightly, heavier in shadow, with tooth
+    float tooth = vnoise(p * vec2(0.9, 0.25)) * 0.5 + hash2(floor(p * 0.7)) * 0.5;
+    float press = mix(0.7, 1.0, 1.0 - diff) * (0.8 + 0.3 * tooth);
+    vec3 col = mix(paper, base, clamp(press, 0.0, 1.0));
+    // hatching: wobbly strokes, a second crossing layer in the deep shadow
+    float wob = (vnoise(p / 9.0) - 0.5) * 2.5;
+    float u = dot(p, vec2(0.62, -0.78)) + wob;
+    float v = dot(p, vec2(0.78, 0.62)) - wob;
+    float h1 = 1.0 - smoothstep(0.25, 0.9, abs(fract(u / 5.0) - 0.5) * 5.0);
+    float h2 = 1.0 - smoothstep(0.25, 0.9, abs(fract(v / 6.0) - 0.5) * 6.0);
+    float dark = 1.0 - diff;
+    float strokeBreak = step(0.3, vnoise(vec2(u * 0.08, floor(u / 5.0) * 3.1)));
+    // (the goo's flat top counts as lit, so hatching keys off the lower,
+    // rounder parts and the underside)
+    float under = clamp(dot(n.xy, vec2(0.0, 1.0)), 0.0, 1.0);
+    dark = clamp(dark + under * 0.6, 0.0, 1.0);
+    float hatch = h1 * smoothstep(0.12, 0.3, dark) * strokeBreak + h2 * smoothstep(0.4, 0.6, dark);
+    float calm = labelZone(p);
+    col = mix(col, graphite, clamp(hatch, 0.0, 1.0) * 0.6 * (1.0 - calm * 0.85));
+    // outlines: a few passes, each shifted and wobbling, overshooting the shape
+    float line = 0.0;
+    for (int k = 0; k < 3; k++) {
+        float fk = float(k);
+        float off = (vnoise(p / (14.0 + fk * 5.0) + fk * 7.3) - 0.5) * 3.2 + fk * 0.6 - 0.8;
+        float w = 0.7 + 0.35 * vnoise(p / 5.0 + fk * 3.0);
+        line = max(line, (1.0 - smoothstep(w - 0.4, w + 0.4, abs(d + off))) * (0.7 + 0.3 * vnoise(p / 3.0 + fk)));
+    }
+    col = mix(col, graphite, line);
+    float alpha = max(fill(d), line * 0.95);
+    return vec4(col, alpha);
+}
+
 vec3 celShade(vec2 p, vec2 scene, vec3 base, bool screentone) {
     float d = scene.x;
 
@@ -1146,7 +1226,13 @@ void main() {
     if (material > 0.5 && material < 1.5) base = toneShift(base, 0.985, 0.75, 1.05, 0.95);          // flesh
     else if (material > 1.5 && material < 2.5) base = mix(paperColor.rgb, base, 0.14);               // ivory
     vec3 col = vec3(0.0);
-    if (shadingStyle > 2.5) {
+    if (shadingStyle > 4.5) {
+        vec4 sk = sketchShade(p, d, base);
+        col = sk.rgb;
+        alpha = sk.a;
+    } else if (shadingStyle > 3.5) {
+        if (alpha > 0.0) col = cleanCel(p, d, base);
+    } else if (shadingStyle > 2.5) {
         vec4 printed = printShade(p, scene, base);
         col = printed.rgb;
         alpha = printed.a;

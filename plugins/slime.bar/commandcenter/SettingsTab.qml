@@ -175,7 +175,7 @@ Item {
       }
       ChoiceRow {
         title: "SHADING"
-        options: [["soft", 0], ["anime", 1], ["manga", 2], ["print", 3]]
+        options: [["soft", 0], ["anime", 1], ["manga", 2], ["print", 3], ["cel", 4], ["sketch", 5]]
         current: settings.bar.shadingStyle
         onPicked: value => settings.bar.shadingStyle = value
       }

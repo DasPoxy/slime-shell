@@ -16,7 +16,8 @@ any screen edge and any screen size.
 ## Looks
 
 Mix a **material** (slime, sinew, bone, plain) with a **shape** (classic,
-pills, islands, notch) and a **shading** style (soft, anime, manga, print):
+pills, islands, notch) and a **shading** style (soft, anime, manga, print,
+cel, sketch):
 
 ![Sinew pills](docs/images/bar-sinew-pills.png)
 ![Bone notch](docs/images/bar-bone-notch.png)
@@ -179,7 +180,7 @@ omarchy-shell slime-shell toggle | open | close | tab <name> | toggleTab <name>
 omarchy-shell slime-shell tasks                  # Slime-Tasks pop-out
 omarchy-shell slime-shell material slime|sinew|bone|plain
 omarchy-shell slime-shell shape classic|pills|islands|notch
-omarchy-shell slime-shell shading 0|1|2|3        # soft, anime, manga, print
+omarchy-shell slime-shell shading 0|1|2|3|4|5    # soft, anime, manga, print, cel, sketch
 omarchy-shell slime-shell drip drip|honey|rain|tar|frozen|stringy|lava|gelatinous
 omarchy-shell slime-shell layer above|behind     # draw over or behind windows
 omarchy-shell slime-shell toggleLayer            # flip between the two
@@ -202,7 +203,8 @@ Command centre → **Settings** (sections fold open and closed):
 - **Desktop styling** — rounded screen corners (off / small / medium / large)
   and slime patches in the corners across from the bar, mirroring its look
 - **Slime** — colour, gradient partner, material, bar position, bar shape,
-  draw above/behind windows, bar debris, slime icon colours, shading
+  draw above/behind windows, bar debris, slime icon colours, shading (soft,
+  anime, manga, print, cel, sketch)
 - **Font & clock** — system font or a display face (blobby, drippy, bubble,
   runic, parchment, monster, honey drip), date/time order
 - **Motion** — frame rate, drip style, drip amount

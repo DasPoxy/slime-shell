@@ -235,7 +235,7 @@ Item {
   // much the same and costs roughly a third more CPU.
   property int slimeFps: 30
   property real dripAmount: 1.0
-  property int shadingStyle: 3       // 0 soft, 1 anime, 2 manga, 3 print
+  property int shadingStyle: 3       // 0 soft, 1 anime, 2 manga, 3 print, 4 cel, 5 sketch
   property string slimeLayer: "above" // "above" windows, or "behind" them
   // Clock order everywhere (bar widget and command centre): time before date.
   property bool clockTimeFirst: false
