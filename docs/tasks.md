@@ -53,8 +53,10 @@ remembers its own folds across restarts.
   **w** write in the log (about the sub-todo picked in the lanes) ·
   **PgUp/PgDn** scroll
 - Progress: **↑↓** pick · **Enter/Space** expand · **A** archive · **↓** past
-  the end drops into the archive, where **Enter/r** restores and **↑**/**Esc**
-  climb back · **/** search the archive (Enter drops into the results)
+  the end drops into the archive — sorted by group — where **Enter/r**
+  restores (you stay in the archive, to restore several), **g** or a
+  right-click gives a menu to set its group, restore or delete it, and
+  **↑**/**Esc** climb back · **/** search the archive (Enter drops into the results)
 
 Right-click a todo for the same group menu (existing groups, a new one, no
 group, rename, archive, delete). Each group gets its own colour. Drag todos

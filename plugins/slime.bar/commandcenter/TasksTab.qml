@@ -391,6 +391,23 @@ Item {
   onSelectedIdChanged: { logEntries = []; subIndex = 0; logSub = 0; logEntry = 0; if (tab === "log") refresh() }
   onArchiveQueryChanged: { refresh(); archiveIndex = 0 }
   onArchivedTodosChanged: if (archiveIndex >= archivedTodos.length) archiveIndex = Math.max(0, archivedTodos.length - 1)
+  // the archive, by group (in group order, loose ones last), then by title
+  readonly property var archiveSorted: archivedTodos.slice().sort(function(a, b) {
+    var ga = a.group || "", gb = b.group || ""
+    return (ga === "") - (gb === "") || groupRank(ga) - groupRank(gb) || ga.localeCompare(gb) || a.title.localeCompare(b.title)
+  })
+  // what the archive list shows: a heading per group, then its todos
+  readonly property var archiveRows: {
+    var rows = [], last = null, named = archiveSorted.some(function(t) { return !!t.group })
+    archiveSorted.forEach(function(t, i) {
+      var g = t.group || ""
+      if (named && g !== last) rows.push({ kind: "head", name: g })
+      last = g
+      rows.push({ kind: "todo", t: t, i: i })
+    })
+    return rows
+  }
+  function restoreArchived(a) { if (a) act(["unarchive", a.id]) }   // stays in the archive: restore several in a row
   // agents edit the files while you watch: keep polling while the tab is up
   Timer { interval: 2000; repeat: true; running: tasks.visible; triggeredOnStart: true; onTriggered: tasks.refresh() }
 
@@ -477,7 +494,8 @@ Item {
     act(["delete", id])
   }
   Timer { id: disarm; interval: 2500; onTriggered: tasks.armedDelete = "" }
-  function openMenu(t, x, y) {
+  function openMenu(t, x, y, archived) {
+    menu.archived = !!archived
     menu.todo = t
     menu.x = Math.max(0, Math.min(tasks.width - menu.width, x))
     menu.y = Math.max(50, Math.min(tasks.height - menu.height, y))
@@ -656,10 +674,9 @@ Item {
         if (up && archiveIndex <= 0) { progressPane = "list"; progressIndex = Math.max(0, rows.length - 1) }
         else if (up) archiveIndex--
         else if (down) archiveIndex = Math.min(na - 1, archiveIndex + 1)
-        else if ((k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "r") && na) {
-          var a = archivedTodos[Math.min(archiveIndex, na - 1)]
-          act(["unarchive", a.id], function(res) { tasks.selectedId = res.id; tasks.tab = "todo"; tasks.progressPane = "list" })
-        }
+        else if ((k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "r") && na)
+          restoreArchived(archiveSorted[Math.min(archiveIndex, na - 1)])
+        else if (txt === "g" && na) openMenu(archiveSorted[Math.min(archiveIndex, na - 1)], tasks.width * 0.3, tasks.height - 360, true)
         else if (k === Qt.Key_Escape) progressPane = "list"
         else return
       }
@@ -1219,7 +1236,7 @@ Item {
             visible: row.modelData.kind === "todo"
             anchors.fill: parent
             readonly property var t: row.modelData.t
-            readonly property bool sel: t && t.id === tasks.selectedId
+            readonly property bool sel: !!t && t.id === tasks.selectedId
             opacity: t && tasks.dragTodo === t.id ? 0.45 : 1
             radius: 12
             color: tasks.armedDelete !== "" && t && tasks.armedDelete === t.id ? Qt.rgba(1, 0.4, 0.4, 0.6) : sel ? Qt.rgba(1, 1, 1, 0.72) : tasks.cc.wash
@@ -1956,37 +1973,69 @@ Item {
         height: parent.height - 56
         clip: true
         spacing: 4
-        model: tasks.archivedTodos
-        currentIndex: tasks.archiveIndex
-        onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+        model: tasks.archiveRows
+        currentIndex: {
+          for (var i = 0; i < tasks.archiveRows.length; i++)
+            if (tasks.archiveRows[i].kind === "todo" && tasks.archiveRows[i].i === tasks.archiveIndex) return i
+          return -1
+        }
+        onCurrentIndexChanged: if (currentIndex >= 0) positionViewAtIndex(currentIndex, ListView.Contain)
         delegate: Item {
+          id: arow
           required property var modelData
           required property int index
           width: ListView.view.width
-          height: 28
-          Rectangle {
+          height: modelData.kind === "head" ? 20 : 28
+          // a group's heading
+          Row {
+            visible: arow.modelData.kind === "head"
+            spacing: 6
+            anchors.verticalCenter: parent.verticalCenter
+            Rectangle { width: 10; height: 10; radius: 5; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(arow.modelData.name); border.color: tasks.cc.ink; border.width: 1; visible: !!arow.modelData.name }
+            CcHeading { cc: tasks.cc; anchors.verticalCenter: parent.verticalCenter; text: arow.modelData.kind !== "head" ? "" : arow.modelData.name ? arow.modelData.name.toUpperCase() : "NO GROUP" }
+          }
+          Item {
+            visible: arow.modelData.kind === "todo"
             anchors.fill: parent
-            anchors.leftMargin: -6; anchors.rightMargin: -2
-            radius: 10
-            visible: tasks.progressPane === "archive" && parent.index === tasks.archiveIndex
-            color: Qt.rgba(1, 1, 1, 0.7)
-            border.color: tasks.cc.ink; border.width: 2
-          }
-          Rectangle { width: 6; height: 20; radius: 3; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(parent.modelData.group) }
-          Text {
-            x: 14; width: parent.width - restoreBtn.width - 24
-            anchors.verticalCenter: parent.verticalCenter
-            elide: Text.ElideRight
-            text: parent.modelData.title + (parent.modelData.group ? "  ·  " + parent.modelData.group : "") + "  ·  " + parent.modelData.counts.done + "/" + parent.modelData.subs.length
-            color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 12
-          }
-          CcButton {
-            id: restoreBtn
-            cc: tasks.cc
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            icon: ""; text: "restore"; fontSize: 10
-            onClicked: tasks.act(["unarchive", parent.modelData.id], function(r) { tasks.selectedId = r.id; tasks.tab = "todo"; tasks.progressPane = "list" })
+            readonly property var t: arow.modelData.kind === "todo" ? arow.modelData.t : ({ id: "", title: "", group: "", counts: { done: 0 }, subs: [] })
+            Rectangle {
+              anchors.fill: parent
+              anchors.leftMargin: -6; anchors.rightMargin: -2
+              radius: 10
+              visible: tasks.progressPane === "archive" && arow.modelData.i === tasks.archiveIndex
+              color: Qt.rgba(1, 1, 1, 0.7)
+              border.color: tasks.cc.ink; border.width: 2
+            }
+            Rectangle { x: 6; width: 6; height: 20; radius: 3; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(parent.t.group) }
+            Text {
+              x: 20; width: parent.width - restoreBtn.width - 30
+              anchors.verticalCenter: parent.verticalCenter
+              elide: Text.ElideRight
+              text: parent.t.title + "  ·  " + parent.t.counts.done + "/" + parent.t.subs.length
+              color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 12
+            }
+            MouseArea {
+              anchors.fill: parent
+              anchors.rightMargin: restoreBtn.width + 8
+              acceptedButtons: Qt.LeftButton | Qt.RightButton
+              onClicked: mouse => {
+                tasks.progressPane = "archive"
+                tasks.archiveIndex = arow.modelData.i
+                tasks.forceActiveFocus()
+                if (mouse.button === Qt.RightButton) {
+                  var p = mapToItem(tasks, mouse.x, mouse.y)
+                  tasks.openMenu(parent.t, p.x, p.y, true)
+                }
+              }
+            }
+            CcButton {
+              id: restoreBtn
+              cc: tasks.cc
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              icon: "\uf0e2"; text: "restore"; fontSize: 10
+              onClicked: tasks.restoreArchived(parent.t)
+            }
           }
         }
       }
@@ -1999,10 +2048,13 @@ Item {
     id: menu
     property var todo: null
     property int index: 0
-    readonly property var groupNames: Object.keys(tasks.groupColors).sort()
+    property bool archived: false          // opened on an archived todo
+    readonly property var groupNames: tasks.allGroupNames()
     // items: each group, "no group", then actions
     readonly property var items: groupNames.map(function(g) { return { kind: "group", name: g } })
-      .concat([{ kind: "group", name: "" }, { kind: "rename" }, { kind: "archive" }, { kind: "delete" }])
+      .concat([{ kind: "group", name: "" }])
+      .concat(archived ? [{ kind: "restore" }, { kind: "delete" }] : [{ kind: "rename" }, { kind: "archive" }, { kind: "delete" }])
+    readonly property var arch: archived ? ["--archived"] : []
     visible: false
     z: 50
     width: 230
@@ -2013,10 +2065,11 @@ Item {
     border.width: 2
     function run(it) {
       if (!todo) return
-      if (it.kind === "group") tasks.act(["group", todo.id, it.name])
+      if (it.kind === "group") tasks.act(["group", todo.id, it.name].concat(arch))
+      else if (it.kind === "restore") tasks.restoreArchived(todo)
       else if (it.kind === "rename") { renameInput.text = todo.title; tasks.selectedId = todo.id; visible = false; renameInput.forceActiveFocus(); return }
       else if (it.kind === "archive") tasks.act(["archive", todo.id])
-      else if (it.kind === "delete") tasks.act(["delete", todo.id])
+      else if (it.kind === "delete") tasks.act(["delete", todo.id].concat(arch))
       visible = false
       tasks.forceActiveFocus()
     }
@@ -2052,7 +2105,8 @@ Item {
               text: {
                 var it = parent.parent.modelData
                 if (it.kind === "group") return (it.name === "" ? "no group" : it.name) + (menu.todo && menu.todo.group === it.name ? "  " : "")
-                return it.kind === "rename" ? "  rename" : it.kind === "archive" ? "  archive" : "  delete"
+                return it.kind === "rename" ? "  rename" : it.kind === "archive" ? "  archive"
+                  : it.kind === "restore" ? "  restore" : "  delete"
               }
               color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 12
             }
@@ -2063,7 +2117,7 @@ Item {
       Field {
         width: menuCol.width
         placeholder: "new group…  (n)"
-        onAccepted: t => { if (menu.todo) tasks.act(["group", menu.todo.id, t]); menu.visible = false; tasks.forceActiveFocus() }
+        onAccepted: t => { if (menu.todo) tasks.act(["group", menu.todo.id, t].concat(menu.arch)); menu.visible = false; tasks.forceActiveFocus() }
         Component.onCompleted: groupInput = input
       }
     }
@@ -2340,7 +2394,7 @@ Item {
           ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s", "log newest first / by sub-todo"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
                         ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
           ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
-                        ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list"], ["↑ at the top  Esc", "back up"]]]
+                        ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list (you stay in the archive)"], ["g  /  right-click", "group, restore or delete an archived list"], ["↑ at the top  Esc", "back up"]]]
         ]
         Column {
           required property var modelData
