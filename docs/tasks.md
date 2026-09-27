@@ -29,14 +29,22 @@ Everything is keyboard driven — press **?** in the tab for the full list:
   **A** archive · **d d** delete · **f** show/hide finished ·
   **J/K** or **Shift+↑↓** move the todo / sub-todo
 
+**Shift+↑↓ moves whatever is highlighted**, on every tab: a todo (within its
+group), a sub-todo (in the Todo tab's list, or past its neighbour in a Task
+Log lane), a group heading (group order is shared by all three tabs), or —
+with the log by sub-todo — a whole log section (which moves that sub-todo).
+
 Groups fold the same way on all three tabs: click a heading, or press
 **←** / **z** on a todo to fold its group (the highlight moves to the
 heading), and **Enter / Space / →** on a heading to unfold it. On the
 Progress tab **→ / ←** first open and close a todo's sub-todos. Each tab
 remembers its own folds across restarts.
-- Task Log: todos are grouped like on the Todo tab · **↑↓** pick · **→/Enter** into the lanes, then **→/Space** move a
-  sub-todo on and **←** back · **w** write in the log (about the sub-todo
-  picked in the lanes) · **PgUp/PgDn** scroll
+- Task Log: todos are grouped and ordered like on the Todo tab · **↑↓** pick ·
+  **→/Enter** into the lanes, then **→/Space** move a sub-todo on and **←**
+  back · **↓** past the last lane item goes on into the log, where **↑↓** pick
+  an entry · **s** shows the log newest first or in sections by sub-todo ·
+  **w** write in the log (about the sub-todo picked in the lanes) ·
+  **PgUp/PgDn** scroll
 - Progress: **↑↓** pick · **Enter/Space** expand · **A** archive · **↓** past
   the end drops into the archive, where **Enter/r** restores and **↑**/**Esc**
   climb back · **/** search the archive (Enter drops into the results)
@@ -107,6 +115,7 @@ slime-tasks log <id> "progress, output, findings…" --by claude [--sub <n>]
 slime-tasks finish <id> <n> "done: 12 tests pass" --by claude  # -> done, logged
 slime-tasks sub-set <id> <n> todo|doing|done [--expect TEXT]
 slime-tasks order <id> <id> …                   # put todos in this order
+slime-tasks group-order <group> <group> …       # put groups in this order
 slime-tasks archive <id>   /   unarchive <id>
 slime-tasks --help                              # everything else
 ```

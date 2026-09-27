@@ -43,6 +43,7 @@ Commands (all print JSON; errors go to stderr with exit status 1):
   finish ID N [NOTE] [--by WHO]     sub-todo -> done, and log it
   group ID GROUP                    "" ungroups
   group-color GROUP #RRGGBB
+  group-order GROUP [GROUP ...]     put groups in this order
   log ID MESSAGE [--by WHO] [--sub N]  append a task-log entry (about sub-todo N)
   log-show ID                       -> {"entries": [{time, by, text}]}
   archive ID / unarchive ID
@@ -196,8 +197,17 @@ def groups(root):
         return {}
 
 
-def save_groups(root, g):
-    write(os.path.join(root, ".slime", "groups.json"), json.dumps({"groups": g}, indent=2) + "\n")
+def group_order(root):
+    try:
+        with open(os.path.join(root, ".slime", "groups.json")) as f:
+            return json.load(f).get("order", [])
+    except (OSError, ValueError):
+        return []
+
+
+def save_groups(root, g, order=None):
+    write(os.path.join(root, ".slime", "groups.json"),
+          json.dumps({"groups": g, "order": group_order(root) if order is None else order}, indent=2) + "\n")
 
 
 def log_entries(root, tid, archived=False):
@@ -301,7 +311,7 @@ def run(argv):
         todos = [summary(root, i, archived) for i in all_ids(root, archived)]
         # hand-set order first (0 = never ordered), then oldest first
         todos.sort(key=lambda t: (t["order"] or 10**9, t["created"] or ""))
-        return {"folder": root, "groups": groups(root), "todos": todos}
+        return {"folder": root, "groups": groups(root), "groupOrder": group_order(root), "todos": todos}
     if cmd == "log-show":
         return {"title": load(root, rest[0], archived)["title"], "entries": log_entries(root, rest[0], archived)}
     if cmd in ("search", "find"):
@@ -348,6 +358,10 @@ def run(argv):
                     t["meta"]["order"] = str(n)
                     save(t)
             return {"order": ids + rest_ids}
+        if cmd == "group-order":
+            names = [n for n in rest if n]
+            save_groups(root, groups(root), names + [n for n in group_order(root) if n not in names])
+            return {"groupOrder": group_order(root)}
         if cmd == "group-color":
             g = groups(root)
             g.setdefault(rest[0], {})["color"] = rest[1]

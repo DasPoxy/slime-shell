@@ -27,6 +27,7 @@ Item {
   // ---- data -------------------------------------------------------------------
   property string folder: ""
   property var groupColors: ({})
+  property var groupOrder: []                 // hand-set group order (slime_tasks group-order)
   property var todos: []
   property var archivedTodos: []
   property var logEntries: []
@@ -46,6 +47,58 @@ Item {
   property bool showNotes: false
   property string logPane: "list"             // log tab: list | lanes
   property string progressPane: "list"        // progress tab: list | archive
+  property int logEntry: 0                    // which log entry, in the entries pane
+  property string progressFollow: ""          // re-find this row after a move ("g:…" / "t:…")
+  // logs by time (newest first) or in sections per sub-todo; remembered
+  readonly property bool logBySub: !!(bar && bar.ccSections && bar.ccSections["tasks-log-by-sub"])
+  function toggleLogSort() {
+    if (!bar) return
+    var m = Object.assign({}, bar.ccSections)
+    if (logBySub) delete m["tasks-log-by-sub"]
+    else m["tasks-log-by-sub"] = true
+    bar.ccSections = m
+    logEntry = 0
+  }
+  // what the log shows: entries, and (by sub-todo) a heading per section
+  readonly property var logDisplay: {
+    if (!logBySub || !selected) return logEntries.map(function(e) { return { kind: "entry", e: e } })
+    var rows = [], used = {}
+    selected.subs.forEach(function(sb, i) {
+      var mine = logEntries.filter(function(e) { return e.sub === sb.text })
+      if (!mine.length) return
+      rows.push({ kind: "head", i: i, sub: sb })
+      mine.forEach(function(e) { used[logEntries.indexOf(e)] = true; rows.push({ kind: "entry", e: e, section: i }) })
+    })
+    var rest = logEntries.filter(function(e, n) { return !used[n] })
+    if (rest.length) {
+      rows.push({ kind: "head", i: -1, sub: null })
+      rest.forEach(function(e) { rows.push({ kind: "entry", e: e, section: -1 }) })
+    }
+    return rows
+  }
+  readonly property var logEntryRows: {
+    var out = []
+    for (var i = 0; i < logDisplay.length; i++) if (logDisplay[i].kind === "entry") out.push(i)
+    return out
+  }
+  // by sub-todo: move a section (i.e. its sub-todo) past the next section
+  function moveSection(dir) {
+    var row = logDisplay[logEntryRows[logEntry]]
+    if (!row || row.section === undefined || row.section < 0 || !selected) return
+    var secs = []
+    logDisplay.forEach(function(r) { if (r.kind === "head" && r.i >= 0) secs.push(r.i) })
+    var at = secs.indexOf(row.section), nb = secs[at + dir]
+    if (nb === undefined) return
+    act(["sub-move", selected.id, String(row.section), String(nb)])
+  }
+  onProgressRowsChanged: {
+    if (progressFollow === "") return
+    var nav = progressRows.filter(function(r) { return r.kind !== "sub" })
+    for (var i = 0; i < nav.length; i++) {
+      var key = nav[i].kind === "group" ? "g:" + nav[i].name : "t:" + nav[i].t.id
+      if (key === progressFollow) { progressIndex = i; progressFollow = ""; return }
+    }
+  }
   property int archiveIndex: 0
   property int logSub: 0                      // which sub-todo, in the lanes
 
@@ -77,7 +130,7 @@ Item {
         byGroup[t.group].push(t)
       } else loose.push(t)
     }
-    names.sort()
+    sortGroups(names)
     var rows = []
     names.forEach(function(n) {
       var shut = groupCollapsed(n)
@@ -121,17 +174,16 @@ Item {
     if (shut && selected && (selected.group || "") === name) cursor = "g:" + name
   }
 
-  // Task Log tab: grouped like the Todo tab (groups A-Z, loose ones last),
-  // most recently active first within each
+  // Task Log tab: grouped and ordered like the Todo tab (loose ones last)
   readonly property var logRows: {
     var byGroup = {}, names = [], loose = []
-    logOrder.forEach(function(t) {
+    todos.forEach(function(t) {
       if (t.group) {
         if (!byGroup[t.group]) { byGroup[t.group] = []; names.push(t.group) }
         byGroup[t.group].push(t)
       } else loose.push(t)
     })
-    names.sort()
+    sortGroups(names)
     var rows = []
     names.forEach(function(n) {
       var shut = groupCollapsed(n, "log")
@@ -173,7 +225,7 @@ Item {
       if (!(g in byGroup)) { byGroup[g] = []; names.push(g) }
       byGroup[g].push(todos[i])
     }
-    names.sort(function(a, b) { return (a === "") - (b === "") || a.localeCompare(b) })
+    names.sort(function(a, b) { return (a === "") - (b === "") || tasks.groupRank(a) - tasks.groupRank(b) || a.localeCompare(b) })
     var rows = []
     names.forEach(function(n) {
       var list = byGroup[n], units = 0, done = 0
@@ -231,6 +283,7 @@ Item {
           var r = JSON.parse(text)
           tasks.folder = r.folder
           tasks.groupColors = r.groups
+          tasks.groupOrder = r.groupOrder || []
           tasks.todos = r.todos
           if (tasks.selectedId === "" || !tasks.selected) tasks.selectedId = tasks.todoOrder.length ? tasks.todoOrder[0] : ""
         } catch (e) { tasks.error = "couldn't read the notes folder" }
@@ -259,7 +312,7 @@ Item {
     if (tab === "progress" && !archiveLister.running) archiveLister.running = true
   }
   onTabChanged: refresh()
-  onSelectedIdChanged: { logEntries = []; subIndex = 0; logSub = 0; if (tab === "log") refresh() }
+  onSelectedIdChanged: { logEntries = []; subIndex = 0; logSub = 0; logEntry = 0; if (tab === "log") refresh() }
   onArchiveQueryChanged: { refresh(); archiveIndex = 0 }
   onArchivedTodosChanged: if (archiveIndex >= archivedTodos.length) archiveIndex = Math.max(0, archivedTodos.length - 1)
   // agents edit the files while you watch: keep polling while the tab is up
@@ -286,17 +339,44 @@ Item {
     if (moving && group !== undefined && (moving.group || "") !== group) act(["group", id, group])
     act(["order"].concat(ids))
   }
-  // keyboard: swap with the neighbour in the same group (shown order)
-  function nudgeTodo(dir) {
-    var t = selected
-    if (!t) return
-    var same = todoOrder.filter(function(id) {
-      for (var i = 0; i < todos.length; i++) if (todos[i].id === id) return (todos[i].group || "") === (t.group || "")
-      return false
-    })
+  // swap a todo (default: the selected one) with its neighbour in its group
+  function nudgeTodo(dir, id) {
+    var t = null
+    for (var k = 0; k < todos.length; k++) if (todos[k].id === (id || selectedId)) t = todos[k]
+    if (!t) return false
+    var same = todos.filter(function(x) { return (x.group || "") === (t.group || "") }).map(function(x) { return x.id })
     var i = same.indexOf(t.id), j = i + dir
-    if (i < 0 || j < 0 || j >= same.length) return
+    if (i < 0 || j < 0 || j >= same.length) return false
     placeTodo(t.id, same[j], dir > 0, t.group || "")
+    return true
+  }
+  // ---- group order (shared by every tab) ----
+  function groupRank(n) { var i = groupOrder.indexOf(n); return i < 0 ? 100000 : i }
+  function sortGroups(names) { names.sort(function(a, b) { return groupRank(a) - groupRank(b) || a.localeCompare(b) }) }
+  function allGroupNames() {
+    var seen = {}, out = []
+    Object.keys(groupColors).concat(todos.map(function(t) { return t.group || "" })).forEach(function(n) {
+      if (n && !seen[n]) { seen[n] = true; out.push(n) }
+    })
+    sortGroups(out)
+    return out
+  }
+  function moveGroup(name, dir) {
+    if (!name) return false                  // "no group" always sits last
+    var order = allGroupNames(), i = order.indexOf(name), j = i + dir
+    if (i < 0 || j < 0 || j >= order.length) return false
+    order.splice(i, 1)
+    order.splice(j, 0, name)
+    act(["group-order"].concat(order))
+    return true
+  }
+  // move a sub-todo past its neighbour in the same lane
+  function moveInLane(t, i, dir) {
+    var st = t.subs[i].state, j = i + dir
+    while (j >= 0 && j < t.subs.length && t.subs[j].state !== st) j += dir
+    if (j < 0 || j >= t.subs.length) return
+    act(["sub-move", t.id, String(i), String(j)])
+    logSub = j
   }
   // drag state (todos: list rows; subs: sub rows)
   property string dragTodo: ""
@@ -342,7 +422,7 @@ Item {
     if (txt === "1" || txt === "2" || txt === "3") { tab = ["todo", "log", "progress"][Number(txt) - 1]; event.accepted = true; return }
     var up = k === Qt.Key_Up || txt === "k", down = k === Qt.Key_Down || txt === "j"
     // Esc with nothing to back out of closes the command centre
-    if (k === Qt.Key_Escape && !(tab === "todo" && pane === "subs") && !(tab === "log" && logPane === "lanes")
+    if (k === Qt.Key_Escape && !(tab === "todo" && pane === "subs") && !(tab === "log" && logPane !== "list")
         && !(tab === "progress" && progressPane === "archive") && !showHelp) {
       if (closeRequest) closeRequest()
       else if (bar) bar.commandCenterOpen = false
@@ -354,7 +434,8 @@ Item {
       if (pane === "list" && cursor !== "") {
         // resting on a group heading
         var gname = cursor.slice(2)
-        if (up || down) moveCursor(up ? -1 : 1)
+        if ((up || down) && (event.modifiers & Qt.ShiftModifier)) moveGroup(gname, up ? -1 : 1)
+        else if (up || down) moveCursor(up ? -1 : 1)
         else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z") toggleGroup(gname)
         else if (k === Qt.Key_Right || txt === "l") { if (groupCollapsed(gname)) setGroupCollapsed(gname, false) }
         else if (k === Qt.Key_Left || txt === "h") { if (!groupCollapsed(gname)) setGroupCollapsed(gname, true) }
@@ -399,14 +480,26 @@ Item {
         else return
       }
     } else if (tab === "log") {
-      var lt = selected, ln = lt ? lt.subs.length : 0
+      var lt = selected, ln = lt ? lt.subs.length : 0, ne = logEntryRows.length
+      var shiftMove = (up || down) && (event.modifiers & Qt.ShiftModifier)
       if (txt === "w" && lt) logInput.forceActiveFocus()
+      else if (txt === "s") toggleLogSort()
       else if (k === Qt.Key_PageDown) logList.flick(0, -1600)
       else if (k === Qt.Key_PageUp) logList.flick(0, 1600)
+      else if (logPane === "entries") {
+        // the log itself
+        if (shiftMove) { if (logBySub) moveSection(up ? -1 : 1) }
+        else if (up && logEntry <= 0) logPane = ln ? "lanes" : "list"
+        else if (up) logEntry--
+        else if (down) logEntry = Math.min(ne - 1, logEntry + 1)
+        else if (k === Qt.Key_Left || k === Qt.Key_Escape || txt === "h") logPane = "list"
+        else return
+      }
       else if (logPane === "list" && logCursor !== "") {
         // resting on a group heading
         var lg = logCursor.slice(2)
-        if (up || down) moveLogCursor(up ? -1 : 1)
+        if (shiftMove) moveGroup(lg, up ? -1 : 1)
+        else if (up || down) moveLogCursor(up ? -1 : 1)
         else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z") toggleLogGroup(lg)
         else if (k === Qt.Key_Right || txt === "l") setGroupCollapsed(lg, false, "log")
         else if (k === Qt.Key_Left || txt === "h") setGroupCollapsed(lg, true, "log")
@@ -414,12 +507,16 @@ Item {
       }
       else if (logPane === "list") {
         var logHead = lt && logNav.indexOf("g:" + (lt.group || "")) >= 0
-        if (up || down) moveLogCursor(up ? -1 : 1)
+        if (shiftMove) nudgeTodo(up ? -1 : 1)
+        else if (up || down) moveLogCursor(up ? -1 : 1)
         else if ((k === Qt.Key_Right || k === Qt.Key_Return || k === Qt.Key_Enter || txt === "l") && ln) { logPane = "lanes"; logSub = Math.min(logSub, ln - 1) }
+        else if ((k === Qt.Key_Right || k === Qt.Key_Return || k === Qt.Key_Enter || txt === "l") && ne) { logPane = "entries"; logEntry = 0 }
         else if ((k === Qt.Key_Left || txt === "h" || txt === "z") && logHead) toggleLogGroup(lt.group || "")
         else return
       } else {
-        if (up) logSub = Math.max(0, logSub - 1)
+        if (shiftMove && ln) moveInLane(lt, logSub, up ? -1 : 1)
+        else if (up) logSub = Math.max(0, logSub - 1)
+        else if (down && logSub >= ln - 1 && ne) { logPane = "entries"; logEntry = 0 }   // on into the log
         else if (down) logSub = Math.min(ln - 1, logSub + 1)
         else if ((k === Qt.Key_Right || txt === "l" || k === Qt.Key_Space) && ln) shift(lt, logSub, 1)
         else if ((k === Qt.Key_Left || txt === "h") && ln) {
@@ -436,7 +533,11 @@ Item {
       if (txt === "/") archiveInput.forceActiveFocus()
       else if (progressPane === "list") {
         // down past the last row drops into the archive
-        if (up) progressIndex = Math.max(0, progressIndex - 1)
+        if ((up || down) && (event.modifiers & Qt.ShiftModifier) && r) {
+          if (r.kind === "group" && moveGroup(r.name, up ? -1 : 1)) progressFollow = "g:" + r.name
+          else if (r.kind === "todo" && nudgeTodo(up ? -1 : 1, r.t.id)) progressFollow = "t:" + r.t.id
+        }
+        else if (up) progressIndex = Math.max(0, progressIndex - 1)
         else if (down && progressIndex >= rows.length - 1 && na) { progressPane = "archive"; archiveIndex = Math.min(archiveIndex, na - 1) }
         else if (down) progressIndex = Math.min(rows.length - 1, progressIndex + 1)
         else if ((k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space) && r) toggleExpand(r)
@@ -1475,7 +1576,21 @@ Item {
         }
         Component.onCompleted: logInput = logField.input
       }
-      CcHeading { y: lanes.height + 50; cc: tasks.cc; text: "  LOG" + (tasks.logEntries.length ? " — " + tasks.logEntries.length + " ENTRIES, NEWEST FIRST" : "") }
+      CcHeading {
+        y: lanes.height + 50
+        cc: tasks.cc
+        text: "  LOG" + (tasks.logEntries.length ? " — " + tasks.logEntries.length + " ENTRIES, " + (tasks.logBySub ? "BY SUB-TODO" : "NEWEST FIRST") : "")
+        font.underline: tasks.logPane === "entries"
+      }
+      CcButton {
+        anchors.right: parent.right
+        y: lanes.height + 44
+        cc: tasks.cc
+        icon: tasks.logBySub ? "\uf0ca" : "\uf017"
+        text: tasks.logBySub ? "by sub-todo  (s)" : "newest first  (s)"
+        fontSize: 10
+        onClicked: { tasks.toggleLogSort(); tasks.forceActiveFocus() }
+      }
       ListView {
         id: logList
         y: lanes.height + 70
@@ -1484,13 +1599,43 @@ Item {
         clip: true
         spacing: 8
         boundsBehavior: Flickable.StopAtBounds
-        model: tasks.logEntries
-        delegate: Rectangle {
+        model: tasks.logDisplay
+        currentIndex: tasks.logPane === "entries" && tasks.logEntryRows.length ? tasks.logEntryRows[Math.min(tasks.logEntry, tasks.logEntryRows.length - 1)] : -1
+        onCurrentIndexChanged: if (currentIndex >= 0) positionViewAtIndex(currentIndex, ListView.Contain)
+        delegate: Item {
+          id: logItem
           required property var modelData
+          required property int index
           width: logList.width
+          height: modelData.kind === "head" ? 26 : entryBox.height
+          // a sub-todo's section heading (by sub-todo)
+          Row {
+            visible: logItem.modelData.kind === "head"
+            spacing: 8
+            anchors.verticalCenter: parent.verticalCenter
+            StateBox { anchors.verticalCenter: parent.verticalCenter; visible: !!logItem.modelData.sub; state3: logItem.modelData.sub ? logItem.modelData.sub.state : "todo" }
+            Text {
+              anchors.verticalCenter: parent.verticalCenter
+              width: logList.width - 30
+              elide: Text.ElideRight
+              textFormat: Text.PlainText
+              text: logItem.modelData.kind !== "head" ? "" : logItem.modelData.sub ? logItem.modelData.sub.text : "About the whole todo"
+              color: tasks.cc.ink
+              font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: 13
+            }
+          }
+          Rectangle {
+          id: entryBox
+          visible: logItem.modelData.kind === "entry"
+          readonly property var modelData: logItem.modelData.kind === "entry" ? logItem.modelData.e : ({ time: "", by: "", sub: "", text: "" })
+          readonly property bool picked: tasks.logPane === "entries" && logList.currentIndex === logItem.index
+          x: tasks.logBySub ? 14 : 0
+          width: logList.width - x
           height: entryText.implicitHeight + 54
           radius: 12
-          color: Qt.rgba(1, 1, 1, 0.5)
+          color: Qt.rgba(1, 1, 1, picked ? 0.75 : 0.5)
+          border.color: tasks.cc.ink
+          border.width: picked ? 2 : 0
           Text {
             x: 10; y: 6
             text: parent.modelData.time + (parent.modelData.by ? "  ·  " + parent.modelData.by : "")
@@ -1526,6 +1671,8 @@ Item {
             color: tasks.cc.ink
             font.family: tasks.cc.font
             font.pixelSize: 12
+          }
+          MouseArea { anchors.fill: parent; onClicked: { tasks.logPane = "entries"; tasks.logEntry = tasks.logEntryRows.indexOf(logItem.index); tasks.forceActiveFocus() } }
           }
         }
         Text {
@@ -1827,7 +1974,8 @@ Item {
                            ["←  z  (or click a heading)", "fold its group"], ["Enter  Space  →  on a heading", "fold / unfold"]]],
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space  Enter", "to do → in progress → done"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
-          ["TASK LOG", [["↑ ↓", "pick a todo"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
+          ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
+          ["TASK LOG", [["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s", "log newest first / by sub-todo"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
                         ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
           ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
                         ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list"], ["↑ at the top  Esc", "back up"]]]
