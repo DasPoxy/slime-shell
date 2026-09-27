@@ -2523,6 +2523,10 @@ Item {
       SlimeScene {
         anchors.fill: parent
         win: dockWin
+        // tucked away: the drips draw back in as it slides off, and once it's
+        // gone nothing is drawn at all
+        visible: dockContent.reveal > 0.01
+        dripAmount: root.dripLevel * dockContent.reveal
         orient: ({ top: 0, bottom: 1, left: 2, right: 3 })[dockWindow.edge]
         barShape: 5
         barHeight: dockWin.thick
