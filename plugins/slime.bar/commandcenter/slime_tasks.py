@@ -8,6 +8,7 @@ so any notes app (Envy, Obsidian, a text editor) can read and edit it too:
     Todos/<id>.md      one per top-level todo: front matter + "- [ ]" sub-todos
     Logs/<id>.md       that todo's task log: "## <time> · <who>" entries
     Archive/           archived todos (and Archive/Logs/ their logs)
+    Attachments/<id>/  pictures hung under that todo's sub-todos
     .slime/groups.json group colours
     .slime/trash/      deleted todos, just in case
 
@@ -37,6 +38,8 @@ Commands (all print JSON; errors go to stderr with exit status 1):
   sub-edit ID N TEXT
   sub-set ID N todo|doing|done [--expect TEXT]
   sub-delete ID N
+  sub-image-add ID N FILE           copy a picture to Attachments/ID/ and attach it to sub-todo N
+  sub-image-remove ID N K           take picture K off sub-todo N (the file goes to the trash)
   sub-move ID N TO                  reorder sub-todos
   order ID [ID ...]                 put todos in this order (others keep theirs, after)
   start ID N [NOTE] [--by WHO]      sub-todo -> doing, and log it
@@ -72,6 +75,7 @@ import fcntl
 import json
 import os
 import re
+import urllib.parse
 import shutil
 import sys
 import tempfile
@@ -79,6 +83,9 @@ import tempfile
 CONF = os.path.expanduser("~/.config/omarchy/slime-shell/slime-tasks.json")
 DEFAULT_FOLDER = "~/Documents/Slime-Notes"
 SUB = re.compile(r"^(\s*)[-*+]\s+\[([ xX/])\]\s+(.*)$")
+# a picture under a sub-todo: an indented markdown image line after it
+IMG = re.compile(r"^(\s+)!\[([^\]]*)\]\(([^)]+)\)\s*$")
+IMAGE_EXT = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".svg")
 STATE_MARK = {"todo": " ", "doing": "/", "done": "x"}
 MARK_STATE = {" ": "todo", "/": "doing", "x": "done", "X": "done"}
 PALETTE = ["#e0406a", "#40a0e0", "#e0b040", "#60c060", "#a060e0", "#e07040", "#40c0b0", "#d060a0"]
@@ -163,7 +170,11 @@ def parse(path):
             continue
         m = SUB.match(line)
         if m:
-            subs.append({"line": i, "state": MARK_STATE[m.group(2)], "text": m.group(3), "indent": len(m.group(1))})
+            subs.append({"line": i, "state": MARK_STATE[m.group(2)], "text": m.group(3), "indent": len(m.group(1)), "images": []})
+            continue
+        m = IMG.match(line)
+        if m and subs and len(m.group(1)) > subs[-1]["indent"]:
+            subs[-1]["images"].append({"name": m.group(2), "path": m.group(3)})
     return {"meta": meta, "title": title, "subs": subs, "lines": lines}
 
 
@@ -172,6 +183,8 @@ def render(todo):
     out = ["---"] + [f"{k}: {v}" for k, v in meta.items() if v != ""] + ["---", f"# {todo['title']}", ""]
     for s in todo["subs"]:
         out.append(f"{' ' * s.get('indent', 0)}- [{STATE_MARK[s['state']]}] {s['text']}")
+        for im in s.get("images", []):
+            out.append(f"{' ' * (s.get('indent', 0) + 2)}![{im['name']}]({im['path']})")
     return "\n".join(out) + "\n"
 
 
@@ -301,7 +314,13 @@ def append_log(root, tid, message, by="", archived=False, sub=""):
 
 def summary(root, tid, archived=False):
     t = load(root, tid, archived)
-    subs = [{"i": i, "state": s["state"], "text": s["text"]} for i, s in enumerate(t["subs"])]
+    base = os.path.dirname(t["path"])
+    subs = [{"i": i, "state": s["state"], "text": s["text"],
+             # pictures: as written, and as an absolute path to show them with
+             "images": [{"name": im["name"], "path": im["path"],
+                         "file": os.path.normpath(os.path.join(base, os.path.expanduser(im["path"])))}
+                        for im in s.get("images", [])]}
+            for i, s in enumerate(t["subs"])]
     lp = log_path(root, tid, archived)
     return {
         "id": tid,
@@ -547,10 +566,44 @@ def run(argv):
             t["title"] = " ".join(rest[1:]).strip() or t["title"]
         elif cmd == "done":
             t["meta"]["done"] = "true" if rest[1] == "true" else "false"
+        elif cmd == "sub-image-add":
+            # copy a picture into Attachments/<id>/ and hang it under sub-todo N
+            n, src = int(rest[1]), os.path.expanduser(" ".join(rest[2:]).strip())
+            if src.startswith("file://"):
+                src = urllib.parse.unquote(src[7:])
+            if not os.path.isfile(src):
+                raise Fail(f"no file '{src}'")
+            if not src.lower().endswith(IMAGE_EXT):
+                raise Fail("that isn't a picture")
+            if not 0 <= n < len(t["subs"]):
+                raise Fail(f"no sub-todo {n}")
+            adir = os.path.join(root, "Attachments", tid)
+            os.makedirs(adir, exist_ok=True)
+            stem, ext = os.path.splitext(os.path.basename(src))
+            stem = re.sub(r"[^A-Za-z0-9._-]+", "-", stem).strip("-") or "picture"
+            name, k = stem + ext.lower(), 2
+            while os.path.exists(os.path.join(adir, name)):
+                name, k = f"{stem}-{k}{ext.lower()}", k + 1
+            shutil.copy2(src, os.path.join(adir, name))
+            t["subs"][n].setdefault("images", []).append({"name": stem, "path": f"../Attachments/{tid}/{name}"})
+        elif cmd == "sub-image-remove":
+            # take picture K off sub-todo N (its file goes to the trash)
+            n, k = int(rest[1]), int(rest[2])
+            ims = t["subs"][n].get("images", []) if 0 <= n < len(t["subs"]) else []
+            if not 0 <= k < len(ims):
+                raise Fail("no such picture")
+            im = ims.pop(k)
+            f = os.path.normpath(os.path.join(os.path.dirname(t["path"]), im["path"]))
+            if os.path.isfile(f) and os.path.commonpath([f, os.path.join(root, "Attachments")]) == os.path.join(root, "Attachments"):
+                trash = os.path.join(root, ".slime", "trash", dt.datetime.now().strftime("%Y%m%d-%H%M%S-") + tid + "-pictures")
+                os.makedirs(trash, exist_ok=True)
+                shutil.move(f, trash)
         elif cmd == "delete":
             trash = os.path.join(root, ".slime", "trash", dt.datetime.now().strftime("%Y%m%d-%H%M%S-") + tid)
             os.makedirs(trash, exist_ok=True)
             shutil.move(t["path"], trash)
+            if os.path.isdir(os.path.join(root, "Attachments", tid)):
+                shutil.move(os.path.join(root, "Attachments", tid), os.path.join(trash, "Attachments"))
             if os.path.exists(log_path(root, tid, archived)):
                 shutil.move(log_path(root, tid, archived), os.path.join(trash, "log.md"))
             return {"deleted": tid}

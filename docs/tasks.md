@@ -27,6 +27,9 @@ Everything is keyboard driven — press **?** in the tab for the full list:
 - Todo: **↑↓** pick · **→/Enter** open sub-todos · **n** new · **a** add sub-todo ·
   **Space** finish / cycle a sub-todo · **Enter** on a sub-todo opens it over
   the panel to read, copy (**c**) or edit (**e**) · **e** rename/edit · **g** group menu ·
+  **p** pins a picture to the highlighted sub-todo (a drip panel of your files
+  opens: arrows pick, **Enter** opens a folder or adds the picture, **⌫** goes
+  up) · **i** folds its pictures ·
   **A** archive · **d d** delete · **f** show/hide finished ·
   **J/K** or **Shift+↑↓** move the todo / sub-todo
 
@@ -74,6 +77,15 @@ right-click) opens a group menu to archive or delete it. In any group menu,
 **d d** on a group deletes that group — its todos just become ungrouped. On
 any group heading, on every tab, **e** renames the group and **d d** deletes it.
 
+**Pictures on sub-todos.** A sub-todo can carry pictures (examples,
+sketches, references). They show as thumbnails under it in the list (the
+chip folds them, or **i**) and pinned to its sheet when you open it with
+**Enter**; there **p** or *add picture* adds one, and you can also drop image
+files onto the sheet. **← →** pick a picture, **Enter** shows it big,
+**d d** removes it. Pictures are copied into `Attachments/<todo>/` and
+written under the sub-todo as ordinary markdown images, so other markdown
+apps show them too.
+
 **Super groups** hold other groups. From a group's menu (**g** or right-click)
 pick *into super group …*, *out of super group …*, or type a name in *new
 super group…* (**n**). A super group's heading sits above its groups on all
@@ -97,6 +109,7 @@ Slime-Notes/
   Todos/<id>.md        one per todo
   Logs/<id>.md         its task log
   Archive/             archived todos (Archive/Logs/ their logs)
+  Attachments/<id>/    pictures pinned to that todo's sub-todos
   .slime/groups.json   group colours, order and super groups
   .slime/trash/        deleted todos, just in case
 ```
@@ -161,6 +174,8 @@ slime-tasks super-rename <old> <new>            # rename a super group
 slime-tasks super-delete <super>                # remove a super group (its groups are kept)
 slime-tasks super-order <super> <super> …       # put super groups in this order
 slime-tasks log-all                             # every todo's log, tagged with its group and super group
+slime-tasks sub-image-add <id> <n> <file>       # pin a picture to sub-todo n
+slime-tasks sub-image-remove <id> <n> <k>       # take picture k off it (the file goes to the trash)
 slime-tasks archive <id>   /   unarchive <id>
 slime-tasks --help                              # everything else
 ```

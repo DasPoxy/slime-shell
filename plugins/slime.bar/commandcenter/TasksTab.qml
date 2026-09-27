@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Shapes
 import Quickshell
 import Quickshell.Io
+import Qt.labs.folderlistmodel
 import "../ui"
 
 // Slime-Tasks: the command centre's todo suite, in a tavern the slime has
@@ -61,12 +62,45 @@ Item {
     viewEditing = false
     if (edit) startEdit()
   }
+  // ---- pictures on sub-todos ----
+  // the pictures of the sub-todo open in the viewer (live, so adds show up)
+  readonly property var viewPics: viewEntry && viewEntry.isSub && selected && selected.subs[viewEntry.n]
+    ? selected.subs[viewEntry.n].images || [] : []
+  property int picIndex: -1                   // the picked picture in the viewer
+  property string zoomPic: ""                 // a picture shown over everything
+  property int armedPic: -1                   // d once: waiting for the second d
+  onViewPicsChanged: if (picIndex >= viewPics.length) picIndex = viewPics.length - 1
+  // pictures fold open under their sub-todo in the list (remembered; open by default)
+  function picsKey(t, sb) { return "tasks-pics-shut:" + (t ? t.id : "") + ":" + (sb ? sb.text : "") }
+  function picsOpen(t, sb) { return !(bar && bar.ccSections && bar.ccSections[picsKey(t, sb)]) }
+  function togglePics(t, sb) {
+    if (!bar || !sb || !(sb.images || []).length) return
+    var m = Object.assign({}, bar.ccSections), key = picsKey(t, sb)
+    if (m[key]) delete m[key]; else m[key] = true
+    bar.ccSections = m
+  }
+  function addPicture(t, n, file) {
+    if (t && file) act(["sub-image-add", t.id, String(n), String(file)])
+  }
+  function removePicture(n, k) {
+    if (selected) act(["sub-image-remove", selected.id, String(n), String(k)])
+    armedPic = -1
+  }
+  Timer { id: disarmPic; interval: 2500; onTriggered: tasks.armedPic = -1 }
+  // the file picker (a drip panel): which sub-todo it adds to
+  property var pickFor: null                  // { id, n }
+  function openPicker(t, n) {
+    if (!t || !t.subs[n]) return
+    pickFor = { id: t.id, n: n }
+    picker.open()
+  }
+
   // a sub-todo, opened over the whole panel the same way (Enter on it)
   function openSub(t, i, edit) {
     if (!t || !t.subs[i]) return
     var st = t.subs[i].state
-    openEntry({ isSub: true, n: i, text: t.subs[i].text, by: "", sub: "",
-                time: "sub-todo " + (i + 1) + "  ·  " + (st === "done" ? "done" : st === "doing" ? "in progress" : "to do") }, edit)
+    openEntry({ isSub: true, n: i, text: t.subs[i].text, by: "", sub: "", time: "",
+                where: "sub-todo " + (i + 1) + "  ·  " + (st === "done" ? "done" : st === "doing" ? "in progress" : "to do") }, edit)
   }
   function copyEntry(e) {
     if (!e) return
@@ -92,7 +126,7 @@ Item {
     viewEditing = false
     forceActiveFocus()
   }
-  function closeEntry() { viewEntry = null; viewEditing = false; forceActiveFocus() }
+  function closeEntry() { viewEntry = null; viewEditing = false; picIndex = -1; zoomPic = ""; armedPic = -1; forceActiveFocus() }
   // L: straight to the selected todo's log (first entry), from either tab
   property bool jumpToLog: false
   function firstEntryRow() {
@@ -917,7 +951,19 @@ Item {
         || ((event.modifiers & Qt.AltModifier) && k >= Qt.Key_1 && k <= Qt.Key_9)) return
     if (viewEntry) {
       // the entry viewer takes the keys while it's open
-      if (k === Qt.Key_Escape || k === Qt.Key_Backspace || txt === "q") closeEntry()
+      var pics = viewPics
+      if (zoomPic !== "") { if (k === Qt.Key_Escape || k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "q") zoomPic = "" }
+      else if (k === Qt.Key_Escape && picIndex >= 0) { picIndex = -1; armedPic = -1 }
+      else if (k === Qt.Key_Escape || k === Qt.Key_Backspace || txt === "q") closeEntry()
+      // pictures (a sub-todo's): p adds, ← → pick, Enter shows it big, d d removes
+      else if (txt === "p" && viewEntry.isSub) openPicker(selected, viewEntry.n)
+      else if ((k === Qt.Key_Right || txt === "l") && pics.length) { picIndex = Math.min(pics.length - 1, picIndex + 1); armedPic = -1 }
+      else if ((k === Qt.Key_Left || txt === "h") && pics.length) { picIndex = Math.max(0, picIndex - 1); armedPic = -1 }
+      else if ((k === Qt.Key_Return || k === Qt.Key_Enter) && picIndex >= 0 && pics[picIndex]) zoomPic = pics[picIndex].file
+      else if ((txt === "d" || k === Qt.Key_Delete) && picIndex >= 0 && pics[picIndex]) {
+        if (armedPic !== picIndex) { armedPic = picIndex; disarmPic.restart() }
+        else removePicture(viewEntry.n, picIndex)
+      }
       else if (txt === "c") copyEntry(viewEntry)
       else if (txt === "e") startEdit()
       else if (k === Qt.Key_Down || txt === "j") viewFlick.flick(0, -700)
@@ -999,6 +1045,8 @@ Item {
         else if ((k === Qt.Key_Return || k === Qt.Key_Enter) && t && n) openSub(t, subIndex, false)
         else if (txt === "a" && t) subInput.forceActiveFocus()
         else if (txt === "L" && t && n) jumpLogFromTodo("sub", subIndex)
+        else if (txt === "p" && t && n) openPicker(t, subIndex)
+        else if (txt === "i" && t && n) togglePics(t, t.subs[subIndex])
         else if ((txt === "e" || k === Qt.Key_F2) && t && n) { subEdit.index = subIndex; subEdit.text = t.subs[subIndex].text; subEdit.forceActiveFocus() }
         else if ((txt === "d" || k === Qt.Key_Delete) && t && n) { act(["sub-delete", t.id, String(subIndex)]); subIndex = Math.max(0, subIndex - 1) }
         else if (txt === "K" && t && subIndex > 0) { act(["sub-move", t.id, String(subIndex), String(subIndex - 1)]); subIndex-- }
@@ -1901,13 +1949,16 @@ Item {
           required property int index
           readonly property bool sel: tasks.pane === "subs" && index === tasks.subIndex
           width: subList.width
-          height: Math.max(30, subText.implicitHeight + 12)
+          readonly property var pics: modelData.images || []
+          readonly property bool picsShown: pics.length > 0 && tasks.picsOpen(tasks.selected, modelData)
+          readonly property real textH: Math.max(30, subText.implicitHeight + 12)
+          height: textH + (picsShown ? 72 : 0)
           radius: 10
           color: sel ? Qt.rgba(1, 1, 1, 0.7) : Qt.rgba(1, 1, 1, 0.3)
           border.color: tasks.cc.ink
           border.width: sel ? 2 : 0
           StateBox {
-            x: 8; anchors.verticalCenter: parent.verticalCenter
+            x: 8; y: (subRow.textH - height) / 2
             state3: subRow.modelData.state
             MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor
               onClicked: tasks.cycle(tasks.selected, subRow.index) }
@@ -1915,8 +1966,8 @@ Item {
           Text {
             id: subText
             visible: !(subEdit.activeFocus && subEdit.index === subRow.index)
-            x: 32; width: parent.width - x - 8
-            anchors.verticalCenter: parent.verticalCenter
+            x: 32; width: parent.width - x - 8 - (subRow.pics.length ? picChip.width + 6 : 0)
+            y: (subRow.textH - implicitHeight) / 2
             text: subRow.modelData.text
             wrapMode: Text.Wrap
             textFormat: Text.PlainText
@@ -1927,8 +1978,57 @@ Item {
             font.family: tasks.cc.font
             font.pixelSize: Math.round(12 * tasks.fs) }
           opacity: tasks.dragSub === index ? 0.45 : 1
+          // its pictures: a chip that folds them (i), and a strip of thumbnails
+          Rectangle {
+            id: picChip
+            z: 2
+            visible: subRow.pics.length > 0
+            anchors.right: parent.right; anchors.rightMargin: 6
+            y: (subRow.textH - height) / 2
+            width: chipText.implicitWidth + 14; height: 20; radius: 10
+            color: chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(tasks.cc.ink.r, tasks.cc.ink.g, tasks.cc.ink.b, 0.12)
+            border.color: tasks.cc.ink; border.width: 1
+            Text {
+              id: chipText
+              anchors.centerIn: parent
+              text: "\uf03e " + subRow.pics.length + "  " + (subRow.picsShown ? "\uf077" : "\uf078")
+              color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs); font.bold: true
+            }
+            MouseArea { id: chipMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+              onClicked: tasks.togglePics(tasks.selected, subRow.modelData) }
+          }
+          Row {
+            z: 2
+            visible: subRow.picsShown
+            x: 32; y: subRow.textH
+            width: parent.width - x - 8
+            height: 64
+            spacing: 6
+            clip: true
+            Repeater {
+              model: subRow.picsShown ? subRow.pics : []
+              Rectangle {
+                required property var modelData
+                height: 64; width: Math.max(40, Math.min(140, thumb.implicitWidth > 0 ? 64 * thumb.implicitWidth / Math.max(1, thumb.implicitHeight) : 64))
+                radius: 8; clip: true
+                color: Qt.rgba(1, 1, 1, 0.5); border.color: tasks.cc.ink; border.width: 1.5
+                Image {
+                  id: thumb
+                  anchors.fill: parent; anchors.margins: 2
+                  source: "file://" + parent.modelData.file
+                  sourceSize.height: 128
+                  fillMode: Image.PreserveAspectCrop
+                  asynchronous: true
+                }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                  onClicked: tasks.zoomPic = parent.modelData.file }
+              }
+            }
+          }
           MouseArea {
             anchors.fill: parent; anchors.leftMargin: 28
+            anchors.bottomMargin: subRow.picsShown ? 72 : 0
+            anchors.rightMargin: subRow.pics.length ? picChip.width + 8 : 0
             preventStealing: true
             cursorShape: tasks.dragSub >= 0 ? Qt.ClosedHandCursor : Qt.PointingHandCursor
             property real pressY: 0
@@ -2904,6 +3004,7 @@ Item {
           anchors.verticalCenter: parent.verticalCenter
           CcButton { cc: parchLook; icon: "\uf0c5"; text: tasks.copiedNote !== "" ? "copied!" : "copy  (c)"; fontSize: 11; on: tasks.copiedNote !== ""; onClicked: tasks.copyEntry(tasks.viewEntry) }
           CcButton { cc: parchLook; visible: !tasks.viewEditing; icon: "\uf044"; text: "edit  (e)"; fontSize: 11; onClicked: tasks.startEdit() }
+          CcButton { cc: parchLook; visible: !tasks.viewEditing && !!viewer.e.isSub; icon: "\uf03e"; text: "add picture  (p)"; fontSize: 11; onClicked: tasks.openPicker(tasks.selected, viewer.e.n) }
           CcButton { cc: parchLook; visible: tasks.viewEditing; icon: "\uf00c"; text: "save  (Ctrl+S)"; fontSize: 11; on: true; onClicked: tasks.saveEdit() }
           CcButton { cc: parchLook; visible: tasks.viewEditing; icon: "\uf00d"; text: "cancel  (Esc)"; fontSize: 11; onClicked: { tasks.viewEditing = false; tasks.forceActiveFocus() } }
           CcButton { cc: parchLook; visible: !tasks.viewEditing; icon: "\uf00d"; text: "close  (Esc)"; fontSize: 11; onClicked: tasks.closeEntry() }
@@ -2921,7 +3022,7 @@ Item {
           width: parent.width - 18
           elide: Text.ElideRight
           textFormat: Text.PlainText
-          text: "\uf0ae  " + (viewer.e.isSub ? (tasks.selected ? tasks.selected.title : "") : tasks.entryTag(viewer.e))
+          text: "\uf0ae  " + (viewer.e.isSub ? (tasks.selected ? tasks.selected.title : "") + "   \u21b3  " + viewer.e.where : tasks.entryTag(viewer.e))
           color: viewer.ink
           font.family: viewer.font; font.pixelSize: Math.round(12 * tasks.fs); font.bold: true
         }
@@ -2936,8 +3037,12 @@ Item {
       width: parent.width - 68
       height: parent.height - y - 34
       clip: true
-      contentHeight: viewText.implicitHeight
+      contentHeight: viewCol.implicitHeight
       boundsBehavior: Flickable.StopAtBounds
+      Column {
+        id: viewCol
+        width: viewFlick.width
+        spacing: 18
       Text {
         id: viewText
         width: viewFlick.width
@@ -2948,6 +3053,96 @@ Item {
         font.family: viewer.font
         font.pixelSize: Math.round(19 * tasks.fs)
         lineHeight: 1.2
+      }
+      // a sub-todo's pictures: pinned to the sheet
+      Text {
+        visible: !!viewer.e.isSub
+        width: parent.width
+        wrapMode: Text.Wrap
+        text: tasks.viewPics.length
+          ? "PICTURES  ·  ← → pick · Enter show big · d d remove · p add (or drop files here)"
+          : "No pictures yet: p (or the button) picks one, or drop image files onto the sheet."
+        color: viewer.ink; opacity: 0.6
+        font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs); font.bold: true
+      }
+      Flow {
+        visible: tasks.viewPics.length > 0
+        width: parent.width
+        spacing: 14
+        Repeater {
+          model: tasks.viewPics
+          Item {
+            id: pin
+            required property var modelData
+            required property int index
+            readonly property bool picked: tasks.picIndex === index
+            readonly property bool armed: tasks.armedPic === index
+            width: Math.min(viewCol.width, 220)
+            height: frame.height + 22
+            rotation: (index % 3 - 1) * 1.6
+            Rectangle {
+              id: frame
+              width: parent.width
+              height: Math.max(80, Math.min(200, big.implicitHeight > 0 ? (width - 12) * big.implicitHeight / Math.max(1, big.implicitWidth) + 12 : 150))
+              color: Qt.rgba(1, 0.98, 0.92, 0.9)
+              border.color: pin.armed ? "#b03020" : viewer.ink
+              border.width: pin.picked ? 3 : 1.4
+              Image {
+                id: big
+                anchors.fill: parent; anchors.margins: 6
+                source: "file://" + pin.modelData.file
+                sourceSize.width: 440
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+              }
+              // a pin through the top
+              Rectangle { anchors.horizontalCenter: parent.horizontalCenter; y: -5; width: 12; height: 12; radius: 6; color: "#b03020"; border.color: viewer.ink; border.width: 1.2 }
+              MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                onClicked: { tasks.picIndex = pin.index; tasks.zoomPic = pin.modelData.file } }
+              // remove (d d, or this)
+              Rectangle {
+                anchors.right: parent.right; anchors.top: parent.top; anchors.margins: -7
+                width: 22; height: 22; radius: 11
+                visible: pin.picked || pinHover.hovered
+                color: pin.armed ? "#b03020" : Qt.rgba(1, 0.97, 0.88, 0.95)
+                border.color: viewer.ink; border.width: 1.4
+                Text { anchors.centerIn: parent; text: "\uf00d"; color: pin.armed ? "white" : viewer.ink; font.family: tasks.cc.font; font.pixelSize: 11 }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                  onClicked: { tasks.picIndex = pin.index; if (tasks.armedPic !== pin.index) { tasks.armedPic = pin.index; disarmPic.restart() } else tasks.removePicture(viewer.e.n, pin.index) } }
+              }
+            }
+            HoverHandler { id: pinHover }
+            Text {
+              y: frame.height + 4
+              width: parent.width
+              horizontalAlignment: Text.AlignHCenter
+              elide: Text.ElideMiddle
+              text: pin.armed ? "d again: remove it" : pin.modelData.name
+              color: pin.armed ? "#b03020" : viewer.ink
+              font.family: viewer.font; font.pixelSize: Math.round(13 * tasks.fs)
+            }
+          }
+        }
+      }
+      }
+    }
+    // drop image files onto the sheet (a sub-todo's) to pin them to it
+    DropArea {
+      anchors.fill: parent
+      enabled: !!viewer.e.isSub && !tasks.viewEditing
+      keys: ["text/uri-list"]
+      onDropped: drop => {
+        if (!drop.hasUrls) return
+        for (var i = 0; i < drop.urls.length; i++) tasks.addPicture(tasks.selected, viewer.e.n, decodeURIComponent(String(drop.urls[i]).replace(/^file:\/\//, "")))
+        drop.acceptProposedAction()
+      }
+      Rectangle {
+        anchors.fill: parent; anchors.margins: 18
+        visible: parent.containsDrag
+        radius: 16
+        color: Qt.rgba(1, 1, 1, 0.25)
+        border.color: viewer.ink; border.width: 3
+        Text { anchors.centerIn: parent; text: "\uf03e  drop to pin it to this sub-todo"; color: viewer.ink; font.family: viewer.font; font.pixelSize: 24 }
       }
     }
 
@@ -3053,7 +3248,7 @@ Item {
                            ["←  z  (or click a heading)", "fold its group"], ["g  /  right-click on a heading", "group menu: archive or delete the group"],
                            ["A  on a heading", "archive the whole group"], ["e  /  d d  on a heading (any tab)", "rename / delete the group"], ["d d  on a group in the g menu", "delete that group"], ["Enter  Space  →  on a heading", "fold / unfold"],
                            ["g  on a group: into / new super group", "super groups hold groups; their headings take the same keys"], ["A  on a super group", "archive every todo in it"]]],
-          ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space", "to do → in progress → done"], ["Enter", "open it over the panel (c copy · e edit)"], ["a", "add"], ["e", "edit"],
+          ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space", "to do → in progress → done"], ["Enter", "open it over the panel (c copy · e edit)"], ["p", "add a picture (a drip panel of your files)"], ["i", "fold its pictures"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
           ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
           ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["L  on a super group, group, todo or sub-todo (here or on the Todo tab)", "jump to its section of the log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Enter on a sub-todo", "open it over the panel"],
@@ -3089,5 +3284,215 @@ Item {
         font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs) }
     }
     MouseArea { anchors.fill: parent; onClicked: tasks.showHelp = false }
+  }
+
+  // ================================================== a picture, shown big
+  Rectangle {
+    id: zoom
+    z: 62
+    anchors.fill: parent
+    visible: tasks.zoomPic !== ""
+    color: Qt.rgba(0, 0, 0, 0.72)
+    radius: 18
+    Image {
+      anchors.fill: parent; anchors.margins: 28
+      source: tasks.zoomPic !== "" ? "file://" + tasks.zoomPic : ""
+      fillMode: Image.PreserveAspectFit
+      asynchronous: true
+    }
+    Text {
+      anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.bottomMargin: 8
+      text: "Esc / Enter / click to close"
+      color: "white"; opacity: 0.7; font.family: tasks.cc.font; font.pixelSize: 11
+    }
+    MouseArea { anchors.fill: parent; onClicked: { tasks.zoomPic = ""; tasks.forceActiveFocus() } }
+    // Esc works here even from the sub-todo list (the tab's keys see the viewer's zoom only)
+    focus: visible
+    Keys.onPressed: event => { tasks.zoomPic = ""; tasks.forceActiveFocus(); event.accepted = true }
+    onVisibleChanged: if (visible && !tasks.viewEntry) forceActiveFocus()
+  }
+
+  // ================================================== pick a picture (drip panel)
+  FocusScope {
+    id: picker
+    z: 61
+    anchors.fill: parent
+    visible: false
+    readonly property string home: Quickshell.env("HOME")
+    property string dir: ""
+    function open() {
+      var last = tasks.bar && tasks.bar.ccSections ? tasks.bar.ccSections["tasks-pic-dir"] : ""
+      dir = last || (home + "/Pictures")
+      visible = true
+      grid.currentIndex = 0
+      grid.forceActiveFocus()
+    }
+    function close() {
+      visible = false
+      if (tasks.viewEntry) tasks.forceActiveFocus(); else tasks.forceActiveFocus()
+    }
+    function go(path) {
+      dir = path
+      grid.currentIndex = 0
+      if (tasks.bar) { var m = Object.assign({}, tasks.bar.ccSections); m["tasks-pic-dir"] = path; tasks.bar.ccSections = m }
+    }
+    function up() { if (dir !== "/") go(dir.replace(/\/[^\/]+\/?$/, "") || "/") }
+    function choose(i) {
+      if (i < 0 || i >= files.count) return
+      var path = files.get(i, "filePath")
+      if (files.get(i, "fileIsDir")) { go(path); return }
+      var t = null
+      for (var k = 0; k < tasks.todos.length; k++) if (tasks.todos[k].id === tasks.pickFor.id) t = tasks.todos[k]
+      tasks.addPicture(t, tasks.pickFor.n, path)
+      close()
+    }
+    FolderListModel {
+      id: files
+      folder: picker.dir !== "" ? "file://" + picker.dir : ""
+      nameFilters: ["*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif", "*.bmp", "*.svg", "*.PNG", "*.JPG", "*.JPEG"]
+      showDirs: true
+      showDirsFirst: true
+      showDotAndDotDot: false
+      showHidden: false
+      sortField: FolderListModel.Name
+    }
+    // dim the tab; a click outside closes it
+    Rectangle { anchors.fill: parent; color: Qt.rgba(0, 0, 0, 0.35); radius: 18
+      MouseArea { anchors.fill: parent; onClicked: picker.close() } }
+
+    // the panel: a blob of slime with drips hanging off it
+    Item {
+      id: ooze
+      anchors.centerIn: parent
+      width: Math.min(parent.width - 40, 640)
+      height: Math.min(parent.height - 80, 460)
+      readonly property real t: tasks.bar ? tasks.bar.animTime : 0
+      Repeater {
+        model: 6
+        Rectangle {
+          required property int index
+          readonly property real len: 18 + ((index * 37) % 23) + 6 * Math.sin(ooze.t * 1.3 + index * 1.7)
+          x: ooze.width * (0.1 + index * 0.155) + ((index * 13) % 17)
+          y: ooze.height - 14
+          width: 12 + (index % 3) * 4; height: len + 14
+          radius: width / 2
+          color: tasks.cc.slime
+          border.color: tasks.cc.ink; border.width: 2
+        }
+      }
+      Rectangle {
+        anchors.fill: parent
+        radius: 26
+        color: tasks.cc.slime
+        border.color: tasks.cc.ink; border.width: 2.5
+        // a sheen across the top
+        Rectangle { x: 18; y: 8; width: parent.width * 0.4; height: 8; radius: 4; color: "white"; opacity: 0.35 }
+        MouseArea { anchors.fill: parent }
+      }
+      // hide the drips' tops where they meet the blob
+      Rectangle { x: 20; y: ooze.height - 20; width: ooze.width - 40; height: 16; color: tasks.cc.slime }
+
+      Column {
+        x: 18; y: 18
+        width: ooze.width - 36
+        spacing: 8
+        Row {
+          width: parent.width
+          spacing: 8
+          CcHeading { cc: tasks.cc; anchors.verticalCenter: parent.verticalCenter; text: "PICK A PICTURE" }
+          Rectangle {
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - 120 - upBtn.width - homeBtn.width - 24; height: 24; radius: 12
+            color: tasks.cc.wash; border.color: tasks.cc.ink; border.width: 1
+            Text {
+              x: 10; width: parent.width - 20; anchors.verticalCenter: parent.verticalCenter
+              elide: Text.ElideLeft
+              text: picker.dir.replace(picker.home, "~")
+              color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs)
+            }
+          }
+          CcButton { id: upBtn; cc: tasks.cc; icon: "\uf062"; text: "up  (⌫)"; fontSize: 10; onClicked: { picker.up(); grid.forceActiveFocus() } }
+          CcButton { id: homeBtn; cc: tasks.cc; icon: "\uf015"; text: "~"; fontSize: 10; onClicked: { picker.go(picker.home); grid.forceActiveFocus() } }
+        }
+        GridView {
+          id: grid
+          width: parent.width
+          height: ooze.height - 36 - 32 - 30
+          clip: true
+          cellWidth: Math.floor(width / Math.max(1, Math.floor(width / 116)))
+          cellHeight: 112
+          model: files
+          boundsBehavior: Flickable.StopAtBounds
+          keyNavigationEnabled: true
+          highlightFollowsCurrentItem: false
+          delegate: Item {
+            id: cell
+            required property int index
+            required property string fileName
+            required property string filePath
+            required property bool fileIsDir
+            readonly property bool here: GridView.isCurrentItem
+            width: grid.cellWidth; height: grid.cellHeight
+            Rectangle {
+              anchors.fill: parent; anchors.margins: 4
+              radius: 12
+              color: cell.here ? Qt.rgba(1, 1, 1, 0.75) : cellMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(1, 1, 1, 0.22)
+              border.color: tasks.cc.ink; border.width: cell.here ? 2.5 : 1
+              Text {
+                visible: cell.fileIsDir
+                anchors.horizontalCenter: parent.horizontalCenter; y: 12
+                text: "\uf07b"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 44
+              }
+              Image {
+                visible: !cell.fileIsDir
+                x: 6; y: 6; width: parent.width - 12; height: 70
+                source: cell.fileIsDir ? "" : "file://" + cell.filePath
+                sourceSize.height: 140
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+              }
+              Text {
+                x: 6; y: 80; width: parent.width - 12
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideMiddle
+                text: cell.fileName
+                color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs); font.bold: cell.fileIsDir
+              }
+            }
+            MouseArea {
+              id: cellMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: { grid.currentIndex = cell.index; picker.choose(cell.index) }
+            }
+          }
+          onCurrentIndexChanged: positionViewAtIndex(currentIndex, GridView.Contain)
+          Keys.onPressed: event => {
+            var k = event.key, txt = event.text
+            if (k === Qt.Key_Escape || txt === "q") picker.close()
+            else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space) picker.choose(currentIndex)
+            else if (k === Qt.Key_Backspace || txt === "-") picker.up()
+            else if (txt === "~") picker.go(picker.home)
+            else if (txt === "h") moveCurrentIndexLeft()
+            else if (txt === "l") moveCurrentIndexRight()
+            else if (txt === "k") moveCurrentIndexUp()
+            else if (txt === "j") moveCurrentIndexDown()
+            else return
+            event.accepted = true
+          }
+          Text {
+            visible: files.count === 0 && files.status === FolderListModel.Ready
+            anchors.centerIn: parent
+            text: "No pictures or folders here  (⌫ goes up)"
+            color: tasks.cc.ink; opacity: 0.7; font.family: tasks.cc.font; font.pixelSize: 12
+          }
+        }
+        Text {
+          text: "arrows / hjkl pick · Enter opens a folder or adds the picture · ⌫ up · ~ home · Esc closes"
+          color: tasks.cc.ink; opacity: 0.65; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs)
+        }
+      }
+    }
   }
 }
