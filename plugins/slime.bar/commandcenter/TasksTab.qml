@@ -81,6 +81,22 @@ Item {
     forceActiveFocus()
   }
   function closeEntry() { viewEntry = null; viewEditing = false; forceActiveFocus() }
+  // L: straight to the selected todo's log (first entry), from either tab
+  property bool jumpToLog: false
+  function firstEntryRow() {
+    for (var i = 0; i < logDisplay.length; i++) if (logDisplay[i].kind === "entry") return i
+    return 0
+  }
+  function jumpLog() {
+    if (!selected) return
+    tab = "log"
+    logCursor = ""
+    logPane = "entries"
+    logEntry = firstEntryRow()
+    jumpToLog = true
+    refresh()
+  }
+  onLogDisplayChanged: if (jumpToLog && logDisplay.length) { logEntry = firstEntryRow(); jumpToLog = false }
   Timer { id: copiedTimer; interval: 1600; onTriggered: tasks.copiedNote = "" }
   property string progressFollow: ""          // re-find this row after a move ("g:…" / "t:…")
   // logs by time (newest first) or in sections per sub-todo; remembered
@@ -528,6 +544,7 @@ Item {
         else if (txt === "a" && t) subInput.forceActiveFocus()
         else if ((txt === "e" || k === Qt.Key_F2) && t) { renameInput.text = t.title; renameInput.forceActiveFocus() }
         else if (txt === "g" && t) openMenu(t, tasks.width * 0.2, 120)
+        else if (txt === "L" && t) jumpLog()
         else if (txt === "A" && t) act(["archive", t.id])
         else if ((txt === "d" || k === Qt.Key_Delete) && t) remove(t.id)
         else if (txt === "f") showDone = !showDone
@@ -555,6 +572,7 @@ Item {
       var lt = selected, ln = lt ? lt.subs.length : 0, ne = logEntryRows.length
       var shiftMove = (up || down) && (event.modifiers & Qt.ShiftModifier)
       if (txt === "w" && lt) logInput.forceActiveFocus()
+      else if (txt === "L" && lt) jumpLog()
       else if (txt === "s") toggleLogSort()
       else if (k === Qt.Key_PageDown) logList.flick(0, -1600)
       else if (k === Qt.Key_PageUp) logList.flick(0, 1600)
@@ -2061,23 +2079,131 @@ Item {
 
   // ============================================================ log entry viewer
   // One entry over the whole panel, for reading (and copying / editing).
+  FontLoader { id: fellFont; source: Qt.resolvedUrl("../fonts/IMFellEnglish-Regular.ttf") }
+  QtObject {
+    id: parchLook                    // CcButton colours, in ink and parchment
+    readonly property var bar: tasks.bar
+    readonly property color ink: viewer.ink
+    readonly property color slime: viewer.sheet
+    readonly property color paper: viewer.sheet
+    readonly property string font: tasks.cc.font
+    readonly property string displayFont: viewer.font
+    readonly property int displayWeight: Font.Normal
+    readonly property color wash: Qt.rgba(1, 0.95, 0.85, 0.5)
+  }
   Rectangle {
     id: viewer
     visible: tasks.viewEntry !== null
     z: 58
     anchors.fill: parent
-    radius: 16
-    color: tasks.cc.paper
-    border.color: tasks.cc.ink
-    border.width: 2
+    color: "transparent"
     MouseArea { anchors.fill: parent }       // nothing underneath takes clicks
+
+    // ---- a worn sheet of parchment: torn, scorched edges, stains, faded rules
+    readonly property color ink: "#3a2412"
+    readonly property color sheet: "#efdcb0"
+    readonly property color sheetEdge: "#caa468"
+    readonly property color scorch: "#6b3f17"
+    readonly property string font: fellFont.status === FontLoader.Ready ? fellFont.name : tasks.cc.font
+    function rnd(i) { var x = Math.sin(i * 78.233 + 12.9898) * 43758.5453; return x - Math.floor(x) }
+    // the outline, nibbled all the way round
+    function torn(w, h, m) {
+      var p = [], i = 0, st = 14
+      for (var x = m; x < w - m; x += st) p.push([x, m + rnd(i++) * 7])
+      for (var y = m; y < h - m; y += st) p.push([w - m - rnd(i++) * 7, y])
+      for (x = w - m; x > m; x -= st) p.push([x, h - m - rnd(i++) * 8])
+      for (y = h - m; y > m; y -= st) p.push([m + rnd(i++) * 7, y])
+      return "M " + p.map(function(q) { return q[0].toFixed(1) + " " + q[1].toFixed(1) }).join(" L ") + " Z"
+    }
+    Shape {
+      id: sheetShape
+      anchors.fill: parent
+      preferredRendererType: Shape.CurveRenderer
+      readonly property string outline: viewer.torn(width, height, 6)
+      ShapePath {                               // the sheet, lighter in the middle
+        strokeColor: viewer.scorch
+        strokeWidth: 2
+        joinStyle: ShapePath.RoundJoin
+        fillGradient: RadialGradient {
+          centerX: sheetShape.width * 0.5; centerY: sheetShape.height * 0.45
+          centerRadius: Math.max(sheetShape.width, sheetShape.height) * 0.62
+          focalX: centerX; focalY: centerY
+          GradientStop { position: 0.0; color: viewer.sheet }
+          GradientStop { position: 0.72; color: Qt.darker(viewer.sheet, 1.05) }
+          GradientStop { position: 1.0; color: viewer.sheetEdge }
+        }
+        PathSvg { path: sheetShape.outline }
+      }
+      ShapePath {                               // scorched rim
+        fillColor: "transparent"
+        strokeColor: Qt.rgba(0.42, 0.24, 0.09, 0.28)
+        strokeWidth: 12
+        joinStyle: ShapePath.RoundJoin
+        PathSvg { path: sheetShape.outline }
+      }
+    }
+    // stains and a water ring
+    Repeater {
+      model: [[0.82, 0.18, 120], [0.14, 0.72, 160], [0.58, 0.86, 90], [0.33, 0.28, 70]]
+      Shape {
+        required property var modelData
+        readonly property real r: modelData[2]
+        x: modelData[0] * viewer.width - r; y: modelData[1] * viewer.height - r
+        width: r * 2; height: r * 2
+        preferredRendererType: Shape.CurveRenderer
+        ShapePath {
+          strokeColor: "transparent"
+          fillGradient: RadialGradient {
+            centerX: r; centerY: r; centerRadius: r; focalX: r; focalY: r
+            GradientStop { position: 0.0; color: Qt.rgba(0.55, 0.36, 0.14, 0.10) }
+            GradientStop { position: 0.8; color: Qt.rgba(0.55, 0.36, 0.14, 0.06) }
+            GradientStop { position: 1.0; color: Qt.rgba(0.55, 0.36, 0.14, 0.0) }
+          }
+          PathSvg { path: "M 0 " + r + " A " + r + " " + r + " 0 1 1 " + (2 * r) + " " + r + " A " + r + " " + r + " 0 1 1 0 " + r + " Z" }
+        }
+      }
+    }
+    Rectangle {                                 // a mug's ring
+      x: viewer.width * 0.86 - 36; y: viewer.height * 0.62 - 36
+      width: 72; height: 72; radius: 36
+      color: "transparent"
+      border.color: Qt.rgba(0.45, 0.28, 0.1, 0.16); border.width: 4
+    }
+    Repeater {                                  // faded rules
+      model: Math.max(0, Math.floor((viewer.height - 140) / 30))
+      Rectangle {
+        required property int index
+        x: 30; y: 128 + index * 30
+        width: viewer.width - 60; height: 1
+        color: viewer.ink; opacity: 0.07
+      }
+    }
+    Rectangle {                                 // an old fold down the middle
+      x: viewer.width / 2; y: 14; width: 2; height: viewer.height - 28
+      gradient: Gradient {
+        GradientStop { position: 0.0; color: "transparent" }
+        GradientStop { position: 0.5; color: Qt.rgba(0.4, 0.25, 0.1, 0.12) }
+        GradientStop { position: 1.0; color: "transparent" }
+      }
+    }
+    Shape {                                     // a dog-eared corner
+      x: viewer.width - 52; y: viewer.height - 52
+      width: 46; height: 46
+      preferredRendererType: Shape.CurveRenderer
+      ShapePath {
+        fillColor: viewer.sheetEdge
+        strokeColor: viewer.scorch; strokeWidth: 1.4
+        joinStyle: ShapePath.RoundJoin
+        PathSvg { path: "M 46 6 L 6 46 L 40 40 Z" }
+      }
+    }
     readonly property var e: tasks.viewEntry || ({ time: "", by: "", sub: "", text: "" })
 
     // header: when, who, what it's about, and the buttons
     Column {
       id: viewHead
-      x: 22; y: 18
-      width: parent.width - 44
+      x: 34; y: 28
+      width: parent.width - 68
       spacing: 6
       Row {
         width: parent.width
@@ -2087,25 +2213,25 @@ Item {
           anchors.verticalCenter: parent.verticalCenter
           elide: Text.ElideRight
           text: viewer.e.time + (viewer.e.by ? "  ·  " + viewer.e.by : "")
-          color: tasks.cc.ink; opacity: 0.7
-          font.family: tasks.cc.font; font.pixelSize: 12; font.bold: true
+          color: viewer.ink; opacity: 0.7
+          font.family: viewer.font; font.pixelSize: 12; font.bold: true
         }
         Row {
           id: viewButtons
           spacing: 6
           anchors.verticalCenter: parent.verticalCenter
-          CcButton { cc: tasks.cc; icon: "\uf0c5"; text: tasks.copiedNote !== "" ? "copied!" : "copy  (c)"; fontSize: 11; on: tasks.copiedNote !== ""; onClicked: tasks.copyEntry(tasks.viewEntry) }
-          CcButton { cc: tasks.cc; visible: !tasks.viewEditing; icon: "\uf044"; text: "edit  (e)"; fontSize: 11; onClicked: tasks.startEdit() }
-          CcButton { cc: tasks.cc; visible: tasks.viewEditing; icon: "\uf00c"; text: "save  (Ctrl+S)"; fontSize: 11; on: true; onClicked: tasks.saveEdit() }
-          CcButton { cc: tasks.cc; visible: tasks.viewEditing; icon: "\uf00d"; text: "cancel  (Esc)"; fontSize: 11; onClicked: { tasks.viewEditing = false; tasks.forceActiveFocus() } }
-          CcButton { cc: tasks.cc; visible: !tasks.viewEditing; icon: "\uf00d"; text: "close  (Esc)"; fontSize: 11; onClicked: tasks.closeEntry() }
+          CcButton { cc: parchLook; icon: "\uf0c5"; text: tasks.copiedNote !== "" ? "copied!" : "copy  (c)"; fontSize: 11; on: tasks.copiedNote !== ""; onClicked: tasks.copyEntry(tasks.viewEntry) }
+          CcButton { cc: parchLook; visible: !tasks.viewEditing; icon: "\uf044"; text: "edit  (e)"; fontSize: 11; onClicked: tasks.startEdit() }
+          CcButton { cc: parchLook; visible: tasks.viewEditing; icon: "\uf00c"; text: "save  (Ctrl+S)"; fontSize: 11; on: true; onClicked: tasks.saveEdit() }
+          CcButton { cc: parchLook; visible: tasks.viewEditing; icon: "\uf00d"; text: "cancel  (Esc)"; fontSize: 11; onClicked: { tasks.viewEditing = false; tasks.forceActiveFocus() } }
+          CcButton { cc: parchLook; visible: !tasks.viewEditing; icon: "\uf00d"; text: "close  (Esc)"; fontSize: 11; onClicked: tasks.closeEntry() }
         }
       }
       Rectangle {
         width: Math.min(parent.width, viewAbout.implicitWidth + 20)
         height: 24
         radius: 12
-        color: Qt.rgba(tasks.cc.ink.r, tasks.cc.ink.g, tasks.cc.ink.b, 0.12)
+        color: Qt.rgba(0.45, 0.28, 0.1, 0.14)
         Rectangle { width: 6; height: parent.height; radius: 3; color: tasks.selected ? tasks.colorOf(tasks.selected.group) : "transparent" }
         Text {
           id: viewAbout
@@ -2114,8 +2240,8 @@ Item {
           elide: Text.ElideRight
           textFormat: Text.PlainText
           text: "\uf0ae  " + (tasks.selected ? tasks.selected.title : "") + (viewer.e.sub ? "   \u21b3  " + viewer.e.sub : "")
-          color: tasks.cc.ink
-          font.family: tasks.cc.font; font.pixelSize: 12; font.bold: true
+          color: viewer.ink
+          font.family: viewer.font; font.pixelSize: 12; font.bold: true
         }
       }
     }
@@ -2124,9 +2250,9 @@ Item {
     Flickable {
       id: viewFlick
       visible: !tasks.viewEditing
-      x: 22; y: viewHead.y + viewHead.height + 14
-      width: parent.width - 44
-      height: parent.height - y - 18
+      x: 34; y: viewHead.y + viewHead.height + 16
+      width: parent.width - 68
+      height: parent.height - y - 34
       clip: true
       contentHeight: viewText.implicitHeight
       boundsBehavior: Flickable.StopAtBounds
@@ -2136,22 +2262,22 @@ Item {
         text: viewer.e.text
         wrapMode: Text.Wrap
         textFormat: Text.MarkdownText
-        color: tasks.cc.ink
-        font.family: tasks.cc.font
-        font.pixelSize: 16
-        lineHeight: 1.15
+        color: viewer.ink
+        font.family: viewer.font
+        font.pixelSize: 19
+        lineHeight: 1.2
       }
     }
 
     // editing: the entry's raw markdown
     Rectangle {
       visible: tasks.viewEditing
-      x: 16; y: viewHead.y + viewHead.height + 10
-      width: parent.width - 32
-      height: parent.height - y - 14
-      radius: 12
-      color: Qt.rgba(1, 1, 1, 0.75)
-      border.color: tasks.cc.ink
+      x: 28; y: viewHead.y + viewHead.height + 10
+      width: parent.width - 56
+      height: parent.height - y - 30
+      radius: 8
+      color: Qt.rgba(1, 0.97, 0.88, 0.8)
+      border.color: viewer.ink
       border.width: 1.6
       Flickable {
         id: editFlick
@@ -2166,7 +2292,7 @@ Item {
           wrapMode: TextEdit.Wrap
           textFormat: TextEdit.PlainText
           selectByMouse: true
-          color: tasks.cc.ink
+          color: viewer.ink
           font.family: "monospace"
           font.pixelSize: 14
           onCursorRectangleChanged: {
@@ -2211,7 +2337,7 @@ Item {
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space  Enter", "to do → in progress → done"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
           ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
-          ["TASK LOG", [["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s", "log newest first / by sub-todo"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
+          ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s", "log newest first / by sub-todo"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
                         ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
           ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
                         ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list"], ["↑ at the top  Esc", "back up"]]]

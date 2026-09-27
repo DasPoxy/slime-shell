@@ -39,13 +39,15 @@ Groups fold the same way on all three tabs: click a heading, or press
 heading), and **Enter / Space / →** on a heading to unfold it. On the
 Progress tab **→ / ←** first open and close a todo's sub-todos. Each tab
 remembers its own folds across restarts.
-- Task Log: todos are grouped and ordered like on the Todo tab · **↑↓** pick ·
+- Task Log: todos are grouped and ordered like on the Todo tab · **L** (here
+  or on the Todo tab) jumps straight to the selected todo's log · **↑↓** pick ·
   **→/Enter** into the lanes, then **→/Space** move a sub-todo on and **←**
   back · **↓** past the last lane item goes on into the log, where **↑↓** pick
   an entry · **s** shows the log newest first or in sections by sub-todo
   (sections fold like groups: **←**/**z** on an entry folds its section,
   **Enter/Space/→** on a heading unfolds it; remembered per todo) ·
-  **Enter** on an entry opens it over the whole panel for reading, where
+  **Enter** on an entry opens it over the whole panel, on a sheet of worn
+  parchment, for reading, where
   **c** copies it, **e** edits its text (**Ctrl+S** saves, **Esc** cancels)
   and **Esc** closes; **c** / **e** work on the highlighted entry too ·
   **w** write in the log (about the sub-todo picked in the lanes) ·
