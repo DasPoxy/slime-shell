@@ -87,30 +87,31 @@ Item {
   //   wetpaint drippy: Rubik Wet Paint display
   //   bubble  bubble letters: Rubik Bubbles display
   //   runic   fantasy runes: MedievalSharp display
-  //   parchment old-print scroll: IM Fell English display
-  //   monster horror-poster: Creepster display
-  //   honey   dripping script: Slime Honey Drip (Lobster with drips) display
+  //   styro / nippo / array: Fontshare's Styro, Nippo and Array display faces.
+  //   Their licence doesn't allow bundling them, so they're used when
+  //   installed on the system (free from fontshare.com) and fall back to
+  //   the rounded face otherwise.
   property string fontStyle: "system"
+  readonly property var systemFaces: ({ styro: "Styro", nippo: "Nippo", array: "Array" })
+  function hasFamily(name) { return Qt.fontFamilies().indexOf(name) >= 0 }
+  readonly property var installedFaces: Object.keys(systemFaces).filter(function(k) { return hasFamily(systemFaces[k]) })
   readonly property bool slimeFonts: slimeSkin && fontStyle !== "system" && snigletFont.status === FontLoader.Ready
   property string fontFamily: slimeFonts ? snigletFont.name : Style.font.family
   readonly property string displayFontFamily: {
     if (!slimeFonts) return fontFamily
-    var loader = ({ chewy: chewyFont, wetpaint: wetPaintFont, bubble: bubbleFont,
-                    runic: runicFont, parchment: parchmentFont, monster: monsterFont,
-                    honey: honeyFont })[fontStyle] || null
+    if (fontStyle in systemFaces) return hasFamily(systemFaces[fontStyle]) ? systemFaces[fontStyle] : fontFamily
+    var loader = ({ chewy: chewyFont, wetpaint: wetPaintFont, bubble: bubbleFont, runic: runicFont })[fontStyle] || null
     return loader && loader.status === FontLoader.Ready ? loader.name : fontFamily
   }
-  // Display faces have a single weight; asking for bold makes Qt smear them.
-  readonly property int displayWeight: slimeFonts ? Font.Normal : Font.Black
+  // The bundled display faces have a single weight (asking for bold makes Qt
+  // smear them); the Fontshare families come in real weights.
+  readonly property int displayWeight: !slimeFonts ? Font.Black : (fontStyle in systemFaces ? Font.Bold : Font.Normal)
   FontLoader { id: snigletFont; source: Qt.resolvedUrl("fonts/Sniglet-Regular.ttf") }
   FontLoader { id: snigletBoldFont; source: Qt.resolvedUrl("fonts/Sniglet-ExtraBold.ttf") }
   FontLoader { id: chewyFont; source: Qt.resolvedUrl("fonts/Chewy-Regular.ttf") }
   FontLoader { id: wetPaintFont; source: Qt.resolvedUrl("fonts/RubikWetPaint-Regular.ttf") }
   FontLoader { id: bubbleFont; source: Qt.resolvedUrl("fonts/RubikBubbles-Regular.ttf") }
   FontLoader { id: runicFont; source: Qt.resolvedUrl("fonts/MedievalSharp-Regular.ttf") }
-  FontLoader { id: parchmentFont; source: Qt.resolvedUrl("fonts/IMFellEnglish-Regular.ttf") }
-  FontLoader { id: monsterFont; source: Qt.resolvedUrl("fonts/Creepster-Regular.ttf") }
-  FontLoader { id: honeyFont; source: Qt.resolvedUrl("fonts/SlimeHoneyDrip-Regular.ttf") }
   // Bound to the central Color singleton so the bar tracks shell.toml's
   // [bar] section. Property names kept for the rest of this file's bindings.
   property color themeForeground: slimeSkin ? slimeInk : Color.bar.text

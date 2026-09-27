@@ -199,8 +199,9 @@ Item {
       kind: "scroll"
       ChoiceRow {
         title: "FONT"
-        options: [["system", "system"], ["blobby", "chewy"], ["drippy", "wetpaint"], ["bubble", "bubble"],
-          ["runic", "runic"], ["parchment", "parchment"], ["monster", "monster"], ["honey drip", "honey"]]
+        // Styro, Nippo and Array show up once installed (free from fontshare.com)
+        options: [["system", "system"], ["blobby", "chewy"], ["drippy", "wetpaint"], ["bubble", "bubble"], ["runic", "runic"]]
+          .concat(settings.bar.installedFaces.map(function(k) { return [k, k] }))
         current: settings.bar.fontStyle
         onPicked: value => settings.bar.fontStyle = value
       }

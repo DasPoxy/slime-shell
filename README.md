@@ -56,8 +56,11 @@ The system font, or a display face for clocks, temperatures and headings
 
 ![Font styles](docs/images/fonts.png)
 
-*Honey drip* is Lobster with drips grown onto every letter by
-`tools/make-drip-font.py`.
+\* *Styro*, *Nippo* and *Array* are free [Fontshare](https://www.fontshare.com)
+fonts whose licence doesn't allow bundling them, so Slime Shell doesn't ship
+them: download them from Fontshare and install them (e.g. copy the `.otf`
+files to `~/.local/share/fonts` and run `fc-cache -f`) and they show up as
+font options.
 
 ### Slime icons
 
@@ -209,7 +212,7 @@ Command centre → **Settings** (sections fold open and closed):
   draw above/behind windows, bar debris, slime icon colours, shading (soft,
   anime, manga, print, cel, sketch)
 - **Font & clock** — system font or a display face (blobby, drippy, bubble,
-  runic, parchment, monster, honey drip), date/time order
+  runic; styro, nippo, array when installed), date/time order
 - **Motion** — frame rate, drip style, drip amount
 - **Updates** — check GitHub, update & restart
 - **Widgets** — each Slime widget's settings, and a button for every bar
@@ -238,7 +241,6 @@ git -C ~/Work/slime-shell pull && omarchy restart shell
 | `bin/slime-shell` | install / use / restore / status |
 | `bin/clone-omarchy-plugin` | clone another Omarchy plugin as `slime.<name>` |
 | `bin/slime-tasks` | the tasks backend on the command line (for agents) |
-| `tools/make-drip-font.py` | builds the honey-drip font from Lobster |
 | `docs/` | widget reference, tasks guide, pictures |
 | `spike/` | the original standalone prototype |
 
@@ -259,9 +261,8 @@ After editing the shader, recompile it:
 ## Credits
 
 Built on Omarchy's shell plugins (MIT). Fonts: Chewy (Apache-2.0); Rubik Wet
-Paint, Rubik Bubbles, Sniglet, MedievalSharp, IM Fell English, Creepster, and
-Slime Honey Drip — Lobster with drips added by `tools/make-drip-font.py`
-(SIL OFL). Licences in `plugins/slime.bar/fonts/`.
+Paint, Rubik Bubbles, Sniglet, MedievalSharp and IM Fell English (SIL OFL).
+Styro, Nippo and Array (Fontshare) are not included — see Fonts above. Licences in `plugins/slime.bar/fonts/`.
 
 ## Licence
 
