@@ -42,7 +42,9 @@ remembers its own folds across restarts.
 - Task Log: todos are grouped and ordered like on the Todo tab · **↑↓** pick ·
   **→/Enter** into the lanes, then **→/Space** move a sub-todo on and **←**
   back · **↓** past the last lane item goes on into the log, where **↑↓** pick
-  an entry · **s** shows the log newest first or in sections by sub-todo ·
+  an entry · **s** shows the log newest first or in sections by sub-todo
+  (sections fold like groups: **←**/**z** on an entry folds its section,
+  **Enter/Space/→** on a heading unfolds it; remembered per todo) ·
   **w** write in the log (about the sub-todo picked in the lanes) ·
   **PgUp/PgDn** scroll
 - Progress: **↑↓** pick · **Enter/Space** expand · **A** archive · **↓** past

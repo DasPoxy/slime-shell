@@ -66,30 +66,56 @@ Item {
     selected.subs.forEach(function(sb, i) {
       var mine = logEntries.filter(function(e) { return e.sub === sb.text })
       if (!mine.length) return
-      rows.push({ kind: "head", i: i, sub: sb })
-      mine.forEach(function(e) { used[logEntries.indexOf(e)] = true; rows.push({ kind: "entry", e: e, section: i }) })
+      var shut = sectionFolded(sb.text)
+      rows.push({ kind: "head", i: i, sub: sb, count: mine.length, collapsed: shut })
+      mine.forEach(function(e) { used[logEntries.indexOf(e)] = true; if (!shut) rows.push({ kind: "entry", e: e, section: i }) })
     })
     var rest = logEntries.filter(function(e, n) { return !used[n] })
     if (rest.length) {
-      rows.push({ kind: "head", i: -1, sub: null })
-      rest.forEach(function(e) { rows.push({ kind: "entry", e: e, section: -1 }) })
+      var restShut = sectionFolded("")
+      rows.push({ kind: "head", i: -1, sub: null, count: rest.length, collapsed: restShut })
+      if (!restShut) rest.forEach(function(e) { rows.push({ kind: "entry", e: e, section: -1 }) })
     }
     return rows
   }
+  // the keyboard's stops in the log: every entry, and (by sub-todo) every
+  // section heading too
   readonly property var logEntryRows: {
     var out = []
-    for (var i = 0; i < logDisplay.length; i++) if (logDisplay[i].kind === "entry") out.push(i)
+    for (var i = 0; i < logDisplay.length; i++) out.push(i)
     return out
   }
+  readonly property var logPicked: logEntryRows.length ? logDisplay[logEntryRows[Math.min(logEntry, logEntryRows.length - 1)]] : null
+  function sectionOf(row) { return !row ? undefined : row.kind === "head" ? row.i : row.section }
   // by sub-todo: move a section (i.e. its sub-todo) past the next section
   function moveSection(dir) {
-    var row = logDisplay[logEntryRows[logEntry]]
-    if (!row || row.section === undefined || row.section < 0 || !selected) return
+    var sec = sectionOf(logPicked)
+    if (sec === undefined || sec < 0 || !selected) return
     var secs = []
     logDisplay.forEach(function(r) { if (r.kind === "head" && r.i >= 0) secs.push(r.i) })
-    var at = secs.indexOf(row.section), nb = secs[at + dir]
+    var at = secs.indexOf(sec), nb = secs[at + dir]
     if (nb === undefined) return
-    act(["sub-move", selected.id, String(row.section), String(nb)])
+    act(["sub-move", selected.id, String(sec), String(nb)])
+  }
+  // ---- folding log sections (per todo and sub-todo, remembered) ----
+  function sectionKey(subText) { return "tasks-log-sec:" + selectedId + ":" + subText }
+  function sectionFolded(subText) { return !!(bar && bar.ccSections && bar.ccSections[sectionKey(subText)]) }
+  function setSectionFolded(subText, shut) {
+    if (!bar) return
+    var m = Object.assign({}, bar.ccSections)
+    if (shut) m[sectionKey(subText)] = true
+    else delete m[sectionKey(subText)]
+    bar.ccSections = m
+  }
+  function headText(row) { return row && row.sub ? row.sub.text : "" }
+  // fold the picked row's section and rest on its heading
+  function foldSectionOf(row) {
+    var sec = sectionOf(row), txt = ""
+    for (var i = 0; i < logDisplay.length; i++)
+      if (logDisplay[i].kind === "head" && logDisplay[i].i === sec) { txt = headText(logDisplay[i]); break }
+    setSectionFolded(txt, true)
+    for (var j = 0; j < logDisplay.length; j++)
+      if (logDisplay[j].kind === "head" && logDisplay[j].i === sec) { logEntry = j; return }
   }
   onProgressRowsChanged: {
     if (progressFollow === "") return
@@ -487,11 +513,16 @@ Item {
       else if (k === Qt.Key_PageDown) logList.flick(0, -1600)
       else if (k === Qt.Key_PageUp) logList.flick(0, 1600)
       else if (logPane === "entries") {
-        // the log itself
+        // the log itself (by sub-todo, its section headings fold like groups)
+        var lp = logPicked, onHead = lp && lp.kind === "head"
         if (shiftMove) { if (logBySub) moveSection(up ? -1 : 1) }
         else if (up && logEntry <= 0) logPane = ln ? "lanes" : "list"
         else if (up) logEntry--
         else if (down) logEntry = Math.min(ne - 1, logEntry + 1)
+        else if (onHead && (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z")) setSectionFolded(headText(lp), !lp.collapsed)
+        else if (onHead && (k === Qt.Key_Right || txt === "l")) setSectionFolded(headText(lp), false)
+        else if (onHead && !lp.collapsed && (k === Qt.Key_Left || txt === "h")) setSectionFolded(headText(lp), true)
+        else if (logBySub && lp && lp.kind === "entry" && (k === Qt.Key_Left || txt === "h" || txt === "z")) foldSectionOf(lp)
         else if (k === Qt.Key_Left || k === Qt.Key_Escape || txt === "h") logPane = "list"
         else return
       }
@@ -1608,18 +1639,44 @@ Item {
           required property int index
           width: logList.width
           height: modelData.kind === "head" ? 26 : entryBox.height
-          // a sub-todo's section heading (by sub-todo)
+          // a sub-todo's section heading (by sub-todo): click, or the keys, fold it
+          Rectangle {
+            visible: logItem.modelData.kind === "head"
+            anchors.fill: parent
+            anchors.leftMargin: -4
+            radius: 9
+            readonly property bool picked: tasks.logPane === "entries" && logList.currentIndex === logItem.index
+            color: picked ? Qt.rgba(1, 1, 1, 0.6) : secMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.25) : "transparent"
+            border.color: tasks.cc.ink
+            border.width: picked ? 2 : 0
+            MouseArea {
+              id: secMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              enabled: logItem.modelData.kind === "head"
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                tasks.logPane = "entries"
+                tasks.logEntry = logItem.index
+                tasks.setSectionFolded(tasks.headText(logItem.modelData), !logItem.modelData.collapsed)
+                tasks.forceActiveFocus()
+              }
+            }
+          }
           Row {
             visible: logItem.modelData.kind === "head"
+            x: 4
             spacing: 8
             anchors.verticalCenter: parent.verticalCenter
+            Text { anchors.verticalCenter: parent.verticalCenter; text: logItem.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 9 }
             StateBox { anchors.verticalCenter: parent.verticalCenter; visible: !!logItem.modelData.sub; state3: logItem.modelData.sub ? logItem.modelData.sub.state : "todo" }
             Text {
               anchors.verticalCenter: parent.verticalCenter
-              width: logList.width - 30
+              width: logList.width - 50
               elide: Text.ElideRight
               textFormat: Text.PlainText
-              text: logItem.modelData.kind !== "head" ? "" : logItem.modelData.sub ? logItem.modelData.sub.text : "About the whole todo"
+              text: logItem.modelData.kind !== "head" ? "" : (logItem.modelData.sub ? logItem.modelData.sub.text : "About the whole todo")
+                + (logItem.modelData.collapsed ? "   ·   " + logItem.modelData.count + (logItem.modelData.count === 1 ? " entry" : " entries") : "")
               color: tasks.cc.ink
               font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: 13
             }
@@ -1975,7 +2032,7 @@ Item {
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space  Enter", "to do → in progress → done"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
           ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
-          ["TASK LOG", [["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s", "log newest first / by sub-todo"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
+          ["TASK LOG", [["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s", "log newest first / by sub-todo"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
                         ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
           ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
                         ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list"], ["↑ at the top  Esc", "back up"]]]
