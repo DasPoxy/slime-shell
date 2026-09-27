@@ -459,6 +459,10 @@ PanelWindow {
     property real material: root.slime ? root.bar.materialId : 0
     property vector4d dripStyle: root.slime ? root.bar.dripStyleVec : Qt.vector4d(1, 1, 0, 1)
     property vector4d dripExtra: root.slime ? root.bar.dripExtraVec : Qt.vector4d(0, 0, 0, 0)
+    property vector4d cava0: root.bar ? root.bar.cava0 : Qt.vector4d(0, 0, 0, 0)
+    property vector4d cava1: root.bar ? root.bar.cava1 : Qt.vector4d(0, 0, 0, 0)
+    property vector4d cava2: root.bar ? root.bar.cava2 : Qt.vector4d(0, 0, 0, 0)
+    property vector4d cava3: root.bar ? root.bar.cava3 : Qt.vector4d(0, 0, 0, 0)
     property vector4d eggDrip: Qt.vector4d(0, 0, 0, 0)
     property vector4d group0: root.slime && root.bar.sharedGroupRects[0] ? root.bar.sharedGroupRects[0] : noBulb
     property vector4d group1: root.slime && root.bar.sharedGroupRects[1] ? root.bar.sharedGroupRects[1] : noBulb

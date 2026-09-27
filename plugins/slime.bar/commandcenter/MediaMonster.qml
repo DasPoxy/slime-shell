@@ -86,6 +86,10 @@ Item {
       property real material: bar.materialId   // the monster is made of the same stuff as the bar
       property vector4d dripStyle: bar.dripStyleVec
       property vector4d dripExtra: bar.dripExtraVec
+      property vector4d cava0: bar ? bar.cava0 : Qt.vector4d(0, 0, 0, 0)
+      property vector4d cava1: bar ? bar.cava1 : Qt.vector4d(0, 0, 0, 0)
+      property vector4d cava2: bar ? bar.cava2 : Qt.vector4d(0, 0, 0, 0)
+      property vector4d cava3: bar ? bar.cava3 : Qt.vector4d(0, 0, 0, 0)
       property vector4d eggDrip: Qt.vector4d(0, 0, 0, 0)
       property vector4d group0: Qt.vector4d(0, 0, 0, 0)
       property vector4d group1: Qt.vector4d(0, 0, 0, 0)

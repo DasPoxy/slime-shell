@@ -307,13 +307,36 @@ Item {
     case "stringy": return Qt.vector4d(0.75, 1, 0, 1.3)
     case "lava": return Qt.vector4d(0.45, 1.15, 0, 0.8)
     case "gelatinous": return Qt.vector4d(1.4, 1, 0, 0.9)
+    case "cava": return Qt.vector4d(1, 1, 0, 1)
     default: return Qt.vector4d(1, 1, 0, 1)
     }
   }
   readonly property real materialId: ["slime", "sinew", "bone", "plain"].indexOf(material)
   // every material drips (bone and plain included) with the chosen amount
   readonly property real dripLevel: dripAmount < 0 ? 1.2 : dripAmount
-  readonly property vector4d dripExtraVec: Qt.vector4d(dripStyle === "stringy" ? 1 : dripStyle === "lava" ? 2 : dripStyle === "gelatinous" ? 3 : 0, dripAmount < 0 ? 1 : 0, 0, 0)
+  readonly property vector4d dripExtraVec: Qt.vector4d(dripStyle === "stringy" ? 1 : dripStyle === "lava" ? 2 : dripStyle === "gelatinous" ? 3 : dripStyle === "cava" ? 4 : 0, dripAmount < 0 ? 1 : 0, 0, 0)
+
+  // ---- cava drip style: the drips are an audio visualizer ----
+  // the shared ooze visualizer's cava (ui/SlimeCava), run only while the
+  // style is picked; it's never drawn itself, the shader draws the drips
+  property vector4d cava0: Qt.vector4d(0, 0, 0, 0)
+  property vector4d cava1: Qt.vector4d(0, 0, 0, 0)
+  property vector4d cava2: Qt.vector4d(0, 0, 0, 0)
+  property vector4d cava3: Qt.vector4d(0, 0, 0, 0)
+  SlimeCava {
+    id: dripCava
+    active: root.dripStyle === "cava"
+    bars: 16
+    width: 0; height: 0
+    onLevelsChanged: {
+      var v = levels
+      function n(i) { return v[i] || 0 }
+      root.cava0 = Qt.vector4d(n(0), n(1), n(2), n(3))
+      root.cava1 = Qt.vector4d(n(4), n(5), n(6), n(7))
+      root.cava2 = Qt.vector4d(n(8), n(9), n(10), n(11))
+      root.cava3 = Qt.vector4d(n(12), n(13), n(14), n(15))
+    }
+  }
   readonly property real barShapeId: ["classic", "pills", "islands", "notch"].indexOf(barShape)
   // Latest left/centre/right section extents, for overlays (see sharedBulbRects).
   property var sharedGroupRects: []
@@ -1956,6 +1979,10 @@ Item {
     property vector4d bulb21: win.bulbRects[21] || win.noBulb
     property vector4d bulb22: win.bulbRects[22] || win.noBulb
     property vector4d bulb23: win.bulbRects[23] || win.noBulb
+    property vector4d cava0: root.cava0
+    property vector4d cava1: root.cava1
+    property vector4d cava2: root.cava2
+    property vector4d cava3: root.cava3
     }
 
   component BarPanel: PanelWindow {
@@ -2045,7 +2072,7 @@ Item {
     readonly property real dripRoom: {
       if (root.dripLevel <= 0) return 130
       var amt = root.dripAmount < 0 ? 1.85 : Math.min(root.dripAmount, 2.1)
-      var fall = root.dripStyle === "stringy" || root.dripStyle === "lava" || root.dripStyle === "gelatinous" ? 110 : 60
+      var fall = root.dripStyle === "stringy" || root.dripStyle === "lava" || root.dripStyle === "gelatinous" || root.dripStyle === "cava" ? 110 : 60
       return Math.max(130, Math.ceil(60 * amt + 50 + fall))
     }
     readonly property real barLength: root.vertical ? height : width

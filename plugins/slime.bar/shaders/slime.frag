@@ -72,6 +72,10 @@ layout(std140, binding = 0) uniform buf {
     vec4 bulb21;
     vec4 bulb22;
     vec4 bulb23;
+    vec4 cava0;       // cava drip style: 16 audio bands, 0..1 (left to right along the bar)
+    vec4 cava1;
+    vec4 cava2;
+    vec4 cava3;
 };
 
 const float CELL = 64.0;
@@ -144,6 +148,23 @@ float fadeOut(float y) {
     return dripExtra.z > 0.0 ? 1.0 - smoothstep(dripExtra.z - 70.0, dripExtra.z - 6.0, y) : 1.0;
 }
 
+// cava: the audio level under x (bands blended into a smooth wave)
+float cavaBand(float i) {
+    // floats only: some GL drivers balk at the int maths once translated
+    i = clamp(i, 0.0, 15.0);
+    vec4 v = i < 3.5 ? cava0 : i < 7.5 ? cava1 : i < 11.5 ? cava2 : cava3;
+    float j = i - floor(i / 4.0) * 4.0;
+    return j < 0.5 ? v.x : j < 1.5 ? v.y : j < 2.5 ? v.z : v.w;
+}
+float cavaLevel(float x) {
+    float len = orient < 1.5 ? screenSize.x : screenSize.y;
+    if (len <= 0.0) len = resolution.x;
+    float f = clamp(x / len, 0.0, 1.0) * 15.0;
+    float i = floor(f);
+    float t = f - i;
+    return mix(cavaBand(i), cavaBand(i + 1.0), t * t * (3.0 - 2.0 * t));
+}
+
 vec3 dripTip(float cx, float edgeY, float seed, float scale) {
     float speed = (0.06 + 0.09 * hash(seed + 1.0)) * dripStyle.x;
     float s = fract(time * speed + hash(seed + 2.0));
@@ -165,6 +186,19 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
     if (dripExtra.y > 0.5) maxLen *= 0.15 + 1.7 * vnoise(vec2(seed * 3.1, time * 0.12));
     float neck = (3.5 + 4.0 * hash(seed + 4.0)) * dripStyle.y;
     float hl = 1e5;
+
+    // ---- cava: every drip is a bar of the audio visualizer — it hangs as far
+    // as the music under it reaches, a round bead of goo swelling at its tip
+    if (dripExtra.x > 3.5) {
+        float lv = cavaLevel(cx);
+        float len = scale * (5.0 + lv * 118.0 * clamp(dripAmount, 0.5, 1.8));
+        float w = (4.2 + 1.2 * hash(seed + 4.0)) * dripStyle.y;
+        vec2 tip = vec2(cx, edgeY + len);
+        float r = w * (1.15 + 0.35 * lv);
+        float d = min(sdSegment(p, vec2(cx, edgeY - 4.0), tip, w * (0.8 + 0.2 * lv)), length(p - tip) - r);
+        hl = length(p - (tip + vec2(-0.35, -0.4) * r)) - 0.28 * r;
+        return vec2(d, hl);
+    }
 
     // ---- gelatinous: the bar holds on to its goo; now and then a small bead
     // gathers on the underside, quivers, and is shaken loose to fall like a
@@ -721,7 +755,21 @@ vec2 mapSceneBody(vec2 p) {
     float hl = 1e5;
     float ci = floor(p.x / CELL);
 
-    for (int k = -1; k <= 1; k++) {
+    // cava: evenly spaced bars, two to a cell, like a visualizer's
+    if (dripExtra.x > 3.5) {
+        for (int k = -1; k <= 1; k++) {
+            float i = ci + float(k);
+            for (int h = 0; h < 2; h++) {
+                float cx = (i + 0.25 + 0.5 * float(h)) * CELL;
+                float edge = dripEdge(cx);
+                if (edge < 0.0) continue;
+                vec2 dr = drip(p, cx, edge, i * 2.0 + float(h), 1.0);
+                d = smin(d, dr.x, 7.0);
+                hl = min(hl, dr.y);
+            }
+        }
+    }
+    else for (int k = -1; k <= 1; k++) {
         float i = ci + float(k);
         // torrent (amount > 1.8) packs more drips in as well as lengthening them
         if (hash(i * 3.7 + 11.0) < 1.0 - 0.7 * dripStyle.w * max(1.0, dripAmount * 0.55)) continue;
