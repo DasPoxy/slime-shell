@@ -51,6 +51,9 @@ Commands (all print JSON; errors go to stderr with exit status 1):
   super-delete SUPER                remove a super group (its groups are kept)
   super-order SUPER [SUPER ...]     put super groups in this order
   group-archive GROUP               archive every todo in a group
+  group-restore GROUP               restore every archived todo in a group
+  super-archive SUPER               archive every todo in a super group's groups
+  super-restore SUPER               restore every archived todo in a super group's groups
   log ID MESSAGE [--by WHO] [--sub N]  append a task-log entry (about sub-todo N)
   log-show ID                       -> {"entries": [{n, time, by, sub, text}]}
   log-all                           every todo's log, tagged with id, title, group and super
@@ -316,6 +319,16 @@ def summary(root, tid, archived=False):
     }
 
 
+def unarchive(root, tid):
+    src, lsrc = todo_path(root, tid, True), log_path(root, tid, True)
+    shutil.move(src, os.path.join(root, "Todos", tid + ".md"))
+    if os.path.exists(lsrc):
+        shutil.move(lsrc, log_path(root, tid))
+    t = load(root, tid)
+    t["meta"]["done"] = "false"
+    save(t)
+
+
 def all_ids(root, archived=False):
     d = os.path.join(root, "Archive" if archived else "Todos")
     return sorted(f[:-3] for f in os.listdir(d) if f.endswith(".md") and not f.startswith("."))
@@ -402,13 +415,7 @@ def run(argv):
 
         tid = rest[0] if rest else ""
         if cmd == "unarchive":
-            src, lsrc = todo_path(root, tid, True), log_path(root, tid, True)
-            shutil.move(src, os.path.join(root, "Todos", tid + ".md"))
-            if os.path.exists(lsrc):
-                shutil.move(lsrc, log_path(root, tid))
-            t = load(root, tid)
-            t["meta"]["done"] = "false"
-            save(t)
+            unarchive(root, tid)
             return {"id": tid}
         if cmd == "order":
             ids = [i for i in rest if i in set(all_ids(root))]
@@ -500,17 +507,30 @@ def run(argv):
             g[new] = g.pop(old, {"color": PALETTE[len(g) % len(PALETTE)]})
             save_groups(root, g, [new if x == old else x for x in group_order(root)])
             return {"renamed": old, "to": new, "todos": n}
-        if cmd == "group-archive":
+        if cmd in ("group-archive", "super-archive"):
+            # every active todo in the group (or in any group of the super group)
             name = " ".join(rest).strip()
-            done = []
+            g, done = groups(root), []
             for i in all_ids(root):
                 t = load(root, i)
-                if t["meta"].get("group", "") == name:
+                grp = t["meta"].get("group", "")
+                if (grp == name) if cmd == "group-archive" else (grp and g.get(grp, {}).get("super") == name):
                     shutil.move(t["path"], os.path.join(root, "Archive", i + ".md"))
                     if os.path.exists(log_path(root, i)):
                         shutil.move(log_path(root, i), log_path(root, i, True))
                     done.append(i)
             return {"archived": done}
+        if cmd in ("group-restore", "super-restore"):
+            # every archived todo in the group (or in any group of the super group)
+            name = " ".join(rest).strip()
+            g, done = groups(root), []
+            for i in all_ids(root, True):
+                t = load(root, i, True)
+                grp = t["meta"].get("group", "")
+                if (grp == name) if cmd == "group-restore" else (grp and g.get(grp, {}).get("super") == name):
+                    unarchive(root, i)
+                    done.append(i)
+            return {"restored": done}
         if cmd == "group-order":
             names = [n for n in rest if n]
             save_groups(root, groups(root), names + [n for n in group_order(root) if n not in names])

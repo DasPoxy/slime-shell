@@ -15,7 +15,7 @@ Three signs hang from the beam:
 |---|---|
 | **Todo** | Top-level todos, grouped and colour-coded. Each opens into its own list of sub-todos, which move *to do → in progress → done*. |
 | **Task Log** | What's being worked on: each todo's sub-todos in *to do / in progress / done* lanes, and its log of progress notes and output (newest first). Agents fill this in as they work, and so can you: click a sub-todo to move it a lane on (right-click: back), and write your own log entries. |
-| **Progress** | How far along every group and todo is, in collapsible sections. Archive finished lists; search the archive and restore them. |
+| **Progress** | How far along every group and todo is, in collapsible sections. Archive finished lists; search the archive and restore them — one at a time, or a whole group or super group at once. |
 
 **Pop-out:** `omarchy-shell slime-shell tasks` (suggested key: **Super+Ctrl+Shift+Return**)
 opens the whole suite in a floating panel in the middle of the screen, over
@@ -65,7 +65,11 @@ remembers its own folds across restarts.
   right-click gives a menu to set its group, restore or delete it, and
   **↑**/**Esc** climb back · **/** search the archive (Enter drops into the results)
 
-On a group heading, **A** archives the whole group, and **g** (or a
+On a group heading, **A** archives the whole group — and on a super group's
+heading, every todo in all of its groups. In the archive (bottom of the
+Progress tab), archived lists sit under their super group › group headings;
+**r** (or *restore all*) on a heading brings back the whole group or super
+group. **g** (or a
 right-click) opens a group menu to archive or delete it. In any group menu,
 **d d** on a group deletes that group — its todos just become ungrouped. On
 any group heading, on every tab, **e** renames the group and **d d** deletes it.
@@ -147,6 +151,9 @@ slime-tasks sub-set <id> <n> todo|doing|done [--expect TEXT]
 slime-tasks order <id> <id> …                   # put todos in this order
 slime-tasks group-order <group> <group> …       # put groups in this order
 slime-tasks group-archive <group>               # archive every todo in a group
+slime-tasks group-restore <group>               # restore every archived todo in a group
+slime-tasks super-archive <super>               # archive every todo in a super group's groups
+slime-tasks super-restore <super>               # restore them all
 slime-tasks group-delete <group>                # remove a group (todos kept, ungrouped)
 slime-tasks group-rename <old> <new>            # rename a group (keeps colour and order)
 slime-tasks super-set <group> <super>           # put a group in a super group ("" takes it out)

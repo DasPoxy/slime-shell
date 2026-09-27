@@ -373,6 +373,7 @@ Item {
     if (k === Qt.Key_Right || txt === "l") { setSuperCollapsed(n, false, scope); return true }
     if (k === Qt.Key_Left || txt === "h") { setSuperCollapsed(n, true, scope); return true }
     if (txt === "e" || k === Qt.Key_F2) { startRenameSuper(n); return true }
+    if (txt === "A") { archiveSuper(n); return true }
     if (txt === "d" || k === Qt.Key_Delete) { deleteSuperKey(n); return true }
     if (txt === "g") { openSuperMenu(n, tasks.width * 0.2, 120); return true }
     return false
@@ -673,23 +674,40 @@ Item {
   onArchiveRowsChanged: if (archiveIndex >= archiveRows.length) archiveIndex = Math.max(0, archiveRows.length - 1)
   // the archive, by group (in group order, loose ones last), then by title
   readonly property var archiveSorted: archivedTodos.slice().sort(function(a, b) {
-    var ga = a.group || "", gb = b.group || ""
-    return (ga === "") - (gb === "") || groupRank(ga) - groupRank(gb) || ga.localeCompare(gb) || a.title.localeCompare(b.title)
+    var ga = a.group || "", gb = b.group || "", sa = superOf(ga), sb = superOf(gb)
+    return (sa === "") - (sb === "") || superRank(sa) - superRank(sb) || sa.localeCompare(sb)
+      || (ga === "") - (gb === "") || groupRank(ga) - groupRank(gb) || ga.localeCompare(gb) || a.title.localeCompare(b.title)
   })
-  // what the archive list shows: a heading per group, then its todos
+  // what the archive list shows: super group › group headings, then the todos
   readonly property var archiveRows: {
-    var rows = [], last = null, head = null, named = archiveSorted.some(function(t) { return !!t.group })
+    var rows = [], lastSup = null, last = null, shead = null, head = null
+    var named = archiveSorted.some(function(t) { return !!t.group })
     archiveSorted.forEach(function(t, i) {
-      var g = t.group || ""
+      var g = t.group || "", sp = superOf(g)
+      if (sp !== lastSup) {
+        shead = sp ? { kind: "shead", name: sp, count: 0, collapsed: superCollapsed(sp, "archive") } : null
+        if (shead) rows.push(shead)
+        lastSup = sp; last = null
+      }
+      if (shead) shead.count++
+      var hidden = shead && shead.collapsed
       if (named && g !== last) {
-        head = { kind: "head", name: g, count: 0, collapsed: groupCollapsed(g, "archive") }
-        rows.push(head)
+        head = { kind: "head", name: g, count: 0, depth: sp ? 1 : 0, collapsed: groupCollapsed(g, "archive") }
+        if (!hidden) rows.push(head)
       }
       last = g
       if (head) head.count++
-      if (!(head && head.collapsed)) rows.push({ kind: "todo", t: t, i: i })
+      if (!hidden && !(head && head.collapsed)) rows.push({ kind: "todo", t: t, i: i, depth: head ? head.depth : 0 })
     })
     return rows
+  }
+  // the super heading an archive row sits under (-1: none)
+  function archiveSuperRow(at) {
+    for (var i = at - 1; i >= 0; i--) {
+      if (archiveRows[i].kind === "shead") return i
+      if (archiveRows[i].kind === "head" && !archiveRows[i].depth) return -1
+    }
+    return -1
   }
   // fold the group an archived row belongs to and rest on its heading
   function foldArchiveGroupOf(t) {
@@ -812,6 +830,10 @@ Item {
     menu.forceActiveFocus()
   }
   function archiveGroup(name) { if (name) act(["group-archive", name]) }
+  function archiveSuper(name) { if (name) act(["super-archive", name]) }
+  // restore a whole group (or super group) from the archive; you stay in the archive
+  function restoreGroup(name) { act(["group-restore", name]) }
+  function restoreSuper(name) { if (name) act(["super-restore", name]) }
   // ---- rename (e) / delete (d d) the highlighted group, on any tab ----
   property string armedGroup: ""             // waiting for the second d
   property string renamingGroup: ""
@@ -1081,7 +1103,17 @@ Item {
         if (up && archiveIndex <= 0) { progressPane = "list"; progressIndex = Math.max(0, rows.length - 1) }
         else if (up) archiveIndex--
         else if (down) archiveIndex = Math.min(nr - 1, archiveIndex + 1)
-        // on a group's heading: fold / unfold, like everywhere else
+        // on a super group's heading: fold / unfold, r restores all of it
+        else if (ar && ar.kind === "shead" && (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z")) setSuperCollapsed(ar.name, !ar.collapsed, "archive")
+        else if (ar && ar.kind === "shead" && (k === Qt.Key_Right || txt === "l")) setSuperCollapsed(ar.name, false, "archive")
+        else if (ar && ar.kind === "shead" && (k === Qt.Key_Left || txt === "h")) setSuperCollapsed(ar.name, true, "archive")
+        else if (ar && ar.kind === "shead" && (txt === "r" || txt === "R")) restoreSuper(ar.name)
+        else if (ar && ar.kind === "shead" && (txt === "e" || k === Qt.Key_F2)) startRenameSuper(ar.name)
+        else if (ar && ar.kind === "shead" && (txt === "d" || k === Qt.Key_Delete)) deleteSuperKey(ar.name)
+        // on a group's heading: fold / unfold, like everywhere else (r restores the group)
+        else if (ar && ar.kind === "head" && (txt === "r" || txt === "R")) restoreGroup(ar.name)
+        // ← on a folded group in a super group: up to the super group's heading
+        else if (ar && ar.kind === "head" && ar.collapsed && (k === Qt.Key_Left || txt === "h") && archiveSuperRow(archiveIndex) >= 0) archiveIndex = archiveSuperRow(archiveIndex)
         else if (ar && ar.kind === "head" && (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z")) setGroupCollapsed(ar.name, !ar.collapsed, "archive")
         else if (ar && ar.kind === "head" && (k === Qt.Key_Right || txt === "l")) setGroupCollapsed(ar.name, false, "archive")
         else if (ar && ar.kind === "head" && (k === Qt.Key_Left || txt === "h")) setGroupCollapsed(ar.name, true, "archive")
@@ -2452,7 +2484,26 @@ Item {
           required property var modelData
           required property int index
           width: ListView.view.width
-          height: modelData.kind === "head" ? 24 : 28
+          height: modelData.kind === "head" ? 24 : modelData.kind === "shead" ? 28 : 28
+          // a super group's heading: click folds it; restore all of it from here
+          SuperHead {
+            visible: arow.modelData.kind === "shead"
+            anchors.fill: parent
+            anchors.leftMargin: -6; anchors.rightMargin: -2
+            name: arow.modelData.kind === "shead" ? arow.modelData.name : ""
+            collapsed: !!arow.modelData.collapsed
+            count: arow.modelData.count || 0
+            here: arow.modelData.kind === "shead" && tasks.progressPane === "archive" && arow.index === tasks.archiveIndex
+            onToggle: { tasks.progressPane = "archive"; tasks.archiveIndex = arow.index; tasks.setSuperCollapsed(name, !collapsed, "archive"); tasks.forceActiveFocus() }
+            onMenu: (x, y) => { tasks.progressPane = "archive"; tasks.archiveIndex = arow.index; tasks.openSuperMenu(name, x, y) }
+            CcButton {
+              anchors.right: parent.right; anchors.rightMargin: 4
+              anchors.verticalCenter: parent.verticalCenter
+              cc: tasks.cc
+              icon: "\uf0e2"; text: "restore all  (r)"; fontSize: 10
+              onClicked: tasks.restoreSuper(arow.modelData.name)
+            }
+          }
           // a group's heading: click (or the keys) folds it
           Rectangle {
             visible: arow.modelData.kind === "head"
@@ -2477,8 +2528,17 @@ Item {
               }
             }
           }
+          CcButton {
+            visible: arow.modelData.kind === "head"
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            cc: tasks.cc
+            icon: "\uf0e2"; text: "restore all  (r)"; fontSize: 10
+            onClicked: tasks.restoreGroup(arow.modelData.name)
+          }
           Row {
             visible: arow.modelData.kind === "head"
+            x: (arow.modelData.depth || 0) * 14
             spacing: 6
             anchors.verticalCenter: parent.verticalCenter
             Text { anchors.verticalCenter: parent.verticalCenter; text: arow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
@@ -2493,6 +2553,7 @@ Item {
           Item {
             visible: arow.modelData.kind === "todo"
             anchors.fill: parent
+            anchors.leftMargin: (arow.modelData.depth || 0) * 14
             readonly property var t: arow.modelData.kind === "todo" ? arow.modelData.t : ({ id: "", title: "", group: "", counts: { done: 0 }, subs: [] })
             Rectangle {
               anchors.fill: parent
@@ -2550,7 +2611,7 @@ Item {
     readonly property var groupNames: tasks.allGroupNames()
     // items: each group, "no group", then actions (on a heading: group actions)
     readonly property var items: headSuper !== ""
-      ? [{ kind: "renameSuper", name: headSuper }, { kind: "deleteSuper", name: headSuper }]
+      ? [{ kind: "archiveSuper", name: headSuper }, { kind: "renameSuper", name: headSuper }, { kind: "deleteSuper", name: headSuper }]
       : headGroup !== ""
       ? [{ kind: "archiveGroup", name: headGroup }, { kind: "deleteGroup", name: headGroup }]
         .concat(Object.keys(tasks.supersMap).sort().map(function(sp) { return { kind: "intoSuper", name: sp } }))
@@ -2583,6 +2644,7 @@ Item {
       if (it.kind === "intoSuper") { tasks.act(["super-set", headGroup, it.name]); visible = false; tasks.forceActiveFocus(); return }
       if (it.kind === "outOfSuper") { tasks.act(["super-set", headGroup, ""]); visible = false; tasks.forceActiveFocus(); return }
       if (it.kind === "renameSuper") { visible = false; tasks.startRenameSuper(it.name); return }
+      if (it.kind === "archiveSuper") { tasks.archiveSuper(it.name); visible = false; tasks.forceActiveFocus(); return }
       if (it.kind === "deleteSuper") {
         if (armed !== "s:" + it.name) { armed = "s:" + it.name; return }
         armed = ""
@@ -2642,6 +2704,7 @@ Item {
                 if (it.kind === "intoSuper") return "\uf247  into super group " + it.name + (tasks.superOf(menu.headGroup) === it.name ? "  \uf00c" : "")
                 if (it.kind === "outOfSuper") return "\uf057  out of super group " + it.name
                 if (it.kind === "renameSuper") return "\uf044  rename super group  (e)"
+                if (it.kind === "archiveSuper") return "\uf187  archive it all  (A)"
                 if (it.kind === "deleteSuper") return "\uf1f8  delete super group  (d d)"
                 if (it.kind === "archiveGroup") return "\uf187  archive the whole group"
                 if (it.kind === "deleteGroup") return "\uf1f8  delete group  (d d)"
@@ -2977,14 +3040,14 @@ Item {
                            ["J K  Shift ↑↓", "move a todo"], ["drag", "move (into another group, too)"],
                            ["←  z  (or click a heading)", "fold its group"], ["g  /  right-click on a heading", "group menu: archive or delete the group"],
                            ["A  on a heading", "archive the whole group"], ["e  /  d d  on a heading (any tab)", "rename / delete the group"], ["d d  on a group in the g menu", "delete that group"], ["Enter  Space  →  on a heading", "fold / unfold"],
-                           ["g  on a group: into / new super group", "super groups hold groups; their headings take the same keys"]]],
+                           ["g  on a group: into / new super group", "super groups hold groups; their headings take the same keys"], ["A  on a super group", "archive every todo in it"]]],
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space", "to do → in progress → done"], ["Enter", "open it over the panel (c copy · e edit)"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
           ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
           ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["L  on a super group, group, todo or sub-todo", "jump to its section of the log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Enter on a sub-todo", "open it over the panel"],
                         ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
           ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
-                        ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list (you stay in the archive)"], ["g  /  right-click", "group, restore or delete an archived list"], ["←  z  /  Enter  →  on a heading", "fold / unfold an archive group"], ["↑ at the top  Esc", "back up"]]]
+                        ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list (you stay in the archive)"], ["r  on an archive heading", "restore the whole group / super group"], ["g  /  right-click", "group, restore or delete an archived list"], ["←  z  /  Enter  →  on a heading", "fold / unfold an archive group"], ["↑ at the top  Esc", "back up"]]]
         ]
         Column {
           required property var modelData
