@@ -898,12 +898,26 @@ vec3 cleanCel(vec2 p, float d, vec3 base) {
     vec3 light = min(base * 1.22 + 0.08, vec3(1.0));
     vec3 shade = base * vec3(0.55, 0.58, 0.78);
     vec3 ink = mix(base * 0.1, vec3(0.03, 0.02, 0.07), 0.7);
-    // hard band edges, anti-aliased over about a pixel
+    // hard band edges, anti-aliased over about a pixel — nudged by a little
+    // noise so they read as brushed rather than ruled
     float aa = 0.04;
-    float inShade = 1.0 - smoothstep(0.55 - aa, 0.55 + aa, diff);
-    float inLight = smoothstep(0.9 - aa, 0.9 + aa, diff);
+    float brush = (vnoise(p / 7.0) - 0.5) * 0.12 + (vnoise(p / 2.3) - 0.5) * 0.04;
+    float inShade = 1.0 - smoothstep(0.55 - aa, 0.55 + aa, diff + brush);
+    float inLight = smoothstep(0.9 - aa, 0.9 + aa, diff + brush * 0.7);
     vec3 col = mix(base, shade, inShade);
     col = mix(col, light, inLight * (1.0 - inShade));
+    // each tone laid in as a soft, uneven wash (quieter behind widgets)
+    float calm = labelZone(p);
+    float wash = (vnoise(p / 18.0) - 0.5) * 0.2 + (vnoise(p / 6.0 + 3.1) - 0.5) * 0.09;
+    col *= 1.0 + wash * (1.0 - calm * 0.6);
+    // short ink strokes feathering the shadow's edge
+    float edgeZone = smoothstep(0.3, 0.5, diff + brush) * (1.0 - smoothstep(0.5, 0.75, diff + brush));
+    float u = dot(p, vec2(0.6, -0.8));
+    float stroke = 1.0 - smoothstep(0.2, 0.7, abs(fract(u / 4.5) - 0.5) * 4.5);
+    float dash = step(0.45, vnoise(vec2(u * 0.12, floor(u / 4.5) * 5.7)));
+    col = mix(col, shade * 0.7, stroke * dash * edgeZone * 0.55 * (1.0 - calm));
+    // fine paper grain over it all
+    col *= 1.0 + (hash2(floor(p * 0.8)) - 0.5) * 0.08 + (vnoise(p / 1.4) - 0.5) * 0.06;
     // rim light: a thin bright line just inside the lit side of the edge
     float rimBand = fill(-(d + 4.2)) * (1.0 - fill(-(d + 2.6)));
     float litSide = smoothstep(0.2, 0.6, dot(normalize(n.xy + 1e-4), -normalize(L.xy)));
