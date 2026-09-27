@@ -76,6 +76,7 @@ layout(std140, binding = 0) uniform buf {
     vec4 cava1;
     vec4 cava2;
     vec4 cava3;
+    vec4 cavaOpts;    // cava: x bars across the bar, y mirrored, z reach, w thickness (0s: defaults)
 };
 
 const float CELL = 64.0;
@@ -148,6 +149,12 @@ float fadeOut(float y) {
     return dripExtra.z > 0.0 ? 1.0 - smoothstep(dripExtra.z - 70.0, dripExtra.z - 6.0, y) : 1.0;
 }
 
+// cava: the space between bars (the bar count spread along the whole bar)
+float cavaStep() {
+    float len = orient < 1.5 ? screenSize.x : screenSize.y;
+    if (len <= 0.0) len = resolution.x;
+    return len / max(4.0, cavaOpts.x > 0.0 ? cavaOpts.x : len / (CELL * 0.5));
+}
 // cava: the audio level under x (bands blended into a smooth wave)
 float cavaBand(float i) {
     // floats only: some GL drivers balk at the int maths once translated
@@ -159,7 +166,10 @@ float cavaBand(float i) {
 float cavaLevel(float x) {
     float len = orient < 1.5 ? screenSize.x : screenSize.y;
     if (len <= 0.0) len = resolution.x;
-    float f = clamp(x / len, 0.0, 1.0) * 15.0;
+    float u = clamp(x / len, 0.0, 1.0);
+    // mirrored: bass in the middle, treble out to both ends
+    if (cavaOpts.y > 0.5) u = abs(u * 2.0 - 1.0);
+    float f = u * 15.0;
     float i = floor(f);
     float t = f - i;
     return mix(cavaBand(i), cavaBand(i + 1.0), t * t * (3.0 - 2.0 * t));
@@ -191,8 +201,10 @@ vec2 drip(vec2 p, float cx, float edgeY, float seed, float scale) {
     // as the music under it reaches, a round bead of goo swelling at its tip
     if (dripExtra.x > 3.5) {
         float lv = cavaLevel(cx);
-        float len = scale * (5.0 + lv * 118.0 * clamp(dripAmount, 0.5, 1.8));
-        float w = (4.2 + 1.2 * hash(seed + 4.0)) * dripStyle.y;
+        float reach = cavaOpts.z > 0.0 ? cavaOpts.z : 1.0;
+        float len = scale * (5.0 + lv * 118.0 * reach * clamp(dripAmount, 0.5, 1.8));
+        float w = (4.2 + 1.2 * hash(seed + 4.0)) * dripStyle.y * (cavaOpts.w > 0.0 ? cavaOpts.w : 1.0);
+        w = min(w, cavaStep() * 0.36);          // never so fat they run together
         vec2 tip = vec2(cx, edgeY + len);
         float r = w * (1.15 + 0.35 * lv);
         float d = min(sdSegment(p, vec2(cx, edgeY - 4.0), tip, w * (0.8 + 0.2 * lv)), length(p - tip) - r);
@@ -755,18 +767,18 @@ vec2 mapSceneBody(vec2 p) {
     float hl = 1e5;
     float ci = floor(p.x / CELL);
 
-    // cava: evenly spaced bars, two to a cell, like a visualizer's
+    // cava: evenly spaced bars, like a visualizer's (as many as asked for)
     if (dripExtra.x > 3.5) {
+        float sp = cavaStep();
+        float bi = floor(p.x / sp);
         for (int k = -1; k <= 1; k++) {
-            float i = ci + float(k);
-            for (int h = 0; h < 2; h++) {
-                float cx = (i + 0.25 + 0.5 * float(h)) * CELL;
-                float edge = dripEdge(cx);
-                if (edge < 0.0) continue;
-                vec2 dr = drip(p, cx, edge, i * 2.0 + float(h), 1.0);
-                d = smin(d, dr.x, 7.0);
-                hl = min(hl, dr.y);
-            }
+            float i = bi + float(k);
+            float cx = (i + 0.5) * sp;
+            float edge = dripEdge(cx);
+            if (edge < 0.0) continue;
+            vec2 dr = drip(p, cx, edge, i, 1.0);
+            d = smin(d, dr.x, min(7.0, sp * 0.3));
+            hl = min(hl, dr.y);
         }
     }
     else for (int k = -1; k <= 1; k++) {

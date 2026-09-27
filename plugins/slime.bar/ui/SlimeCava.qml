@@ -23,7 +23,12 @@ Item {
   property bool fromTop: false            // hang down instead of rising up
   property var levels: []                 // 0..1 per bar, smoothed
 
-  readonly property string configPath: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/slime-shell-cava-" + bars + ".conf"
+  property int sensitivity: 0             // 0: cava finds it (autosens); else a fixed %
+  property int smoothing: 60              // cava's noise_reduction: low snappy, high syrupy
+  property bool stereo: false             // true: left channel mirrored beside the right
+  readonly property bool tuned: sensitivity > 0 || smoothing !== 60 || stereo
+  readonly property string configPath: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/slime-shell-cava-" + bars
+    + (tuned ? "-s" + sensitivity + "-n" + smoothing + (stereo ? "-st" : "") : "") + ".conf"
   readonly property bool silent: levels.every(function(v) { return v < 0.02 })
   property bool configReady: false
   readonly property bool wanted: active && visible && configReady
@@ -31,16 +36,24 @@ Item {
   // cava config: raw ascii levels 0..100, ';' between bars, one frame per line
   FileView {
     id: config
-    path: viz.configPath
     printErrors: false
-    Component.onCompleted: setText(
-      "[general]\nbars = " + viz.bars + "\nframerate = 30\nautosens = 1\n" +
-      "[output]\nmethod = raw\nchannels = mono\nmono_option = average\nraw_target = /dev/stdout\ndata_format = ascii\n" +
-      "ascii_max_range = 100\nbar_delimiter = 59\nframe_delimiter = 10\n" +
-      "[smoothing]\nnoise_reduction = 60\n")
+    Component.onCompleted: viz.writeConfig()
     onSaved: viz.configReady = true
     onSaveFailed: viz.configReady = true
   }
+  function writeConfig() {
+    configReady = false
+    config.path = viz.configPath      // set here, not bound: it must change before the write
+    config.setText(
+      "[general]\nbars = " + viz.bars + "\nframerate = 30\n" +
+      (viz.sensitivity > 0 ? "autosens = 0\nsensitivity = " + viz.sensitivity + "\n" : "autosens = 1\n") +
+      "[output]\nmethod = raw\n" + (viz.stereo ? "channels = stereo\n" : "channels = mono\nmono_option = average\n") +
+      "raw_target = /dev/stdout\ndata_format = ascii\n" +
+      "ascii_max_range = 100\nbar_delimiter = 59\nframe_delimiter = 10\n" +
+      "[smoothing]\nnoise_reduction = " + viz.smoothing + "\n")
+  }
+  // new settings: a new config file, and cava restarted on it
+  onConfigPathChanged: { cava.running = false; writeConfig() }
 
   Process {
     id: cava

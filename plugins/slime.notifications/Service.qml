@@ -1042,6 +1042,7 @@ Item {
         property vector4d cava1: bar ? bar.cava1 : Qt.vector4d(0, 0, 0, 0)
         property vector4d cava2: bar ? bar.cava2 : Qt.vector4d(0, 0, 0, 0)
         property vector4d cava3: bar ? bar.cava3 : Qt.vector4d(0, 0, 0, 0)
+        property vector4d cavaOpts: bar ? bar.cavaOpts : Qt.vector4d(0, 0, 0, 0)
         property vector4d eggDrip: Qt.vector4d(0, 0, 0, 0)
         property vector4d group0: bar && bar.sharedGroupRects[0] ? bar.sharedGroupRects[0] : noBulb
         property vector4d group1: bar && bar.sharedGroupRects[1] ? bar.sharedGroupRects[1] : noBulb

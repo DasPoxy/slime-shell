@@ -264,6 +264,49 @@ Item {
         current: settings.bar.dripStyle
         onPicked: value => settings.bar.dripStyle = value
       }
+      // the cava drip style's own knobs (only while it's picked)
+      ChoiceRow {
+        visible: settings.bar.dripStyle === "cava"
+        title: "CAVA · BARS"
+        options: [["24", 24], ["48", 48], ["80", 80], ["120", 120], ["160", 160]]
+        current: settings.bar.cavaBars
+        onPicked: value => settings.bar.cavaBars = value
+      }
+      ChoiceRow {
+        visible: settings.bar.dripStyle === "cava"
+        title: "CAVA · LAYOUT"
+        options: [["bass → treble", false], ["mirrored (bass in the middle)", true]]
+        current: settings.bar.cavaMirror
+        onPicked: value => settings.bar.cavaMirror = value
+      }
+      ChoiceRow {
+        visible: settings.bar.dripStyle === "cava"
+        title: "CAVA · SENSITIVITY"
+        options: [["auto", 0], ["low", 50], ["medium", 100], ["high", 180], ["max", 300]]
+        current: settings.bar.cavaSens
+        onPicked: value => settings.bar.cavaSens = value
+      }
+      ChoiceRow {
+        visible: settings.bar.dripStyle === "cava"
+        title: "CAVA · REACH"
+        options: [["short", 0.55], ["medium", 1.0], ["long", 1.5], ["floor it", 2.1]]
+        current: settings.bar.cavaReach
+        onPicked: value => settings.bar.cavaReach = value
+      }
+      ChoiceRow {
+        visible: settings.bar.dripStyle === "cava"
+        title: "CAVA · THICKNESS"
+        options: [["thin", 0.6], ["normal", 1.0], ["thick", 1.5], ["chunky", 2.2]]
+        current: settings.bar.cavaWidth
+        onPicked: value => settings.bar.cavaWidth = value
+      }
+      ChoiceRow {
+        visible: settings.bar.dripStyle === "cava"
+        title: "CAVA · SMOOTHING"
+        options: [["snappy", 20], ["smooth", 55], ["syrupy", 85]]
+        current: settings.bar.cavaSmooth
+        onPicked: value => settings.bar.cavaSmooth = value
+      }
       ChoiceRow {
         title: "DRIP AMOUNT"
         options: [["dry", 0.4], ["ooze", 1.0], ["gush", 1.7], ["torrent", 2.6], ["variable", -1]]

@@ -217,6 +217,13 @@ Item {
   property int desktopCorners: 0            // rounded screen corners: radius in px, 0 = off
   property bool cornerSlime: false          // slime patches in the corners across from the bar
   property bool ccKeyboard: true            // command centre keyboard navigation
+  // cava drip style (Settings → Motion, shown while it's picked)
+  property int cavaBars: 80                 // bars across the whole bar
+  property bool cavaMirror: false           // bass in the middle, treble out to both ends
+  property int cavaSens: 0                  // 0 auto, else cava's sensitivity %
+  property real cavaReach: 1.0              // how far the loudest bar hangs
+  property real cavaWidth: 1.0              // bar thickness
+  property int cavaSmooth: 55               // cava's noise_reduction
   property real ccFontScale: 1.0            // command centre text size (0.8 – 1.4)
   property bool ccSidebarCollapsed: false   // command centre's tab sidebar folded to icons
   readonly property var monsterHues: ["bright_green", "bright_cyan", "bright_magenta", "bright_yellow", "bright_blue", "bright_red",
@@ -323,10 +330,13 @@ Item {
   property vector4d cava1: Qt.vector4d(0, 0, 0, 0)
   property vector4d cava2: Qt.vector4d(0, 0, 0, 0)
   property vector4d cava3: Qt.vector4d(0, 0, 0, 0)
+  readonly property vector4d cavaOpts: Qt.vector4d(cavaBars, cavaMirror ? 1 : 0, cavaReach, cavaWidth)
   SlimeCava {
     id: dripCava
     active: root.dripStyle === "cava"
     bars: 16
+    sensitivity: root.cavaSens
+    smoothing: root.cavaSmooth
     width: 0; height: 0
     onLevelsChanged: {
       var v = levels
@@ -346,7 +356,8 @@ Item {
   // written (debounced) whenever one of these changes.
   readonly property var skinKeys: ["slimeRole", "gradientRole", "shadingStyle", "slimeFps", "dripAmount",
     "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material", "dripStyle", "monsterColor",
-    "desktopCorners", "cornerSlime", "ccKeyboard", "ccSidebarCollapsed", "ccFontScale"]
+    "desktopCorners", "cornerSlime", "ccKeyboard", "ccSidebarCollapsed", "ccFontScale",
+    "cavaBars", "cavaMirror", "cavaSens", "cavaReach", "cavaWidth", "cavaSmooth"]
   property bool skinLoaded: false
   // A layer change made while the bar surface is still being set up is lost,
   // so "behind" only takes effect once the bar has been mapped for a moment.
@@ -394,6 +405,12 @@ Item {
   onCornerSlimeChanged: skinSaveTimer.restart()
   onCcKeyboardChanged: skinSaveTimer.restart()
   onCcFontScaleChanged: skinSaveTimer.restart()
+  onCavaBarsChanged: skinSaveTimer.restart()
+  onCavaMirrorChanged: skinSaveTimer.restart()
+  onCavaSensChanged: skinSaveTimer.restart()
+  onCavaReachChanged: skinSaveTimer.restart()
+  onCavaWidthChanged: skinSaveTimer.restart()
+  onCavaSmoothChanged: skinSaveTimer.restart()
   onCcSidebarCollapsedChanged: skinSaveTimer.restart()
   // the edge across from the bar (for the corner patches)
   readonly property string oppositeEdge: ({ top: "bottom", bottom: "top", left: "right", right: "left" })[position] || "bottom"
@@ -1983,6 +2000,7 @@ Item {
     property vector4d cava1: root.cava1
     property vector4d cava2: root.cava2
     property vector4d cava3: root.cava3
+    property vector4d cavaOpts: root.cavaOpts
     }
 
   component BarPanel: PanelWindow {
