@@ -187,6 +187,7 @@ Item {
           cursorShape: Qt.PointingHandCursor
           onClicked: if (home.clockWidget) home.clockWidget.toggleHour24()
         }
+        CcFocus { onActivate: if (home.clockWidget) home.clockWidget.toggleHour24() }
       }
       Column {
         anchors.verticalCenter: parent.verticalCenter
@@ -468,6 +469,7 @@ Item {
             cursorShape: Qt.PointingHandCursor
             onClicked: calendar.month = new Date(clock.date.getFullYear(), clock.date.getMonth(), 1)
           }
+          CcFocus { onActivate: calendar.month = new Date(clock.date.getFullYear(), clock.date.getMonth(), 1) }
         }
         CcGearButton {
           anchors.right: parent.right

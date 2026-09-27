@@ -87,7 +87,9 @@ falls off with it, or turns up trapped in a panel's ooze.
   marching on a dungeon), Wallpapers, Tasks, Start-Up (apps to launch at
   login, and on which workspace) and Settings tabs. It fits any screen:
   capped to the space there is (tall tabs scroll) and scaled down on narrow
-  or portrait screens.
+  or portrait screens. Keyboard driven too: arrows move a highlight between controls,
+  Enter presses, ←/→ turn sliders, 1–6 or Ctrl+Tab switch tabs, **?** shows
+  the keys (Settings → Command centre to turn it off).
 - **Widgets** — launcher, workspaces, agents (its robot gets worried as your
   session usage climbs), media, clock & weather, indicators, tray, treasure
   chest (widget picker), bluetooth, network, audio, display, power, keyboard
@@ -200,6 +202,7 @@ omarchy-shell shell toggle <widget id>           # any bar widget's panel, e.g. 
 
 Command centre → **Settings** (sections fold open and closed):
 
+- **Command centre** — keyboard navigation on / off
 - **Desktop styling** — rounded screen corners (off / small / medium / large)
   and slime patches in the corners across from the bar, mirroring its look
 - **Slime** — colour, gradient partner, material, bar position, bar shape,

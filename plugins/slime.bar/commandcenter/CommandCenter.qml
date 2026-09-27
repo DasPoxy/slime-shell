@@ -59,6 +59,111 @@ Item {
     return (i >= 3 ? bytes.toFixed(1) : Math.round(bytes)) + " " + units[i]
   }
 
+  // ---- keyboard: arrows move a highlight between controls (the nearest one
+  // in that direction), Enter / Space press it, ← / → nudge a slider,
+  // Ctrl+Tab · Alt+1…6 (and 1…6) switch tabs, ? shows the keys, Esc steps
+  // back and then closes. The Tasks tab keeps its own keys. Off with
+  // Settings → Command centre → Keyboard navigation.
+  readonly property bool kbEnabled: bar.ccKeyboard !== false
+  property Item kbItem: null
+  property bool kbHelp: false
+  property rect kbRect: Qt.rect(0, 0, 0, 0)
+  focus: true
+  function kbTabs() { return tabs.map(function(t) { return t[0] }) }
+  function switchTab(i) {
+    var t = kbTabs()
+    bar.ccTab = t[(i + t.length) % t.length]
+  }
+  function walk(it, out) {
+    if (!it || !it.visible || it.opacity <= 0.01) return
+    if (it.ccFocusable === true && it.enabled !== false && it.width > 1 && it.height > 1) out.push(it)
+    var ch = it.children
+    for (var i = 0; i < ch.length; i++) walk(ch[i], out)
+  }
+  function focusables() { var out = []; walk(tabColumn, out); walk(scroller, out); return out }
+  function rectOf(it) { var p = it.mapToItem(center, 0, 0); return Qt.rect(p.x, p.y, it.width, it.height) }
+  function kbMove(dx, dy) {
+    var all = focusables()
+    if (!all.length) return
+    if (!kbItem || all.indexOf(kbItem) < 0) {
+      // first press: the top-left control in the tab's content
+      var best = null, bs = 1e9
+      all.forEach(function(it) {
+        var r = rectOf(it)
+        if (r.x < sidebarWidth) return
+        var sc = r.y * 2 + r.x
+        if (sc < bs) { bs = sc; best = it }
+      })
+      kbItem = best || all[0]
+    } else {
+      var c = rectOf(kbItem), cx = c.x + c.width / 2, cy = c.y + c.height / 2
+      var pick = null, ps = 1e9
+      all.forEach(function(it) {
+        if (it === kbItem) return
+        var r = rectOf(it), vx = r.x + r.width / 2 - cx, vy = r.y + r.height / 2 - cy
+        var along = vx * dx + vy * dy, cross = Math.abs(vx * dy - vy * dx)
+        if (along <= 4) return
+        var sc = along + cross * 2.5
+        if (sc < ps) { ps = sc; pick = it }
+      })
+      if (pick) kbItem = pick
+    }
+    kbSync()
+    kbReveal()
+  }
+  function kbSync() { if (kbItem) kbRect = rectOf(kbItem) }
+  // scroll the tab so the highlighted control is in view
+  function kbReveal() {
+    if (!kbItem || !scroller.interactive) return
+    var p = kbItem.mapToItem(scroller.contentItem, 0, 0)
+    if (p.x < 0) return                                    // (the sidebar)
+    if (p.y < scroller.contentY) scroller.contentY = Math.max(0, p.y - 12)
+    else if (p.y + kbItem.height > scroller.contentY + scroller.height)
+      scroller.contentY = Math.min(scroller.contentHeight - scroller.height, p.y + kbItem.height - scroller.height + 12)
+    kbSync()
+  }
+  Connections {
+    target: center.bar
+    function onAnimTimeChanged() { if (center.kbItem) center.kbSync() }       // controls bob
+    function onCcTabChanged() { center.kbItem = null; center.kbHelp = false; center.kbTakeFocus() }
+  }
+  function kbTakeFocus() { if (shown && bar.ccTab !== "tasks") Qt.callLater(function() { center.forceActiveFocus() }) }
+  onShownChanged: { kbItem = null; kbHelp = false; kbTakeFocus() }
+  // hover keys on the media slime borrow the keyboard; take it back after
+  Timer {
+    interval: 600; repeat: true
+    running: center.shown && center.bar.ccTab !== "tasks"
+    onTriggered: if (!center.Window.activeFocusItem) center.forceActiveFocus()
+  }
+  Keys.onPressed: event => {
+    var k = event.key, txt = event.text
+    var ctrl = event.modifiers & Qt.ControlModifier, alt = event.modifiers & Qt.AltModifier
+    var cur = kbTabs().indexOf(bar.ccTab)
+    // tab switching works everywhere, the Tasks tab included
+    if (ctrl && (k === Qt.Key_Tab || k === Qt.Key_Backtab)) { switchTab(cur + (k === Qt.Key_Backtab ? -1 : 1)); event.accepted = true; return }
+    if (alt && k >= Qt.Key_1 && k < Qt.Key_1 + tabs.length) { switchTab(k - Qt.Key_1); event.accepted = true; return }
+    if (bar.ccTab === "tasks") return                     // its own keys (Esc closes there)
+    if (k === Qt.Key_Escape) {
+      if (kbHelp) kbHelp = false
+      else if (kbItem) kbItem = null
+      else bar.commandCenterOpen = false
+      event.accepted = true; return
+    }
+    if (!kbEnabled) return
+    var slider = kbItem && typeof kbItem.ccAdjust === "function"
+    if (txt === "?") kbHelp = !kbHelp
+    else if (k >= Qt.Key_1 && k < Qt.Key_1 + tabs.length && !ctrl) switchTab(k - Qt.Key_1)
+    else if (slider && (k === Qt.Key_Left || txt === "h")) kbItem.ccAdjust(-1)
+    else if (slider && (k === Qt.Key_Right || txt === "l")) kbItem.ccAdjust(1)
+    else if (k === Qt.Key_Left || txt === "h") kbMove(-1, 0)
+    else if (k === Qt.Key_Right || txt === "l") kbMove(1, 0)
+    else if (k === Qt.Key_Up || txt === "k") kbMove(0, -1)
+    else if (k === Qt.Key_Down || txt === "j") kbMove(0, 1)
+    else if ((k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space) && kbItem) { kbItem.ccActivate(); kbSync() }
+    else return
+    event.accepted = true
+  }
+
   readonly property real contentHeight: loader.item ? loader.item.implicitHeight : 0
   implicitHeight: Math.min(maxHeight, Math.max(tabColumn.implicitHeight, contentHeight))
 
@@ -117,6 +222,54 @@ Item {
       }
     }
   }
+  // the keyboard's highlight ring
+  Rectangle {
+    z: 100
+    visible: center.kbItem !== null && center.kbItem.visible && center.bar.ccTab !== "tasks"
+    x: center.kbRect.x - 4; y: center.kbRect.y - 4
+    width: center.kbRect.width + 8; height: center.kbRect.height + 8
+    radius: Math.min(height / 2, 14)
+    color: Qt.rgba(1, 1, 1, 0.14)
+    border.color: center.ink
+    border.width: 2.5
+    Rectangle {
+      anchors.fill: parent; anchors.margins: -3
+      radius: parent.radius + 3
+      color: "transparent"
+      border.color: Qt.rgba(1, 1, 1, 0.7)
+      border.width: 1.5
+    }
+  }
+  // the keys, on ?
+  Rectangle {
+    z: 101
+    visible: center.kbHelp
+    anchors.centerIn: parent
+    width: 460
+    height: kbHelpText.implicitHeight + 28
+    radius: 16
+    color: center.paper
+    border.color: center.ink
+    border.width: 2
+    Text {
+      id: kbHelpText
+      x: 16; y: 14
+      width: parent.width - 32
+      textFormat: Text.PlainText
+      text: "Arrows / h j k l   move between controls\n"
+          + "Enter / Space       press the highlighted control\n"
+          + "← / → on a slider   turn it down / up\n"
+          + "1 … 6, Alt+1 … 6    go to a tab\n"
+          + "Ctrl+Tab            next tab (Shift: previous)\n"
+          + "Esc                 clear the highlight, then close\n"
+          + "?                   these keys\n\n"
+          + "The Tasks tab has its own keys (? there)."
+      color: center.ink
+      font.family: "monospace"
+      font.pixelSize: 12
+    }
+  }
+
   // scroll indicator, only when the tab doesn't fit
   Rectangle {
     visible: scroller.interactive

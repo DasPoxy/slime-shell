@@ -223,6 +223,7 @@ Item {
               cursorShape: Qt.PointingHandCursor
               onClicked: if (monster.player) monster.player[parent.modelData[1]]()
             }
+            CcFocus { anchors.margins: -6; onActivate: if (monster.player) monster.player[parent.modelData[1]]() }
           }
         }
       }

@@ -101,6 +101,18 @@ Item {
 
     CcSection {
       cc: settings.cc
+      title: "Command centre"
+      kind: "cottage"
+      ChoiceRow {
+        title: "KEYBOARD NAVIGATION (ARROWS, ENTER, 1–6, ? FOR KEYS)"
+        options: [["on", true], ["off", false]]
+        current: settings.bar.ccKeyboard
+        onPicked: value => settings.bar.ccKeyboard = value
+      }
+    }
+
+    CcSection {
+      cc: settings.cc
       title: "Desktop styling"
       kind: "mirror"
       ChoiceRow {

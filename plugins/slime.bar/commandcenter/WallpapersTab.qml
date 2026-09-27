@@ -124,6 +124,7 @@ Item {
         cursorShape: Qt.PointingHandCursor
         onClicked: walls.setWallpaper(thumb.filePath)
       }
+      CcFocus { onActivate: walls.setWallpaper(thumb.filePath) }
     }
   }
 }

@@ -25,6 +25,8 @@ Item {
   property bool muted: false
 
   signal clicked
+  readonly property bool ccFocusable: true
+  function ccActivate() { clicked() }
 
   readonly property real t: cc && cc.bar ? cc.bar.animTime : 0
   readonly property real grow: active ? 1.12 : (hover.hovered ? 1.06 : 1)

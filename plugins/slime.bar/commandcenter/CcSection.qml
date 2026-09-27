@@ -65,6 +65,7 @@ Column {
       cursorShape: Qt.PointingHandCursor
       onClicked: section.toggle()
     }
+    CcFocus { onActivate: section.toggle() }
   }
 
   Column {

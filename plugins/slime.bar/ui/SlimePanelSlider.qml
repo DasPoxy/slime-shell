@@ -27,6 +27,17 @@ Item {
   signal released(real value)
   signal rightClicked()
 
+  // a stop for the command centre's keyboard navigation: ← / → nudge it
+  readonly property bool ccFocusable: slime
+  function ccActivate() {}
+  function ccAdjust(dir) {
+    var next = Math.max(minimum, Math.min(maximum, liveValue + dir * step))
+    if (integer) next = Math.round(next)
+    liveValue = next
+    moved(next)
+    released(next)
+  }
+
   readonly property bool slime: !!bar && bar.slimeSkin === true
   readonly property real range: Math.max(0.0001, maximum - minimum)
   readonly property real progress: Math.max(0, Math.min(1, (liveValue - minimum) / range))

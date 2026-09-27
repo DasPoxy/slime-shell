@@ -215,6 +215,7 @@ Item {
   // ---- Desktop styling ----
   property int desktopCorners: 0            // rounded screen corners: radius in px, 0 = off
   property bool cornerSlime: false          // slime patches in the corners across from the bar
+  property bool ccKeyboard: true            // command centre keyboard navigation
   readonly property var monsterHues: ["bright_green", "bright_cyan", "bright_magenta", "bright_yellow", "bright_blue", "bright_red",
     "green", "cyan", "magenta", "yellow"]
   function monsterBodyFor(i) {
@@ -319,7 +320,7 @@ Item {
   // written (debounced) whenever one of these changes.
   readonly property var skinKeys: ["slimeRole", "gradientRole", "shadingStyle", "slimeFps", "dripAmount",
     "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material", "dripStyle", "monsterColor",
-    "desktopCorners", "cornerSlime"]
+    "desktopCorners", "cornerSlime", "ccKeyboard"]
   property bool skinLoaded: false
   // A layer change made while the bar surface is still being set up is lost,
   // so "behind" only takes effect once the bar has been mapped for a moment.
@@ -365,6 +366,7 @@ Item {
   onMonsterColorChanged: skinSaveTimer.restart()
   onDesktopCornersChanged: skinSaveTimer.restart()
   onCornerSlimeChanged: skinSaveTimer.restart()
+  onCcKeyboardChanged: skinSaveTimer.restart()
   // the edge across from the bar (for the corner patches)
   readonly property string oppositeEdge: ({ top: "bottom", bottom: "top", left: "right", right: "left" })[position] || "bottom"
   onMaterialChanged: skinSaveTimer.restart()

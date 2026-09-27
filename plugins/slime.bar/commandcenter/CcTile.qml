@@ -10,6 +10,8 @@ Rectangle {
   property bool on: false
   property bool busy: false
   signal clicked
+  readonly property bool ccFocusable: true
+  function ccActivate() { clicked() }
 
   implicitHeight: 58
   radius: 16

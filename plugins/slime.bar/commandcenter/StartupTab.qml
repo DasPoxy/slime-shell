@@ -162,6 +162,7 @@ Item {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: startup.update(row.index, "workspace", parent.index)
               }
+              CcFocus { onActivate: startup.update(row.index, "workspace", parent.index) }
             }
           }
         }
@@ -198,6 +199,7 @@ Item {
         font.family: startup.cc.font
         font.pixelSize: 13
       }
+      CcFocus { onActivate: search.forceActiveFocus() }
       TextInput {
         id: search
         x: 36

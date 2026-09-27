@@ -534,6 +534,9 @@ Item {
   // ---- keyboard --------------------------------------------------------------------
   Keys.onPressed: event => {
     var k = event.key, txt = event.text
+    // Ctrl+Tab and Alt+1…6 belong to the command centre (switch its tabs)
+    if (((event.modifiers & Qt.ControlModifier) && (k === Qt.Key_Tab || k === Qt.Key_Backtab))
+        || ((event.modifiers & Qt.AltModifier) && k >= Qt.Key_1 && k <= Qt.Key_9)) return
     if (viewEntry) {
       // the entry viewer takes the keys while it's open
       if (k === Qt.Key_Escape || k === Qt.Key_Backspace || txt === "q") closeEntry()

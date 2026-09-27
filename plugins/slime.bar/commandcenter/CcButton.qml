@@ -11,6 +11,9 @@ Rectangle {
   property real pad: 18
   property real fontSize: 12
   signal clicked
+  // a stop for the command centre's keyboard navigation
+  readonly property bool ccFocusable: true
+  function ccActivate() { clicked() }
 
   implicitWidth: row.implicitWidth + pad
   implicitHeight: 26
