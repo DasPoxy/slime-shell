@@ -89,7 +89,9 @@ falls off with it, or turns up trapped in a panel's ooze.
 - **Command centre** — Home (quick toggles, clock, cloud-shaped weather,
   sound, the media monster, calendar, notifications), System (adventurers
   marching on a dungeon), Wallpapers (the theme's, plus any you drop in
-  `~/Pictures/SlimeS-Wallpapers`), Tasks, Start-Up (apps to launch at
+  `~/Pictures/SlimeS-Wallpapers` — stills, or videos and gifs that play as
+  motion wallpapers, muted and looping, paused while a window is fullscreen
+  or you're idle), Tasks, Start-Up (apps to launch at
   login, and on which workspace) and Settings tabs. It fits any screen:
   capped to the space there is (tall tabs scroll) and scaled down on narrow
   or portrait screens. Keyboard driven too: arrows move a highlight between controls,
@@ -207,6 +209,7 @@ omarchy-shell slime-shell shading 0|1|2|3|4|5    # soft, anime, manga, print, ce
 omarchy-shell slime-shell drip drip|honey|rain|tar|frozen|stringy|lava|gelatinous|cava
 omarchy-shell slime-shell dock toggle|on|off|apps|top|bottom|left|right|start|center|end|autohide|pinned
 omarchy-shell slime-shell corners on|off|toggle
+omarchy-shell slime-shell wallpaper <path>       # a still, or a video / gif to play
 omarchy-shell slime-shell layer above|behind     # draw over or behind windows
 omarchy-shell slime-shell toggleLayer            # flip between the two
 omarchy-shell slime-shell color <theme role>     # accent, green, cyan, …

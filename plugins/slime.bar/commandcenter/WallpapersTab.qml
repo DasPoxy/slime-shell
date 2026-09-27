@@ -33,6 +33,7 @@ Item {
   Component.onCompleted: {
     currentProbe.running = true
     Quickshell.execDetached(["mkdir", "-p", walls.myDir])
+    posterKick.restart()
   }
 
   // each section folds open and closed (remembered, like the other folds)
@@ -71,10 +72,29 @@ Item {
     CcFocus { onActivate: walls.toggle(fh.key) }
   }
 
+  // a still is set straight away; a video / gif plays through the bar's
+  // motion wallpaper (which sets its poster as the background)
   function setWallpaper(path) {
+    if (bar && bar.isMotion(path)) { bar.setMotionWall(path); return }
+    if (bar) bar.clearMotionWall()
     walls.current = path
     Quickshell.execDetached(["omarchy-theme-bg-set", path])
   }
+  function isCurrent(path) {
+    return bar && bar.motionWall !== "" ? bar.motionWall === path : walls.current === path
+  }
+  // posters for the videos / gifs (made once, cached), for the thumbnails
+  property int posterRev: 0
+  Process {
+    id: posterMaker
+    command: ["bash", "-c",
+      "mkdir -p \"$2\"; for f in \"$1\"/*; do case \"${f,,}\" in *.mp4|*.webm|*.mkv|*.mov|*.m4v|*.gif) ;; *) continue ;; esac; " +
+      "p=\"$2/$(basename \"$f\" | sed 's/[^A-Za-z0-9._-]\\+/-/g').jpg\"; [ -s \"$p\" ] && continue; " +
+      "case \"${f,,}\" in *.gif) magick \"$f[0]\" -resize 1920x \"$p\" ;; *) ffmpeg -y -loglevel error -ss 1 -i \"$f\" -frames:v 1 -vf scale=1920:-2 \"$p\" ;; esac 2>/dev/null; done",
+      "_", walls.myDir, bar ? bar.posterDir : ""]
+    onExited: walls.posterRev++
+  }
+  Timer { id: posterKick; interval: 300; onTriggered: if (!posterMaker.running) posterMaker.running = true }
 
   readonly property var filters: ["*.png", "*.jpg", "*.jpeg", "*.webp", "*.PNG", "*.JPG", "*.JPEG", "*.WEBP"]
   FolderListModel {
@@ -87,7 +107,10 @@ Item {
   FolderListModel {
     id: mine
     folder: "file://" + walls.myDir
-    nameFilters: walls.filters
+    // stills, and motion: videos and gifs
+    nameFilters: walls.filters.concat(["*.mp4", "*.webm", "*.mkv", "*.mov", "*.m4v", "*.gif",
+                                       "*.MP4", "*.WEBM", "*.MKV", "*.MOV", "*.M4V", "*.GIF"])
+    onCountChanged: posterKick.restart()
     showDirs: false
     sortField: FolderListModel.Name
   }
@@ -96,7 +119,8 @@ Item {
   component Thumb: Item {
     id: thumb
     required property string filePath
-    readonly property bool selected: walls.current === filePath
+    readonly property bool motion: walls.bar ? walls.bar.isMotion(filePath) : false
+    readonly property bool selected: walls.isCurrent(filePath)
     width: walls.thumbWidth
     height: walls.thumbHeight
 
@@ -109,13 +133,30 @@ Item {
 
       Image {
         anchors.fill: parent
-        source: "file://" + thumb.filePath
+        // a video / gif shows its poster (once made)
+        source: thumb.motion ? (walls.bar ? "file://" + walls.bar.posterFor(thumb.filePath) + "?" + walls.posterRev : "")
+                             : "file://" + thumb.filePath
         sourceSize: Qt.size(320, 180)
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
       }
     }
 
+    Rectangle {   // motion badge: it plays
+      visible: thumb.motion
+      anchors.left: parent.left
+      anchors.bottom: parent.bottom
+      anchors.margins: 8
+      width: 26; height: 22; radius: 11
+      color: Qt.rgba(0, 0, 0, 0.55)
+      border.color: walls.cc.slime; border.width: 1.5
+      Text {
+        anchors.centerIn: parent
+        text: /\.gif$/i.test(thumb.filePath) ? "GIF" : "\uf04b"
+        color: walls.cc.slime
+        font.family: walls.cc.font; font.bold: true
+        font.pixelSize: Math.round((/\.gif$/i.test(thumb.filePath) ? 8 : 10) * walls.fs) }
+    }
     Rectangle {   // selected badge
       visible: thumb.selected
       anchors.right: parent.right
@@ -211,7 +252,7 @@ Item {
       visible: mine.count === 0 && !walls.shut("mine")
       width: parent.width
       wrapMode: Text.Wrap
-      text: "Drop images into ~/Pictures/SlimeS-Wallpapers and they show up here, whatever the theme."
+      text: "Drop images, videos or gifs into ~/Pictures/SlimeS-Wallpapers and they show up here, whatever the theme."
       color: walls.cc.ink; opacity: 0.7
       font.family: walls.cc.font; font.pixelSize: Math.round(11 * walls.fs)
     }

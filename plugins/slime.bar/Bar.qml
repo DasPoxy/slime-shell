@@ -6,6 +6,7 @@ import QtQuick
 import QtQml
 import QtQuick.Shapes
 import QtQuick.Layouts
+import QtMultimedia
 import qs.Commons
 import qs.Ui
 import "BarModel.js" as BarModel
@@ -218,6 +219,51 @@ Item {
   property int desktopCorners: 0            // rounded screen corners: radius in px, 0 = off
   property bool cornerSlime: false          // slime patches in the corners across from the bar
   property bool ccKeyboard: true            // command centre keyboard navigation
+  // ---- motion wallpapers (videos / gifs from ~/Pictures/SlimeS-Wallpapers) ----
+  // Played muted and looping on a background layer over Omarchy's own; a
+  // still frame (the poster) is set as the real background so the lock
+  // screen and anything else reading it match. Picking any other background
+  // (here, a theme change, Next, another picker) swaps the poster out, and
+  // the motion stops.
+  property string motionWall: ""
+  readonly property bool motionIsGif: /\.gif$/i.test(motionWall)
+  readonly property bool motionPaused: allFullscreen || slimeIdle.isIdle
+  readonly property string posterDir: Quickshell.env("HOME") + "/.cache/slime-shell/wallpaper-posters"
+  function isMotion(path) { return /\.(mp4|webm|mkv|mov|m4v|gif)$/i.test(String(path)) }
+  function posterFor(path) {
+    var b = String(path).split("/").pop().replace(/[^A-Za-z0-9._-]+/g, "-")
+    return posterDir + "/" + b + ".jpg"
+  }
+  // the poster is made first (if it isn't cached), then set as the background
+  function setMotionWall(path) {
+    motionStarter.command = ["bash", "-c",
+      "mkdir -p \"$(dirname \"$2\")\"; [ -s \"$2\" ] || { case \"$1\" in " +
+      "*.gif|*.GIF) magick \"$1[0]\" -resize 1920x \"$2\" ;; " +
+      "*) ffmpeg -y -loglevel error -ss 1 -i \"$1\" -frames:v 1 -vf scale=1920:-2 \"$2\" ;; esac; }; " +
+      "[ -s \"$2\" ] && omarchy-theme-bg-set \"$2\"", "_", path, posterFor(path)]
+    motionPending = path
+    motionStarter.running = true
+  }
+  property string motionPending: ""
+  Process {
+    id: motionStarter
+    onExited: code => { if (code === 0) root.motionWall = root.motionPending; root.motionPending = "" }
+  }
+  function clearMotionWall() { motionWall = "" }
+  // the background moved on without us: stop
+  Timer {
+    interval: 3000; repeat: true
+    running: root.motionWall !== ""
+    onTriggered: motionProbe.running = true
+  }
+  Process {
+    id: motionProbe
+    command: ["readlink", "-f", Quickshell.env("HOME") + "/.local/state/omarchy/current/background"]
+    stdout: StdioCollector {
+      onStreamFinished: if (root.motionWall !== "" && text.trim() !== "" && text.trim() !== root.posterFor(root.motionWall)) root.motionWall = ""
+    }
+  }
+
   // ---- SlimeS-Dock: a dock of apps / folders on a free screen edge ----
   property bool dockEnabled: false
   property string dockEdge: "bottom"
@@ -415,7 +461,7 @@ Item {
     "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material", "dripStyle", "monsterColor",
     "desktopCorners", "cornerSlime", "ccKeyboard", "ccSidebarCollapsed", "ccFontScale",
     "cavaBars", "cavaMirror", "cavaSens", "cavaReach", "cavaWidth", "cavaSmooth",
-    "dockEnabled", "dockEdge", "dockAlign", "dockAutoHide", "dockIconSize"]
+    "dockEnabled", "dockEdge", "dockAlign", "dockAutoHide", "dockIconSize", "motionWall"]
   property bool skinLoaded: false
   // A layer change made while the bar surface is still being set up is lost,
   // so "behind" only takes effect once the bar has been mapped for a moment.
@@ -474,6 +520,7 @@ Item {
   onDockAlignChanged: skinSaveTimer.restart()
   onDockAutoHideChanged: skinSaveTimer.restart()
   onDockIconSizeChanged: skinSaveTimer.restart()
+  onMotionWallChanged: skinSaveTimer.restart()
   onCcSidebarCollapsedChanged: skinSaveTimer.restart()
   // the edge across from the bar (for the corner patches)
   readonly property string oppositeEdge: ({ top: "bottom", bottom: "top", left: "right", right: "left" })[position] || "bottom"
@@ -546,6 +593,11 @@ Item {
     // SlimeS-Dock: toggle | on | off | apps (the add-apps panel) |
     // top / bottom / left / right (its edge) | start / center / end (along it) |
     // autohide / pinned
+    // a wallpaper: a still (set as the background) or a video / gif (played)
+    function wallpaper(path: string): void {
+      if (root.isMotion(path)) root.setMotionWall(path)
+      else { root.clearMotionWall(); Quickshell.execDetached(["omarchy-theme-bg-set", path]) }
+    }
     // Desktop styling: slime in the far corners, on | off | toggle
     function corners(action: string): void { root.cornerSlime = action === "toggle" ? !root.cornerSlime : action === "on" }
     function dock(action: string): void {
@@ -2356,6 +2408,53 @@ Item {
     // ---- Skin: drips, the command centre, the egg — in their own window just
     // past the bar, one fixed size (resizing a surface on screen makes it
     // jump for a frame), click-through except where the command centre is.
+    // ---- Motion wallpaper: the picked video / gif, over Omarchy's background ----
+    PanelWindow {
+      id: motionWindow
+      screen: barWindow.screen
+      visible: root.motionWall !== ""
+      color: "transparent"
+      exclusionMode: ExclusionMode.Ignore
+      WlrLayershell.namespace: "slime-wallpaper"
+      WlrLayershell.layer: WlrLayer.Background
+      WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+      anchors { top: true; bottom: true; left: true; right: true }
+      mask: Region {}
+      AnimatedImage {
+        anchors.fill: parent
+        visible: root.motionIsGif
+        source: root.motionIsGif ? "file://" + root.motionWall : ""
+        fillMode: Image.PreserveAspectCrop
+        playing: !root.motionPaused
+        cache: false
+        asynchronous: true
+      }
+      MediaPlayer {
+        id: motionPlayer
+        source: !root.motionIsGif && root.motionWall !== "" ? "file://" + root.motionWall : ""
+        loops: MediaPlayer.Infinite
+        videoOutput: motionVideo
+        // no audio output at all: wallpapers are silent
+        onSourceChanged: if (source != "" && !root.motionPaused) play()
+        onMediaStatusChanged: if (mediaStatus === MediaPlayer.LoadedMedia && !root.motionPaused) play()
+      }
+      Connections {
+        target: root
+        function onMotionPausedChanged() {
+          if (root.motionIsGif || root.motionWall === "") return
+          if (root.motionPaused) motionPlayer.pause(); else motionPlayer.play()
+        }
+      }
+      VideoOutput {
+        id: motionVideo
+        anchors.fill: parent
+        visible: !root.motionIsGif
+        fillMode: VideoOutput.PreserveAspectCrop
+        // the poster underneath shows until the first frame is up
+        opacity: motionPlayer.playbackState !== MediaPlayer.StoppedState && motionPlayer.mediaStatus >= MediaPlayer.BufferedMedia ? 1 : 0
+      }
+    }
+
     // ---- Desktop styling: rounded screen corners ----
     // Four small click-through overlays, one per corner, each a black
     // quarter-circle cut-out (like a rounded bezel). Over everything.
