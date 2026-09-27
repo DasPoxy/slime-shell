@@ -199,17 +199,61 @@ Item {
   }
 
   // fold / unfold the sidebar: a little round button at its top-right corner
-  Rectangle {
+  // …drawn as a bubble trapped in the goo, with the arrow floating inside
+  Item {
     id: sidebarToggle
-    x: center.sidebarWidth - width - 6
-    y: center.sidebarCollapsed ? tabColumn.implicitHeight + 6 : 2
-    width: 22; height: 22; radius: 11
-    color: toggleHover.hovered ? Qt.rgba(1, 1, 1, 0.75) : Qt.rgba(1, 1, 1, 0.45)
-    border.color: center.ink
-    border.width: 1.5
+    readonly property real t: center.bar ? center.bar.animTime : 0
+    x: center.sidebarWidth - width - 5
+    y: (center.sidebarCollapsed ? tabColumn.implicitHeight + 6 : 1) + Math.sin(t * 1.4) * 1.2
+    width: 26; height: 26
+    scale: toggleHover.hovered ? 1.12 : 1
+    Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutBack } }
     Behavior on y { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-    // an arrow pointing the way the sidebar will go: left to fold it away,
-    // right to bring it back; it swings round as it flips
+    // the bubble wobbles very slightly, like it's squeezed by the ooze
+    transform: Scale {
+      origin.x: 13; origin.y: 13
+      xScale: 1 + Math.sin(sidebarToggle.t * 2.3) * 0.035
+      yScale: 1 - Math.sin(sidebarToggle.t * 2.3) * 0.035
+    }
+    // soft shadow the bubble casts into the slime below it
+    Rectangle {
+      x: 3; y: 5; width: parent.width - 4; height: parent.height - 4; radius: width / 2
+      color: Qt.rgba(center.ink.r, center.ink.g, center.ink.b, 0.22)
+    }
+    Shape {
+      anchors.fill: parent
+      preferredRendererType: Shape.CurveRenderer
+      // body: nearly clear in the middle, the slime's colour thickening to the
+      // rim (light passing through more film at the edges)
+      ShapePath {
+        strokeColor: Qt.rgba(center.ink.r, center.ink.g, center.ink.b, 0.55)
+        strokeWidth: 1.2
+        fillGradient: RadialGradient {
+          centerX: 11; centerY: 11; centerRadius: 15; focalX: 10; focalY: 10
+          GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.28) }
+          GradientStop { position: 0.55; color: Qt.rgba(center.slime.r, center.slime.g, center.slime.b, 0.25) }
+          GradientStop { position: 0.85; color: Qt.rgba(center.slime.r * 0.7, center.slime.g * 0.7, center.slime.b * 0.8, 0.55) }
+          GradientStop { position: 1.0; color: Qt.rgba(center.ink.r, center.ink.g, center.ink.b, 0.45) }
+        }
+        PathSvg { path: "M 13 1 A 12 12 0 1 1 12.99 1 Z" }
+      }
+      // bright film just inside the rim
+      ShapePath {
+        fillColor: "transparent"
+        strokeColor: Qt.rgba(1, 1, 1, 0.55)
+        strokeWidth: 0.9
+        PathSvg { path: "M 13 2.4 A 10.6 10.6 0 1 1 12.99 2.4 Z" }
+      }
+      // reflected light pooling in the bottom-right of the bubble
+      ShapePath {
+        fillColor: "transparent"
+        strokeColor: Qt.rgba(1, 1, 1, 0.45)
+        strokeWidth: 1.6
+        capStyle: ShapePath.RoundCap
+        PathSvg { path: "M 20.5 17.5 A 9 9 0 0 1 14 22" }
+      }
+    }
+    // the arrow, floating inside (it swings round as the sidebar flips)
     Shape {
       anchors.centerIn: parent
       width: 12; height: 12
@@ -225,6 +269,14 @@ Item {
         PathSvg { path: "M 10.5 6 L 1.5 6 M 5.5 1.5 L 1.2 6 L 5.5 10.5" }
       }
     }
+    // glossy highlight over the top-left, and a sparkle — over the arrow, so
+    // it reads as behind the bubble's skin
+    Rectangle {
+      x: 5; y: 6.5; width: 9; height: 3.6; radius: 1.8
+      rotation: -38
+      color: Qt.rgba(1, 1, 1, 0.78)
+    }
+    Rectangle { x: 16.2; y: 5.2; width: 2.6; height: 2.6; radius: 1.3; color: Qt.rgba(1, 1, 1, 0.9) }
     HoverHandler { id: toggleHover }
     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: center.toggleSidebar() }
     CcFocus { onActivate: center.toggleSidebar() }
