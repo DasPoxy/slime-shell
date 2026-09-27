@@ -53,6 +53,7 @@ Commands (all print JSON; errors go to stderr with exit status 1):
   group-archive GROUP               archive every todo in a group
   log ID MESSAGE [--by WHO] [--sub N]  append a task-log entry (about sub-todo N)
   log-show ID                       -> {"entries": [{n, time, by, sub, text}]}
+  log-all                           every todo's log, tagged with id, title, group and super
   log-edit ID N TEXT [--expect OLD]  rewrite entry N's text (0 = oldest)
   archive ID / unarchive ID
   search QUERY [--archived]         titles and sub-todos containing QUERY
@@ -363,6 +364,17 @@ def run(argv):
                 "supers": supers(root), "superOrder": super_order(root), "todos": todos}
     if cmd == "log-show":
         return {"title": load(root, rest[0], archived)["title"], "entries": log_entries(root, rest[0], archived)}
+    if cmd == "log-all":
+        # every active todo's log, each entry tagged super group › group › todo (› sub-todo)
+        g, out = groups(root), []
+        for i in all_ids(root):
+            t = load(root, i)
+            grp = t["meta"].get("group", "")
+            sup = g.get(grp, {}).get("super", "") if grp else ""
+            for e in log_entries(root, i):
+                e.update({"id": i, "title": t["title"], "group": grp, "super": sup})
+                out.append(e)
+        return {"entries": out}
     if cmd in ("search", "find"):
         q = " ".join(rest).lower()
         out = []

@@ -82,12 +82,12 @@ Item {
     viewEditor.cursorPosition = viewEditor.text.length
   }
   function saveEdit() {
-    if (!viewEntry || !selected) return
+    if (!viewEntry || (!selected && viewEntry.id === undefined)) return
     var text = viewEditor.text.trim()
     if (text === "" || text === viewEntry.text) { viewEditing = false; forceActiveFocus(); return }
     var before = viewEntry.text, n = viewEntry.n
     if (viewEntry.isSub) act(["sub-edit", selected.id, String(n), text])
-    else act(["log-edit", selected.id, String(n), text, "--expect", before])
+    else act(["log-edit", viewEntry.id !== undefined ? viewEntry.id : selected.id, String(n), text, "--expect", before])
     viewEntry = Object.assign({}, viewEntry, { text: text })
     viewEditing = false
     forceActiveFocus()
@@ -96,8 +96,65 @@ Item {
   // L: straight to the selected todo's log (first entry), from either tab
   property bool jumpToLog: false
   function firstEntryRow() {
-    for (var i = 0; i < logDisplay.length; i++) if (logDisplay[i].kind === "entry") return i
+    for (var i = 0; i < logDisplay.length; i++)
+      if (logDisplay[i].kind === "entry" && (!logWide || logDisplay[i].e.id === selectedId)) return i
+    for (var j = 0; j < logDisplay.length; j++) if (logDisplay[j].kind === "entry") return j
     return 0
+  }
+  // L in the Task Log: straight to the highlighted super group's, group's,
+  // todo's or sub-todo's section of the log (switching the log's view to one
+  // that has that section, and unfolding the way there)
+  property var logJumpTo: null                // {what, name} of the heading to land on
+  function jumpLogHere() {
+    var what = "", name = "", mode = logMode, vals = []
+    if (logPane === "list" && logCursor.indexOf("s:") === 0) {
+      what = "super"; name = logCursor.slice(2); mode = "super"; vals = [name]
+    } else if (logPane === "list" && logCursor.indexOf("g:") === 0) {
+      what = "group"; name = logCursor.slice(2)
+      mode = logMode === "super" ? "super" : "group"
+      vals = mode === "super" ? [superOf(name), name] : [name]
+    } else if (logPane === "lanes" && selected && selected.subs[logSub]) {
+      what = "sub"; name = logSub; mode = "sub"
+    } else if (selected && logWide) {
+      what = "todo"; name = selected.id
+      var g = selected.group
+      vals = logMode === "super" ? [superOf(g), g, name] : logMode === "group" ? [g, name] : [name]
+    } else { jumpLog(); return }
+    // the view, and every fold on the way down, in one go
+    var m = Object.assign({}, bar.ccSections)
+    delete m["tasks-log-by-sub"]
+    m["tasks-log-mode"] = mode
+    if (what === "sub") delete m[sectionKey(selected.subs[logSub].text)]
+    else {
+      var levels = mode === "super" ? ["super", "group", "todo"] : mode === "group" ? ["group", "todo"] : ["todo"]
+      var path = ""
+      vals.forEach(function(v, i) {
+        delete m["tasks-log-sec:" + mode + ":" + path + "/" + levels[i] + ":" + v]
+        path += "/" + v
+      })
+    }
+    bar.ccSections = m
+    logJumpTo = { what: what, name: name }
+    tryLogJump()
+  }
+  function tryLogJump() {
+    if (!logJumpTo) return
+    for (var i = 0; i < logDisplay.length; i++) {
+      var r = logDisplay[i]
+      if (r.kind === "head" && r.what === logJumpTo.what && (r.what === "sub" ? r.i === logJumpTo.name : r.name === logJumpTo.name)) {
+        logJumpTo = null
+        logPane = "entries"
+        logEntry = i
+        // the section's heading at the top of the log, its entries below it
+        Qt.callLater(function() { logList.positionViewAtIndex(i, ListView.Beginning) })
+        return
+      }
+    }
+    // not there (yet): wait for the log to load; if it has, there's nothing logged about it
+    if (!(logWide ? logAllReader.running : logReader.running) && (logWide ? allLogEntries.length : true)) {
+      if (logJumpTo.what === "sub") { logPane = "entries"; logEntry = 0 }
+      logJumpTo = null
+    }
   }
   function jumpLog() {
     if (!selected) return
@@ -108,35 +165,95 @@ Item {
     jumpToLog = true
     refresh()
   }
-  onLogDisplayChanged: if (jumpToLog && logDisplay.length) { logEntry = firstEntryRow(); jumpToLog = false }
+  onLogDisplayChanged: {
+    if (jumpToLog && logDisplay.length) { logEntry = firstEntryRow(); jumpToLog = false }
+    tryLogJump()
+  }
   Timer { id: copiedTimer; interval: 1600; onTriggered: tasks.copiedNote = "" }
   property string progressFollow: ""          // re-find this row after a move ("g:…" / "t:…")
-  // logs by time (newest first) or in sections per sub-todo; remembered
-  readonly property bool logBySub: !!(bar && bar.ccSections && bar.ccSections["tasks-log-by-sub"])
-  function toggleLogSort() {
+  // how the log is shown (s / S cycle it; remembered):
+  //   time  - this todo's log, newest first      sub   - this todo's, by sub-todo
+  //   todo  - every todo's log, by todo           group - by group › todo
+  //   super - by super group › group › todo
+  readonly property var logModes: ["time", "sub", "todo", "group", "super"]
+  readonly property var logModeNames: ({ time: "newest first", sub: "by sub-todo", todo: "all · by todo", group: "all · by group", super: "all · by super group" })
+  readonly property var logModeIcons: ({ time: "\uf017", sub: "\uf0ca", todo: "\uf0ae", group: "\uf07b", super: "\uf247" })
+  readonly property string logMode: {
+    var m = bar && bar.ccSections ? bar.ccSections["tasks-log-mode"] : ""
+    if (logModes.indexOf(m) >= 0) return m
+    return bar && bar.ccSections && bar.ccSections["tasks-log-by-sub"] ? "sub" : "time"
+  }
+  readonly property bool logBySub: logMode === "sub"
+  readonly property bool logWide: logMode === "todo" || logMode === "group" || logMode === "super"
+  property var allLogEntries: []              // every todo's log (the "all · …" views)
+  function toggleLogSort(back) {
     if (!bar) return
     var m = Object.assign({}, bar.ccSections)
-    if (logBySub) delete m["tasks-log-by-sub"]
-    else m["tasks-log-by-sub"] = true
+    delete m["tasks-log-by-sub"]
+    m["tasks-log-mode"] = logModes[(logModes.indexOf(logMode) + (back ? logModes.length - 1 : 1)) % logModes.length]
     bar.ccSections = m
     logEntry = 0
   }
-  // what the log shows: entries, and (by sub-todo) a heading per section
+  onLogModeChanged: refresh()
+  // the log's entries in the current view (the "all" views: newest first)
+  readonly property var logShown: logWide
+    ? allLogEntries.slice().sort(function(a, b) { return a.time < b.time ? 1 : a.time > b.time ? -1 : b.n - a.n })
+    : logEntries
+  // an entry's full tag: super group › group › todo  ↳ sub-todo
+  function entryGroup(e) { return e.id !== undefined ? e.group : (selected ? selected.group : "") }
+  function entryTag(e) {
+    var grp = entryGroup(e)
+    var title = e.id !== undefined ? e.title : (selected ? selected.title : "")
+    var sup = grp ? superOf(grp) : ""
+    return (sup ? sup + "  \u203a  " : "") + (grp ? grp + "  \u203a  " : "") + title + (e.sub ? "   \u21b3  " + e.sub : "")
+  }
+  // what the log shows: entries, and a heading per section (levels nest)
   readonly property var logDisplay: {
-    if (!logBySub || !selected) return logEntries.map(function(e) { return { kind: "entry", e: e } })
-    var rows = [], used = {}
+    var rows = []
+    if (logWide) {
+      // sections: super group › group › todo, as deep as the view goes;
+      // sections come newest activity first, like the entries in them
+      var levels = logMode === "super" ? ["super", "group", "todo"] : logMode === "group" ? ["group", "todo"] : ["todo"]
+      var keyOf = function(e, what) { return what === "super" ? superOf(e.group) : what === "group" ? e.group : e.id }
+      var build = function(list, depth, path) {
+        if (depth === levels.length) {
+          list.forEach(function(e) { rows.push({ kind: "entry", e: e, level: depth }) })
+          return
+        }
+        var what = levels[depth], order = [], by = {}
+        list.forEach(function(e) {
+          var k = keyOf(e, what)
+          if (!by[k]) { by[k] = []; order.push(k) }
+          by[k].push(e)
+        })
+        // "not in a super group" / "no group" go last (sort isn't stable: keep first-seen order by hand)
+        if (order.indexOf("") >= 0) { order.splice(order.indexOf(""), 1); order.push("") }
+        order.forEach(function(k) {
+          var mine = by[k], key = "tasks-log-sec:" + logMode + ":" + path + "/" + what + ":" + k
+          var shut = sectionFolded(key)
+          rows.push({ kind: "head", what: what, name: k, level: depth, key: key, count: mine.length, collapsed: shut,
+                      label: what === "todo" ? mine[0].title : k !== "" ? k : what === "super" ? "Not in a super group" : "No group",
+                      group: what === "todo" ? mine[0].group : what === "group" ? k : "" })
+          if (!shut) build(mine, depth + 1, path + "/" + k)
+        })
+      }
+      build(logShown, 0, "")
+      return rows
+    }
+    if (!logBySub || !selected) return logEntries.map(function(e) { return { kind: "entry", e: e, level: 0 } })
+    var used = {}
     selected.subs.forEach(function(sb, i) {
       var mine = logEntries.filter(function(e) { return e.sub === sb.text })
       if (!mine.length) return
-      var shut = sectionFolded(sb.text)
-      rows.push({ kind: "head", i: i, sub: sb, count: mine.length, collapsed: shut })
-      mine.forEach(function(e) { used[logEntries.indexOf(e)] = true; if (!shut) rows.push({ kind: "entry", e: e, section: i }) })
+      var key = sectionKey(sb.text), shut = sectionFolded(key)
+      rows.push({ kind: "head", what: "sub", i: i, sub: sb, key: key, level: 0, label: sb.text, count: mine.length, collapsed: shut })
+      mine.forEach(function(e) { used[logEntries.indexOf(e)] = true; if (!shut) rows.push({ kind: "entry", e: e, section: i, level: 1 }) })
     })
     var rest = logEntries.filter(function(e, n) { return !used[n] })
     if (rest.length) {
-      var restShut = sectionFolded("")
-      rows.push({ kind: "head", i: -1, sub: null, count: rest.length, collapsed: restShut })
-      if (!restShut) rest.forEach(function(e) { rows.push({ kind: "entry", e: e, section: -1 }) })
+      var restKey = sectionKey(""), restShut = sectionFolded(restKey)
+      rows.push({ kind: "head", what: "sub", i: -1, sub: null, key: restKey, level: 0, label: "About the whole todo", count: rest.length, collapsed: restShut })
+      if (!restShut) rest.forEach(function(e) { rows.push({ kind: "entry", e: e, section: -1, level: 1 }) })
     }
     return rows
   }
@@ -161,23 +278,28 @@ Item {
   }
   // ---- folding log sections (per todo and sub-todo, remembered) ----
   function sectionKey(subText) { return "tasks-log-sec:" + selectedId + ":" + subText }
-  function sectionFolded(subText) { return !!(bar && bar.ccSections && bar.ccSections[sectionKey(subText)]) }
-  function setSectionFolded(subText, shut) {
-    if (!bar) return
+  function sectionFolded(key) { return !!(bar && bar.ccSections && bar.ccSections[key]) }
+  function setSectionFolded(key, shut) {
+    if (!bar || !key) return
     var m = Object.assign({}, bar.ccSections)
-    if (shut) m[sectionKey(subText)] = true
-    else delete m[sectionKey(subText)]
+    if (shut) m[key] = true
+    else delete m[key]
     bar.ccSections = m
   }
-  function headText(row) { return row && row.sub ? row.sub.text : "" }
-  // fold the picked row's section and rest on its heading
-  function foldSectionOf(row) {
-    var sec = sectionOf(row), txt = ""
-    for (var i = 0; i < logDisplay.length; i++)
-      if (logDisplay[i].kind === "head" && logDisplay[i].i === sec) { txt = headText(logDisplay[i]); break }
-    setSectionFolded(txt, true)
-    for (var j = 0; j < logDisplay.length; j++)
-      if (logDisplay[j].kind === "head" && logDisplay[j].i === sec) { logEntry = j; return }
+  // the heading a row sits under (-1: none)
+  function parentHead(at) {
+    var lv = logDisplay[at] ? logDisplay[at].level : 0
+    for (var i = at - 1; i >= 0; i--)
+      if (logDisplay[i].kind === "head" && logDisplay[i].level < lv) return i
+    return -1
+  }
+  // fold the section the picked row is in, and rest on its heading; false if none
+  function foldSectionOf(at) {
+    var h = parentHead(at)
+    if (h < 0) return false
+    setSectionFolded(logDisplay[h].key, true)
+    logEntry = h
+    return true
   }
   onProgressRowsChanged: {
     if (progressFollow === "") return
@@ -529,8 +651,16 @@ Item {
       onStreamFinished: { try { tasks.logEntries = JSON.parse(text).entries.slice().reverse() } catch (e) { tasks.logEntries = [] } }
     }
   }
+  Process {
+    id: logAllReader
+    command: ["python3", tasks.script, "log-all"]
+    stdout: StdioCollector {
+      onStreamFinished: { try { tasks.allLogEntries = JSON.parse(text).entries } catch (e) { tasks.allLogEntries = [] } }
+    }
+  }
   function refresh() {
     if (!lister.running) lister.running = true
+    if (tab === "log" && logWide && !logAllReader.running) logAllReader.running = true
     if (tab === "log" && selectedId !== "" && !logReader.running) {
       logReader.command = ["python3", script, "log-show", selectedId]
       logReader.running = true
@@ -845,8 +975,8 @@ Item {
       var lt = selected, ln = lt ? lt.subs.length : 0, ne = logEntryRows.length
       var shiftMove = (up || down) && (event.modifiers & Qt.ShiftModifier)
       if (txt === "w" && lt) logInput.forceActiveFocus()
-      else if (txt === "L" && lt) jumpLog()
-      else if (txt === "s") toggleLogSort()
+      else if (txt === "L") jumpLogHere()
+      else if (txt === "s" || txt === "S") toggleLogSort(txt === "S")
       else if (k === Qt.Key_PageDown) logList.flick(0, -1600)
       else if (k === Qt.Key_PageUp) logList.flick(0, 1600)
       else if (logPane === "entries") {
@@ -856,10 +986,12 @@ Item {
         else if (up && logEntry <= 0) logPane = ln ? "lanes" : "list"
         else if (up) logEntry--
         else if (down) logEntry = Math.min(ne - 1, logEntry + 1)
-        else if (onHead && (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z")) setSectionFolded(headText(lp), !lp.collapsed)
-        else if (onHead && (k === Qt.Key_Right || txt === "l")) setSectionFolded(headText(lp), false)
-        else if (onHead && !lp.collapsed && (k === Qt.Key_Left || txt === "h")) setSectionFolded(headText(lp), true)
-        else if (logBySub && lp && lp.kind === "entry" && (k === Qt.Key_Left || txt === "h" || txt === "z")) foldSectionOf(lp)
+        else if (onHead && (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z")) setSectionFolded(lp.key, !lp.collapsed)
+        else if (onHead && (k === Qt.Key_Right || txt === "l")) setSectionFolded(lp.key, false)
+        else if (onHead && !lp.collapsed && (k === Qt.Key_Left || txt === "h")) setSectionFolded(lp.key, true)
+        // ← on a folded heading: up to the heading it sits in (else back to the list)
+        else if (onHead && (k === Qt.Key_Left || txt === "h") && parentHead(logEntryRows[logEntry]) >= 0) logEntry = parentHead(logEntryRows[logEntry])
+        else if (lp && lp.kind === "entry" && (k === Qt.Key_Left || txt === "h" || txt === "z") && foldSectionOf(logEntryRows[logEntry])) {}
         else if (lp && lp.kind === "entry" && (k === Qt.Key_Return || k === Qt.Key_Enter)) openEntry(lp.e, false)
         else if (lp && lp.kind === "entry" && txt === "c") copyEntry(lp.e)
         else if (lp && lp.kind === "entry" && txt === "e") openEntry(lp.e, true)
@@ -1998,15 +2130,15 @@ Item {
       CcHeading {
         y: lanes.height + 50
         cc: tasks.cc
-        text: "  LOG" + (tasks.logEntries.length ? " — " + tasks.logEntries.length + " ENTRIES, " + (tasks.logBySub ? "BY SUB-TODO" : "NEWEST FIRST") : "")
+        text: "  LOG" + (tasks.logShown.length ? " — " + tasks.logShown.length + (tasks.logShown.length === 1 ? " ENTRY" : " ENTRIES") : "")
         font.underline: tasks.logPane === "entries"
       }
       CcButton {
         anchors.right: parent.right
         y: lanes.height + 44
         cc: tasks.cc
-        icon: tasks.logBySub ? "\uf0ca" : "\uf017"
-        text: tasks.logBySub ? "by sub-todo  (s)" : "newest first  (s)"
+        icon: tasks.logModeIcons[tasks.logMode]
+        text: tasks.logModeNames[tasks.logMode] + "  (s)"
         fontSize: 10
         onClicked: { tasks.toggleLogSort(); tasks.forceActiveFocus() }
       }
@@ -2046,24 +2178,42 @@ Item {
               onClicked: {
                 tasks.logPane = "entries"
                 tasks.logEntry = logItem.index
-                tasks.setSectionFolded(tasks.headText(logItem.modelData), !logItem.modelData.collapsed)
+                tasks.setSectionFolded(logItem.modelData.key, !logItem.modelData.collapsed)
                 tasks.forceActiveFocus()
               }
             }
           }
           Row {
+            id: headRow
             visible: logItem.modelData.kind === "head"
-            x: 4
+            x: 4 + (logItem.modelData.level || 0) * 14
             spacing: 8
             anchors.verticalCenter: parent.verticalCenter
+            readonly property string what: logItem.modelData.what || ""
             Text { anchors.verticalCenter: parent.verticalCenter; text: logItem.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
             StateBox { anchors.verticalCenter: parent.verticalCenter; visible: !!logItem.modelData.sub; state3: logItem.modelData.sub ? logItem.modelData.sub.state : "todo" }
+            // super group / group / todo headings in the "all" views
             Text {
               anchors.verticalCenter: parent.verticalCenter
-              width: logList.width - 50
+              visible: headRow.what === "super" || headRow.what === "todo"
+              text: headRow.what === "super" ? "\uf247" : "\uf0ae"
+              color: headRow.what === "super" ? tasks.superColor(logItem.modelData.name) : tasks.cc.ink
+              style: Text.Outline; styleColor: tasks.cc.ink
+              font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs)
+            }
+            Rectangle {
+              anchors.verticalCenter: parent.verticalCenter
+              visible: headRow.what === "group"
+              width: 10; height: 10; radius: 5
+              color: tasks.colorOf(logItem.modelData.group || "")
+              border.color: tasks.cc.ink; border.width: 1
+            }
+            Text {
+              anchors.verticalCenter: parent.verticalCenter
+              width: logList.width - 50 - headRow.x
               elide: Text.ElideRight
               textFormat: Text.PlainText
-              text: logItem.modelData.kind !== "head" ? "" : (logItem.modelData.sub ? logItem.modelData.sub.text : "About the whole todo")
+              text: logItem.modelData.kind !== "head" ? "" : logItem.modelData.label
                 + (logItem.modelData.collapsed ? "   ·   " + logItem.modelData.count + (logItem.modelData.count === 1 ? " entry" : " entries") : "")
               color: tasks.cc.ink
               font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: Math.round(13 * tasks.fs) }
@@ -2073,7 +2223,7 @@ Item {
           visible: logItem.modelData.kind === "entry"
           readonly property var modelData: logItem.modelData.kind === "entry" ? logItem.modelData.e : ({ time: "", by: "", sub: "", text: "" })
           readonly property bool picked: tasks.logPane === "entries" && logList.currentIndex === logItem.index
-          x: tasks.logBySub ? 14 : 0
+          x: (logItem.modelData.level || 0) * 14
           width: logList.width - x
           height: entryText.implicitHeight + 54
           radius: 12
@@ -2093,14 +2243,14 @@ Item {
             height: 18
             radius: 9
             color: Qt.rgba(tasks.cc.ink.r, tasks.cc.ink.g, tasks.cc.ink.b, 0.12)
-            Rectangle { x: 0; width: 5; height: parent.height; radius: 2.5; color: tasks.selected ? tasks.colorOf(tasks.selected.group) : "transparent" }
+            Rectangle { x: 0; width: 5; height: parent.height; radius: 2.5; color: tasks.colorOf(tasks.entryGroup(parent.parent.modelData)) }
             Text {
               id: aboutText
               x: 9; anchors.verticalCenter: parent.verticalCenter
               width: parent.width - 14
               elide: Text.ElideRight
               textFormat: Text.PlainText
-              text: "\uf0ae  " + (tasks.selected ? tasks.selected.title : "") + (parent.parent.modelData.sub ? "   \u21b3  " + parent.parent.modelData.sub : "")
+              text: "\uf0ae  " + tasks.entryTag(parent.parent.modelData)
               color: tasks.cc.ink
               font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs); font.bold: true
             }
@@ -2123,7 +2273,7 @@ Item {
           }
         }
         Text {
-          visible: tasks.logEntries.length === 0
+          visible: tasks.logShown.length === 0
           width: parent.width
           wrapMode: Text.Wrap
           text: "Nothing logged yet. Agents and scripts add entries with\n  slime-tasks log <id> \"…\"   and move sub-todos with   slime-tasks start/finish <id> <n>."
@@ -2689,14 +2839,14 @@ Item {
         height: 24
         radius: 12
         color: Qt.rgba(0.45, 0.28, 0.1, 0.14)
-        Rectangle { width: 6; height: parent.height; radius: 3; color: tasks.selected ? tasks.colorOf(tasks.selected.group) : "transparent" }
+        Rectangle { width: 6; height: parent.height; radius: 3; color: tasks.colorOf(tasks.entryGroup(viewer.e)) }
         Text {
           id: viewAbout
           x: 12; anchors.verticalCenter: parent.verticalCenter
           width: parent.width - 18
           elide: Text.ElideRight
           textFormat: Text.PlainText
-          text: "\uf0ae  " + (tasks.selected ? tasks.selected.title : "") + (viewer.e.sub ? "   \u21b3  " + viewer.e.sub : "")
+          text: "\uf0ae  " + (viewer.e.isSub ? (tasks.selected ? tasks.selected.title : "") : tasks.entryTag(viewer.e))
           color: viewer.ink
           font.family: viewer.font; font.pixelSize: Math.round(12 * tasks.fs); font.bold: true
         }
@@ -2831,7 +2981,7 @@ Item {
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space", "to do → in progress → done"], ["Enter", "open it over the panel (c copy · e edit)"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
           ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
-          ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s", "log newest first / by sub-todo"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Enter on a sub-todo", "open it over the panel"],
+          ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["L  on a super group, group, todo or sub-todo", "jump to its section of the log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Enter on a sub-todo", "open it over the panel"],
                         ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
           ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
                         ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list (you stay in the archive)"], ["g  /  right-click", "group, restore or delete an archived list"], ["←  z  /  Enter  →  on a heading", "fold / unfold an archive group"], ["↑ at the top  Esc", "back up"]]]

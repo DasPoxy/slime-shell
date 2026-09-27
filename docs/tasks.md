@@ -41,12 +41,17 @@ heading), and **Enter / Space / →** on a heading to unfold it. On the
 Progress tab **→ / ←** first open and close a todo's sub-todos. Each tab
 remembers its own folds across restarts.
 - Task Log: todos are grouped and ordered like on the Todo tab · **L** (here
-  or on the Todo tab) jumps straight to the selected todo's log · **↑↓** pick ·
+  or on the Todo tab) jumps straight to the selected todo's log — and on a
+  highlighted super group, group or sub-todo (in the lanes), to that section
+  of the log · **↑↓** pick ·
   **→/Enter** into the lanes, then **→/Space** move a sub-todo on and **←**
   back · **↓** past the last lane item goes on into the log, where **↑↓** pick
-  an entry · **s** shows the log newest first or in sections by sub-todo
-  (sections fold like groups: **←**/**z** on an entry folds its section,
-  **Enter/Space/→** on a heading unfolds it; remembered per todo) ·
+  an entry · **s** / **S** cycle how the log is shown: this todo's newest
+  first, or by sub-todo, or *every* todo's log by todo, by group › todo, or
+  by super group › group › todo. Every entry is tagged with its full place:
+  super group › group › todo ↳ sub-todo. Sections fold like groups: **←**/**z**
+  on an entry folds its section, **←** on a folded heading climbs to the one
+  above, **Enter/Space/→** on a heading unfolds it (remembered) ·
   **Enter** on an entry opens it over the whole panel, on a sheet of worn
   parchment, for reading, where
   **c** copies it, **e** edits its text (**Ctrl+S** saves, **Esc** cancels)
@@ -148,6 +153,7 @@ slime-tasks super-set <group> <super>           # put a group in a super group (
 slime-tasks super-rename <old> <new>            # rename a super group
 slime-tasks super-delete <super>                # remove a super group (its groups are kept)
 slime-tasks super-order <super> <super> …       # put super groups in this order
+slime-tasks log-all                             # every todo's log, tagged with its group and super group
 slime-tasks archive <id>   /   unarchive <id>
 slime-tasks --help                              # everything else
 ```
