@@ -53,7 +53,8 @@ remembers its own folds across restarts.
   **w** write in the log (about the sub-todo picked in the lanes) ·
   **PgUp/PgDn** scroll
 - Progress: **↑↓** pick · **Enter/Space** expand · **A** archive · **↓** past
-  the end drops into the archive — sorted by group — where **Enter/r**
+  the end drops into the archive — sorted by group, whose headings fold like
+  everywhere else — where **Enter/r**
   restores (you stay in the archive, to restore several), **g** or a
   right-click gives a menu to set its group, restore or delete it, and
   **↑**/**Esc** climb back · **/** search the archive (Enter drops into the results)

@@ -175,7 +175,7 @@ Item {
       if (key === progressFollow) { progressIndex = i; progressFollow = ""; return }
     }
   }
-  property int archiveIndex: 0
+  property int archiveIndex: 0               // a row of archiveRows (heading or todo)
   property int logSub: 0                      // which sub-todo, in the lanes
 
   implicitHeight: 620
@@ -390,7 +390,7 @@ Item {
   onTabChanged: refresh()
   onSelectedIdChanged: { logEntries = []; subIndex = 0; logSub = 0; logEntry = 0; if (tab === "log") refresh() }
   onArchiveQueryChanged: { refresh(); archiveIndex = 0 }
-  onArchivedTodosChanged: if (archiveIndex >= archivedTodos.length) archiveIndex = Math.max(0, archivedTodos.length - 1)
+  onArchiveRowsChanged: if (archiveIndex >= archiveRows.length) archiveIndex = Math.max(0, archiveRows.length - 1)
   // the archive, by group (in group order, loose ones last), then by title
   readonly property var archiveSorted: archivedTodos.slice().sort(function(a, b) {
     var ga = a.group || "", gb = b.group || ""
@@ -398,14 +398,25 @@ Item {
   })
   // what the archive list shows: a heading per group, then its todos
   readonly property var archiveRows: {
-    var rows = [], last = null, named = archiveSorted.some(function(t) { return !!t.group })
+    var rows = [], last = null, head = null, named = archiveSorted.some(function(t) { return !!t.group })
     archiveSorted.forEach(function(t, i) {
       var g = t.group || ""
-      if (named && g !== last) rows.push({ kind: "head", name: g })
+      if (named && g !== last) {
+        head = { kind: "head", name: g, count: 0, collapsed: groupCollapsed(g, "archive") }
+        rows.push(head)
+      }
       last = g
-      rows.push({ kind: "todo", t: t, i: i })
+      if (head) head.count++
+      if (!(head && head.collapsed)) rows.push({ kind: "todo", t: t, i: i })
     })
     return rows
+  }
+  // fold the group an archived row belongs to and rest on its heading
+  function foldArchiveGroupOf(t) {
+    var g = t.group || ""
+    setGroupCollapsed(g, true, "archive")
+    for (var i = 0; i < archiveRows.length; i++)
+      if (archiveRows[i].kind === "head" && archiveRows[i].name === g) { archiveIndex = i; return }
   }
   function restoreArchived(a) { if (a) act(["unarchive", a.id]) }   // stays in the archive: restore several in a row
   // agents edit the files while you watch: keep polling while the tab is up
@@ -654,7 +665,7 @@ Item {
           else if (r.kind === "todo" && nudgeTodo(up ? -1 : 1, r.t.id)) progressFollow = "t:" + r.t.id
         }
         else if (up) progressIndex = Math.max(0, progressIndex - 1)
-        else if (down && progressIndex >= rows.length - 1 && na) { progressPane = "archive"; archiveIndex = Math.min(archiveIndex, na - 1) }
+        else if (down && progressIndex >= rows.length - 1 && na) { progressPane = "archive"; archiveIndex = Math.min(archiveIndex, archiveRows.length - 1) }
         else if (down) progressIndex = Math.min(rows.length - 1, progressIndex + 1)
         else if ((k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space) && r) toggleExpand(r)
         // same folding keys as the Todo tab
@@ -671,12 +682,19 @@ Item {
         else return
       } else {
         // up past the first archived list climbs back into the progress rows
+        var ar = archiveRows[Math.min(archiveIndex, archiveRows.length - 1)]
+        var nr = archiveRows.length
         if (up && archiveIndex <= 0) { progressPane = "list"; progressIndex = Math.max(0, rows.length - 1) }
         else if (up) archiveIndex--
-        else if (down) archiveIndex = Math.min(na - 1, archiveIndex + 1)
-        else if ((k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "r") && na)
-          restoreArchived(archiveSorted[Math.min(archiveIndex, na - 1)])
-        else if (txt === "g" && na) openMenu(archiveSorted[Math.min(archiveIndex, na - 1)], tasks.width * 0.3, tasks.height - 360, true)
+        else if (down) archiveIndex = Math.min(nr - 1, archiveIndex + 1)
+        // on a group's heading: fold / unfold, like everywhere else
+        else if (ar && ar.kind === "head" && (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z")) setGroupCollapsed(ar.name, !ar.collapsed, "archive")
+        else if (ar && ar.kind === "head" && (k === Qt.Key_Right || txt === "l")) setGroupCollapsed(ar.name, false, "archive")
+        else if (ar && ar.kind === "head" && (k === Qt.Key_Left || txt === "h")) setGroupCollapsed(ar.name, true, "archive")
+        // on an archived todo
+        else if (ar && ar.kind === "todo" && (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "r")) restoreArchived(ar.t)
+        else if (ar && ar.kind === "todo" && txt === "g") openMenu(ar.t, tasks.width * 0.3, tasks.height - 360, true)
+        else if (ar && ar.kind === "todo" && (k === Qt.Key_Left || txt === "h" || txt === "z") && archiveRows.some(function(x) { return x.kind === "head" })) foldArchiveGroupOf(ar.t)
         else if (k === Qt.Key_Escape) progressPane = "list"
         else return
       }
@@ -1961,7 +1979,12 @@ Item {
           width: 260
           placeholder: "search the archive…  (/)"
           clearOnEnter: false
-          onEntered: if (tasks.archivedTodos.length) { tasks.progressPane = "archive"; tasks.archiveIndex = 0 }
+          onEntered: if (tasks.archiveRows.length) {
+            tasks.progressPane = "archive"
+            var first = 0
+            while (first < tasks.archiveRows.length - 1 && tasks.archiveRows[first].kind !== "todo") first++
+            tasks.archiveIndex = first
+          }
           input.onTextChanged: tasks.archiveQuery = input.text
           Component.onCompleted: archiveInput = archiveField.input
         }
@@ -1974,25 +1997,51 @@ Item {
         clip: true
         spacing: 4
         model: tasks.archiveRows
-        currentIndex: {
-          for (var i = 0; i < tasks.archiveRows.length; i++)
-            if (tasks.archiveRows[i].kind === "todo" && tasks.archiveRows[i].i === tasks.archiveIndex) return i
-          return -1
-        }
+        currentIndex: tasks.progressPane === "archive" ? tasks.archiveIndex : -1
         onCurrentIndexChanged: if (currentIndex >= 0) positionViewAtIndex(currentIndex, ListView.Contain)
         delegate: Item {
           id: arow
           required property var modelData
           required property int index
           width: ListView.view.width
-          height: modelData.kind === "head" ? 20 : 28
-          // a group's heading
+          height: modelData.kind === "head" ? 24 : 28
+          // a group's heading: click (or the keys) folds it
+          Rectangle {
+            visible: arow.modelData.kind === "head"
+            anchors.fill: parent
+            anchors.leftMargin: -6; anchors.rightMargin: -2
+            radius: 9
+            readonly property bool here: tasks.progressPane === "archive" && arow.index === tasks.archiveIndex
+            color: here ? Qt.rgba(1, 1, 1, 0.6) : archHeadMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.25) : "transparent"
+            border.color: tasks.cc.ink
+            border.width: here ? 2 : 0
+            MouseArea {
+              id: archHeadMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              enabled: arow.modelData.kind === "head"
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                tasks.progressPane = "archive"
+                tasks.archiveIndex = arow.index
+                tasks.setGroupCollapsed(arow.modelData.name, !arow.modelData.collapsed, "archive")
+                tasks.forceActiveFocus()
+              }
+            }
+          }
           Row {
             visible: arow.modelData.kind === "head"
             spacing: 6
             anchors.verticalCenter: parent.verticalCenter
+            Text { anchors.verticalCenter: parent.verticalCenter; text: arow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 9 }
             Rectangle { width: 10; height: 10; radius: 5; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(arow.modelData.name); border.color: tasks.cc.ink; border.width: 1; visible: !!arow.modelData.name }
             CcHeading { cc: tasks.cc; anchors.verticalCenter: parent.verticalCenter; text: arow.modelData.kind !== "head" ? "" : arow.modelData.name ? arow.modelData.name.toUpperCase() : "NO GROUP" }
+            Text {
+              anchors.verticalCenter: parent.verticalCenter
+              visible: !!arow.modelData.collapsed
+              text: arow.modelData.count + (arow.modelData.count === 1 ? " todo" : " todos")
+              color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 10
+            }
           }
           Item {
             visible: arow.modelData.kind === "todo"
@@ -2002,7 +2051,7 @@ Item {
               anchors.fill: parent
               anchors.leftMargin: -6; anchors.rightMargin: -2
               radius: 10
-              visible: tasks.progressPane === "archive" && arow.modelData.i === tasks.archiveIndex
+              visible: tasks.progressPane === "archive" && arow.index === tasks.archiveIndex
               color: Qt.rgba(1, 1, 1, 0.7)
               border.color: tasks.cc.ink; border.width: 2
             }
@@ -2020,7 +2069,7 @@ Item {
               acceptedButtons: Qt.LeftButton | Qt.RightButton
               onClicked: mouse => {
                 tasks.progressPane = "archive"
-                tasks.archiveIndex = arow.modelData.i
+                tasks.archiveIndex = arow.index
                 tasks.forceActiveFocus()
                 if (mouse.button === Qt.RightButton) {
                   var p = mapToItem(tasks, mouse.x, mouse.y)
@@ -2394,7 +2443,7 @@ Item {
           ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s", "log newest first / by sub-todo"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
                         ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
           ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
-                        ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list (you stay in the archive)"], ["g  /  right-click", "group, restore or delete an archived list"], ["↑ at the top  Esc", "back up"]]]
+                        ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list (you stay in the archive)"], ["g  /  right-click", "group, restore or delete an archived list"], ["←  z  /  Enter  →  on a heading", "fold / unfold an archive group"], ["↑ at the top  Esc", "back up"]]]
         ]
         Column {
           required property var modelData
