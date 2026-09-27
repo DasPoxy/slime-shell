@@ -105,11 +105,20 @@ falls off with it, or turns up trapped in a panel's ooze.
   commands only) and your files (`/` for files only); drips from the bar when
   clicked, floats centred when summoned by keybind.
 - **Notifications** — toasts drip out of the bar (top bar).
-- **Slime-Tasks** — the command centre's Tasks tab, a tavern the slime
-  swallowed: todos with sub-todos and coloured groups, a live task log that
-  agents write to (`slime-tasks`), and progress by group with an archive. Fully
-  keyboard driven; plain markdown in `~/Documents/Slime-Notes`, so Envy or any
-  notes app can open it: [docs/tasks.md](docs/tasks.md).
+- **Slime-Tasks** — a todo, task-log and progress suite in the command
+  centre's Tasks tab, or as a pop-out over everything (`omarchy-shell
+  slime-shell tasks`). The slime has swallowed a whole tavern: signs on a
+  beam, mead barrels, a bar, broken boards, and bards, knights, rogues and
+  orcs adrift in the goo. Todos with sub-todos and coloured groups; a live
+  task log that you and your agents (`slime-tasks`) write to while sub-todos
+  shift across *to do / in progress / done*; progress by group with an
+  archive. Fully keyboard driven, drag to reorder, plain markdown in
+  `~/Documents/Slime-Notes` so Envy or any notes app can open it:
+  [docs/tasks.md](docs/tasks.md).
+
+  | | |
+  |---|---|
+  | ![Slime-Tasks: todos](docs/images/tasks-todo.png) | ![Slime-Tasks: task log](docs/images/tasks-log.png) |
 
 ## The bar
 
@@ -167,6 +176,7 @@ Other IPC for binds or scripts:
 
 ```sh
 omarchy-shell slime-shell toggle | open | close | tab <name> | toggleTab <name>
+omarchy-shell slime-shell tasks                  # Slime-Tasks pop-out
 omarchy-shell slime-shell material slime|sinew|bone|plain
 omarchy-shell slime-shell shape classic|pills|islands|notch
 omarchy-shell slime-shell shading 0|1|2|3        # soft, anime, manga, print

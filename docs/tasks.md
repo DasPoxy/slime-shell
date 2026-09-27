@@ -1,7 +1,15 @@
 # Slime-Tasks — the command centre's Tasks tab
 
 A todo, task-log and progress suite built into the command centre, in a
-tavern the slime has swallowed whole. Three signs hang from the beam:
+tavern the slime has swallowed whole — signs on a beam, lanterns, a rack of
+mead barrels, a bar with its taps and bottles, broken wall boards, and the
+regulars (bards, knights, rogues, orcs, goblins…) adrift in the goo.
+
+| | |
+|---|---|
+| ![Todo tab](images/tasks-todo.png) | ![Task Log tab](images/tasks-log.png) |
+
+Three signs hang from the beam:
 
 | Tab | What it's for |
 |---|---|
