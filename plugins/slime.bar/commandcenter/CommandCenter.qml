@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Shapes
 
 // The Slime command centre: a column of tabs down the left (floating items,
 // like the bar's widgets) beside the active tab's content, drawn
@@ -38,7 +39,12 @@ Item {
     ["startup", "potion", "Start-Up", "StartupTab.qml"],
     ["settings", "anvil", "Settings", "SettingsTab.qml"]
   ]
-  readonly property real sidebarWidth: 128
+  // the tab sidebar folds down to just its icons (button at its top-right
+  // corner, or t), handing the room to the tab; remembered
+  readonly property bool sidebarCollapsed: bar.ccSidebarCollapsed === true
+  property real sidebarWidth: sidebarCollapsed ? 50 : 128
+  Behavior on sidebarWidth { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+  function toggleSidebar() { bar.ccSidebarCollapsed = !sidebarCollapsed }
   readonly property string tabSource: {
     for (var i = 0; i < tabs.length; i++) if (tabs[i][0] === bar.ccTab) return tabs[i][3]
     return tabs[0][3]
@@ -142,6 +148,8 @@ Item {
     // tab switching works everywhere, the Tasks tab included
     if (ctrl && (k === Qt.Key_Tab || k === Qt.Key_Backtab)) { switchTab(cur + (k === Qt.Key_Backtab ? -1 : 1)); event.accepted = true; return }
     if (alt && k >= Qt.Key_1 && k < Qt.Key_1 + tabs.length) { switchTab(k - Qt.Key_1); event.accepted = true; return }
+    // t folds the sidebar, from any tab (Tasks passes t through)
+    if (txt === "t" && !ctrl && !alt) { toggleSidebar(); event.accepted = true; return }
     if (bar.ccTab === "tasks") return                     // its own keys (Esc closes there)
     if (k === Qt.Key_Escape) {
       if (kbHelp) kbHelp = false
@@ -181,12 +189,45 @@ Item {
         kind: modelData[1]
         label: modelData[2]
         size: 30
+        labelSide: center.sidebarCollapsed ? "none" : "right"
         phase: index * 1.3
         active: center.bar.ccTab === modelData[0]
         lit: active
         onClicked: center.bar.ccTab = modelData[0]
       }
     }
+  }
+
+  // fold / unfold the sidebar: a little round button at its top-right corner
+  Rectangle {
+    id: sidebarToggle
+    x: center.sidebarWidth - width - 6
+    y: center.sidebarCollapsed ? tabColumn.implicitHeight + 6 : 2
+    width: 22; height: 22; radius: 11
+    color: toggleHover.hovered ? Qt.rgba(1, 1, 1, 0.75) : Qt.rgba(1, 1, 1, 0.45)
+    border.color: center.ink
+    border.width: 1.5
+    Behavior on y { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+    // an arrow pointing the way the sidebar will go: left to fold it away,
+    // right to bring it back; it swings round as it flips
+    Shape {
+      anchors.centerIn: parent
+      width: 12; height: 12
+      rotation: center.sidebarCollapsed ? 180 : 0
+      Behavior on rotation { NumberAnimation { duration: 260; easing.type: Easing.OutBack } }
+      preferredRendererType: Shape.CurveRenderer
+      ShapePath {
+        fillColor: "transparent"
+        strokeColor: center.ink
+        strokeWidth: 2
+        capStyle: ShapePath.RoundCap
+        joinStyle: ShapePath.RoundJoin
+        PathSvg { path: "M 10.5 6 L 1.5 6 M 5.5 1.5 L 1.2 6 L 5.5 10.5" }
+      }
+    }
+    HoverHandler { id: toggleHover }
+    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: center.toggleSidebar() }
+    CcFocus { onActivate: center.toggleSidebar() }
   }
 
   // a faint divider between the tabs and the content
@@ -262,6 +303,7 @@ Item {
           + "1 … 6, Alt+1 … 6    go to a tab\n"
           + "Ctrl+Tab            next tab (Shift: previous)\n"
           + "Esc                 clear the highlight, then close\n"
+          + "t                   fold / unfold the tab sidebar\n"
           + "?                   these keys\n\n"
           + "The Tasks tab has its own keys (? there)."
       color: center.ink

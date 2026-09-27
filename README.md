@@ -91,7 +91,8 @@ falls off with it, or turns up trapped in a panel's ooze.
   login, and on which workspace) and Settings tabs. It fits any screen:
   capped to the space there is (tall tabs scroll) and scaled down on narrow
   or portrait screens. Keyboard driven too: arrows move a highlight between controls,
-  Enter presses, ←/→ turn sliders, 1–6 or Ctrl+Tab switch tabs, **?** shows
+  Enter presses, ←/→ turn sliders, 1–6 or Ctrl+Tab switch tabs, **t** folds
+  the tab sidebar down to icons (or the arrow at its corner), **?** shows
   the keys (Settings → Command centre to turn it off).
 - **Widgets** — launcher, workspaces, agents (its robot gets worried as your
   session usage climbs), media, clock & weather, indicators, tray, treasure
