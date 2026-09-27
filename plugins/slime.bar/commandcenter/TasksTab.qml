@@ -93,12 +93,14 @@ Item {
   readonly property var todoOrder: todoRows.filter(function(r) { return r.kind === "todo" }).map(function(r) { return r.t.id })
 
   // ---- folding groups (remembered with the command centre's other sections) --
-  function groupCollapsed(name) { return !!(bar && bar.ccSections && bar.ccSections["tasks-group:" + name]) }
-  function setGroupCollapsed(name, shut) {
+  // each tab remembers its own folds: scope "" (Todo), "progress", "log"
+  function foldKey(name, scope) { return (scope ? "tasks-" + scope + "-group:" : "tasks-group:") + name }
+  function groupCollapsed(name, scope) { return !!(bar && bar.ccSections && bar.ccSections[foldKey(name, scope)]) }
+  function setGroupCollapsed(name, shut, scope) {
     if (!bar) return
     var m = Object.assign({}, bar.ccSections)
-    if (shut) m["tasks-group:" + name] = true
-    else delete m["tasks-group:" + name]
+    if (shut) m[foldKey(name, scope)] = true
+    else delete m[foldKey(name, scope)]
     bar.ccSections = m
   }
   // the keyboard cursor in the todo list: a todo's id, or "g:<group>" when
@@ -117,6 +119,43 @@ Item {
     var shut = !groupCollapsed(name)
     setGroupCollapsed(name, shut)
     if (shut && selected && (selected.group || "") === name) cursor = "g:" + name
+  }
+
+  // Task Log tab: grouped like the Todo tab (groups A-Z, loose ones last),
+  // most recently active first within each
+  readonly property var logRows: {
+    var byGroup = {}, names = [], loose = []
+    logOrder.forEach(function(t) {
+      if (t.group) {
+        if (!byGroup[t.group]) { byGroup[t.group] = []; names.push(t.group) }
+        byGroup[t.group].push(t)
+      } else loose.push(t)
+    })
+    names.sort()
+    var rows = []
+    names.forEach(function(n) {
+      var shut = groupCollapsed(n, "log")
+      rows.push({ kind: "group", name: n, count: byGroup[n].length, collapsed: shut })
+      if (!shut) byGroup[n].forEach(function(t) { rows.push({ kind: "todo", t: t }) })
+    })
+    var looseShut = names.length > 0 && groupCollapsed("", "log")
+    if (loose.length && names.length) rows.push({ kind: "group", name: "", count: loose.length, collapsed: looseShut })
+    if (!looseShut) loose.forEach(function(t) { rows.push({ kind: "todo", t: t }) })
+    return rows
+  }
+  property string logCursor: ""                // "g:<group>" on a heading, "" on the selected todo
+  readonly property var logNav: logRows.map(function(r) { return r.kind === "group" ? "g:" + r.name : r.t.id })
+  function moveLogCursor(d) {
+    if (logNav.length === 0) return
+    var i = logNav.indexOf(logCursor !== "" ? logCursor : selectedId)
+    var key = logNav[Math.max(0, Math.min(logNav.length - 1, i < 0 ? 0 : i + d))]
+    if (key.indexOf("g:") === 0) logCursor = key
+    else { logCursor = ""; selectedId = key }
+  }
+  function toggleLogGroup(name) {
+    var shut = !groupCollapsed(name, "log")
+    setGroupCollapsed(name, shut, "log")
+    if (shut && selected && (selected.group || "") === name) logCursor = "g:" + name
   }
 
   // Task Log tab: most recently active first
@@ -144,7 +183,7 @@ Item {
         done += t.done ? u : t.counts.done
       })
       rows.push({ kind: "group", name: n, pct: units ? done / units : 0, count: list.length })
-      if (tasks.expanded["g:" + n] === false) return
+      if (tasks.groupCollapsed(n, "progress")) return
       list.forEach(function(t) {
         rows.push({ kind: "todo", t: t })
         if (tasks.expanded["t:" + t.id]) t.subs.forEach(function(s) { rows.push({ kind: "sub", t: t, s: s }) })
@@ -364,9 +403,20 @@ Item {
       if (txt === "w" && lt) logInput.forceActiveFocus()
       else if (k === Qt.Key_PageDown) logList.flick(0, -1600)
       else if (k === Qt.Key_PageUp) logList.flick(0, 1600)
+      else if (logPane === "list" && logCursor !== "") {
+        // resting on a group heading
+        var lg = logCursor.slice(2)
+        if (up || down) moveLogCursor(up ? -1 : 1)
+        else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z") toggleLogGroup(lg)
+        else if (k === Qt.Key_Right || txt === "l") setGroupCollapsed(lg, false, "log")
+        else if (k === Qt.Key_Left || txt === "h") setGroupCollapsed(lg, true, "log")
+        else return
+      }
       else if (logPane === "list") {
-        if (up || down) select(up ? -1 : 1, logOrder.map(function(x) { return x.id }))
+        var logHead = lt && logNav.indexOf("g:" + (lt.group || "")) >= 0
+        if (up || down) moveLogCursor(up ? -1 : 1)
         else if ((k === Qt.Key_Right || k === Qt.Key_Return || k === Qt.Key_Enter || txt === "l") && ln) { logPane = "lanes"; logSub = Math.min(logSub, ln - 1) }
+        else if ((k === Qt.Key_Left || txt === "h" || txt === "z") && logHead) toggleLogGroup(lt.group || "")
         else return
       } else {
         if (up) logSub = Math.max(0, logSub - 1)
@@ -390,6 +440,16 @@ Item {
         else if (down && progressIndex >= rows.length - 1 && na) { progressPane = "archive"; archiveIndex = Math.min(archiveIndex, na - 1) }
         else if (down) progressIndex = Math.min(rows.length - 1, progressIndex + 1)
         else if ((k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space) && r) toggleExpand(r)
+        // same folding keys as the Todo tab
+        else if (r && r.kind === "group" && (k === Qt.Key_Right || txt === "l")) setGroupCollapsed(r.name, false, "progress")
+        else if (r && r.kind === "group" && (k === Qt.Key_Left || txt === "h")) setGroupCollapsed(r.name, true, "progress")
+        else if (r && r.kind === "group" && txt === "z") toggleExpand(r)
+        else if (r && r.kind === "todo" && (k === Qt.Key_Right || txt === "l")) { if (r.t.subs.length) setSubsOpen(r.t.id, true) }
+        else if (r && r.kind === "todo" && (k === Qt.Key_Left || txt === "h")) {
+          if (expanded["t:" + r.t.id]) setSubsOpen(r.t.id, false)
+          else foldProgressGroupOf(r.t)
+        }
+        else if (r && r.kind === "todo" && txt === "z") foldProgressGroupOf(r.t)
         else if (txt === "A" && r && r.kind === "todo") act(["archive", r.t.id])
         else return
       } else {
@@ -408,10 +468,20 @@ Item {
     event.accepted = true
   }
   function toggleExpand(r) {
-    var key = r.kind === "group" ? "g:" + r.name : "t:" + r.t.id
+    if (r.kind === "group") { setGroupCollapsed(r.name, !groupCollapsed(r.name, "progress"), "progress"); return }
+    setSubsOpen(r.t.id, !expanded["t:" + r.t.id])
+  }
+  function setSubsOpen(id, open) {
     var e = Object.assign({}, expanded)
-    e[key] = r.kind === "group" ? (expanded[key] === false) : !expanded[key]
+    e["t:" + id] = open
     expanded = e
+  }
+  // fold a todo's group on the Progress tab and rest on its heading
+  function foldProgressGroupOf(t) {
+    var name = t.group || ""
+    setGroupCollapsed(name, true, "progress")
+    var nav = progressRows.filter(function(r) { return r.kind !== "sub" })
+    for (var i = 0; i < nav.length; i++) if (nav[i].kind === "group" && nav[i].name === name) { progressIndex = i; return }
   }
 
   // ---- the tavern ----------------------------------------------------------------------
@@ -1255,16 +1325,52 @@ Item {
       height: parent.height
       clip: true
       spacing: 5
-      model: tasks.logOrder
-      delegate: Rectangle {
+      model: tasks.logRows
+      delegate: Item {
+        id: logRow
         required property var modelData
-        readonly property bool sel: modelData.id === tasks.selectedId
         width: logTodoList.width
-        height: 44
+        height: modelData.kind === "group" ? 24 : 44
+        // group heading: click (or the keyboard) folds it
+        Rectangle {
+          visible: logRow.modelData.kind === "group"
+          anchors.fill: parent
+          radius: 9
+          readonly property bool here: logRow.modelData.kind === "group" && tasks.logCursor === "g:" + logRow.modelData.name && tasks.logPane === "list"
+          color: here ? Qt.rgba(1, 1, 1, 0.6) : logHeadMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.25) : "transparent"
+          border.color: tasks.cc.ink
+          border.width: here ? 2 : 0
+          Row {
+            x: 6; spacing: 6
+            anchors.verticalCenter: parent.verticalCenter
+            Text { anchors.verticalCenter: parent.verticalCenter; text: logRow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 9 }
+            Rectangle { width: 12; height: 12; radius: 6; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(logRow.modelData.name); border.color: tasks.cc.ink; border.width: 1.2; visible: !!logRow.modelData.name }
+            CcHeading { cc: tasks.cc; anchors.verticalCenter: parent.verticalCenter; text: !logRow.modelData.name ? "NO GROUP" : logRow.modelData.name.toUpperCase() }
+            Text {
+              anchors.verticalCenter: parent.verticalCenter
+              visible: !!logRow.modelData.collapsed
+              text: logRow.modelData.count + (logRow.modelData.count === 1 ? " todo" : " todos")
+              color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 10
+            }
+          }
+          MouseArea {
+            id: logHeadMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            enabled: logRow.modelData.kind === "group"
+            onClicked: { tasks.logPane = "list"; tasks.logCursor = "g:" + logRow.modelData.name; tasks.toggleLogGroup(logRow.modelData.name); tasks.forceActiveFocus() }
+          }
+        }
+        Rectangle {
+        visible: logRow.modelData.kind === "todo"
+        anchors.fill: parent
+        readonly property var modelData: logRow.modelData.kind === "todo" ? logRow.modelData.t : ({ id: "", title: "", group: "", counts: { doing: 0 }, logCount: 0 })
+        readonly property bool sel: modelData.id === tasks.selectedId
         radius: 12
         color: sel ? Qt.rgba(1, 1, 1, 0.72) : tasks.cc.wash
         border.color: tasks.cc.ink
-        border.width: sel ? 2.2 : 0
+        border.width: sel ? (tasks.logCursor === "" ? 2.2 : 1.2) : 0
         Rectangle { width: 6; height: parent.height; radius: 3; color: tasks.colorOf(parent.modelData.group) }
         Column {
           x: 14; anchors.verticalCenter: parent.verticalCenter
@@ -1276,7 +1382,8 @@ Item {
             color: tasks.cc.ink; opacity: 0.65; font.family: tasks.cc.font; font.pixelSize: 10
           }
         }
-        MouseArea { anchors.fill: parent; onClicked: { tasks.selectedId = parent.modelData.id; tasks.forceActiveFocus() } }
+        MouseArea { anchors.fill: parent; onClicked: { tasks.logCursor = ""; tasks.selectedId = parent.modelData.id; tasks.forceActiveFocus() } }
+        }
       }
     }
 
@@ -1473,7 +1580,7 @@ Item {
           visible: prow.modelData.kind === "group"
           x: 10; anchors.verticalCenter: parent.verticalCenter
           spacing: 8
-          Text { text: tasks.expanded["g:" + prow.modelData.name] === false ? "" : ""; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
+          Text { text: tasks.groupCollapsed(prow.modelData.name, "progress") ? "" : ""; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
           Rectangle { width: 12; height: 12; radius: 6; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(prow.modelData.name); border.color: tasks.cc.ink; border.width: 1.2; visible: prow.modelData.name !== "" }
           Text { text: !prow.modelData.name ? "No group" : prow.modelData.name; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: 15; anchors.verticalCenter: parent.verticalCenter }
           Text { text: prow.modelData.kind !== "group" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
@@ -1720,9 +1827,9 @@ Item {
                            ["←  z  (or click a heading)", "fold its group"], ["Enter  Space  →  on a heading", "fold / unfold"]]],
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space  Enter", "to do → in progress → done"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
-          ["TASK LOG", [["↑ ↓", "pick a todo"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
+          ["TASK LOG", [["↑ ↓", "pick a todo"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
                         ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
-          ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["A", "archive"], ["↓ past the end", "into the archive"],
+          ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
                         ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list"], ["↑ at the top  Esc", "back up"]]]
         ]
         Column {
