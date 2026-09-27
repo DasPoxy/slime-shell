@@ -519,6 +519,44 @@ Item {
     menu.forceActiveFocus()
   }
   function archiveGroup(name) { if (name) act(["group-archive", name]) }
+  // ---- rename (e) / delete (d d) the highlighted group, on any tab ----
+  property string armedGroup: ""             // waiting for the second d
+  property string renamingGroup: ""
+  Timer { id: disarmGroup; interval: 2500; onTriggered: tasks.armedGroup = "" }
+  function deleteGroupKey(name) {
+    if (!name) return
+    if (armedGroup !== name) { armedGroup = name; disarmGroup.restart(); return }
+    armedGroup = ""
+    act(["group-delete", name])
+  }
+  function startRenameGroup(name) {
+    if (!name) return
+    renamingGroup = name
+    renameGroupInput.text = name
+    renameGroupInput.selectAll()
+    renameGroupInput.forceActiveFocus()
+  }
+  function finishRenameGroup(to) {
+    var from = renamingGroup
+    renamingGroup = ""
+    forceActiveFocus()
+    if (!to || to === from) return
+    // folds follow the group to its new name
+    if (bar && bar.ccSections) {
+      var m = Object.assign({}, bar.ccSections)
+      ;["", "progress", "log", "archive"].forEach(function(sc) {
+        if (m[foldKey(from, sc)]) { delete m[foldKey(from, sc)]; m[foldKey(to, sc)] = true }
+      })
+      bar.ccSections = m
+    }
+    if (cursor === "g:" + from) cursor = "g:" + to
+    if (logCursor === "g:" + from) logCursor = "g:" + to
+    act(["group-rename", from, to])
+  }
+  function headColor(name, here, hover) {
+    return armedGroup !== "" && armedGroup === name ? Qt.rgba(1, 0.4, 0.4, 0.65)
+      : here ? Qt.rgba(1, 1, 1, 0.6) : hover ? Qt.rgba(1, 1, 1, 0.25) : "transparent"
+  }
   function openMenu(t, x, y, archived) {
     menu.archived = !!archived
     menu.headGroup = ""
@@ -576,6 +614,8 @@ Item {
         else if (k === Qt.Key_Right || txt === "l") { if (groupCollapsed(gname)) setGroupCollapsed(gname, false) }
         else if (k === Qt.Key_Left || txt === "h") { if (!groupCollapsed(gname)) setGroupCollapsed(gname, true) }
         else if (txt === "g") openGroupMenu(gname, tasks.width * 0.2, 120)
+        else if (txt === "e" || k === Qt.Key_F2) startRenameGroup(gname)
+        else if (txt === "d" || k === Qt.Key_Delete) deleteGroupKey(gname)
         else if (txt === "A") archiveGroup(gname)
         else if (txt === "n") newInput.forceActiveFocus()
         else if (txt === "f") showDone = !showDone
@@ -650,6 +690,8 @@ Item {
         else if (up || down) moveLogCursor(up ? -1 : 1)
         else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z") toggleLogGroup(lg)
         else if (txt === "g") openGroupMenu(lg, tasks.width * 0.1, 120)
+        else if (txt === "e" || k === Qt.Key_F2) startRenameGroup(lg)
+        else if (txt === "d" || k === Qt.Key_Delete) deleteGroupKey(lg)
         else if (txt === "A") archiveGroup(lg)
         else if (k === Qt.Key_Right || txt === "l") setGroupCollapsed(lg, false, "log")
         else if (k === Qt.Key_Left || txt === "h") setGroupCollapsed(lg, true, "log")
@@ -696,6 +738,8 @@ Item {
         else if (r && r.kind === "group" && (k === Qt.Key_Left || txt === "h")) setGroupCollapsed(r.name, true, "progress")
         else if (r && r.kind === "group" && txt === "z") toggleExpand(r)
         else if (r && r.kind === "group" && txt === "g") openGroupMenu(r.name, tasks.width * 0.3, 120)
+        else if (r && r.kind === "group" && (txt === "e" || k === Qt.Key_F2)) startRenameGroup(r.name)
+        else if (r && r.kind === "group" && (txt === "d" || k === Qt.Key_Delete)) deleteGroupKey(r.name)
         else if (r && r.kind === "group" && txt === "A") archiveGroup(r.name)
         else if (r && r.kind === "todo" && (k === Qt.Key_Right || txt === "l")) { if (r.t.subs.length) setSubsOpen(r.t.id, true) }
         else if (r && r.kind === "todo" && (k === Qt.Key_Left || txt === "h")) {
@@ -716,6 +760,8 @@ Item {
         else if (ar && ar.kind === "head" && (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z")) setGroupCollapsed(ar.name, !ar.collapsed, "archive")
         else if (ar && ar.kind === "head" && (k === Qt.Key_Right || txt === "l")) setGroupCollapsed(ar.name, false, "archive")
         else if (ar && ar.kind === "head" && (k === Qt.Key_Left || txt === "h")) setGroupCollapsed(ar.name, true, "archive")
+        else if (ar && ar.kind === "head" && (txt === "e" || k === Qt.Key_F2)) startRenameGroup(ar.name)
+        else if (ar && ar.kind === "head" && (txt === "d" || k === Qt.Key_Delete)) deleteGroupKey(ar.name)
         // on an archived todo
         else if (ar && ar.kind === "todo" && (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "r")) restoreArchived(ar.t)
         else if (ar && ar.kind === "todo" && txt === "g") openMenu(ar.t, tasks.width * 0.3, tasks.height - 360, true)
@@ -1102,7 +1148,8 @@ Item {
   Text {
     anchors.right: parent.right
     y: 18
-    text: tasks.error !== "" ? "  " + tasks.error : "? keys"
+    text: tasks.error !== "" ? "  " + tasks.error
+      : tasks.armedGroup !== "" ? "d again: delete group " + tasks.armedGroup + " (its todos are kept)" : "? keys"
     color: tasks.cc.ink
     opacity: tasks.error !== "" ? 1 : 0.55
     font.family: tasks.cc.font
@@ -1248,7 +1295,7 @@ Item {
             anchors.fill: parent
             radius: 9
             readonly property bool here: row.modelData.kind === "group" && tasks.cursor === "g:" + row.modelData.name && tasks.pane === "list"
-            color: here ? Qt.rgba(1, 1, 1, 0.6) : headMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.25) : "transparent"
+            color: tasks.headColor(row.modelData.name, here, headMouse.containsMouse)
             border.color: tasks.cc.ink
             border.width: here ? 2 : 0
             Row {
@@ -1601,7 +1648,7 @@ Item {
           anchors.fill: parent
           radius: 9
           readonly property bool here: logRow.modelData.kind === "group" && tasks.logCursor === "g:" + logRow.modelData.name && tasks.logPane === "list"
-          color: here ? Qt.rgba(1, 1, 1, 0.6) : logHeadMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.25) : "transparent"
+          color: tasks.headColor(logRow.modelData.name, here, logHeadMouse.containsMouse)
           border.color: tasks.cc.ink
           border.width: here ? 2 : 0
           Row {
@@ -1916,7 +1963,9 @@ Item {
         width: progressList.width - indent
         height: modelData.kind === "sub" ? 24 : 36
         radius: 12
-        color: modelData.kind === "sub" ? "transparent" : sel ? Qt.rgba(1, 1, 1, 0.72) : tasks.cc.wash
+        color: modelData.kind === "sub" ? "transparent"
+          : modelData.kind === "group" && tasks.armedGroup !== "" && tasks.armedGroup === modelData.name ? Qt.rgba(1, 0.4, 0.4, 0.65)
+          : sel ? Qt.rgba(1, 1, 1, 0.72) : tasks.cc.wash
         border.color: tasks.cc.ink
         border.width: sel ? 2 : 0
 
@@ -2047,7 +2096,7 @@ Item {
             anchors.leftMargin: -6; anchors.rightMargin: -2
             radius: 9
             readonly property bool here: tasks.progressPane === "archive" && arow.index === tasks.archiveIndex
-            color: here ? Qt.rgba(1, 1, 1, 0.6) : archHeadMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.25) : "transparent"
+            color: tasks.headColor(arow.modelData.name, here, archHeadMouse.containsMouse)
             border.color: tasks.cc.ink
             border.width: here ? 2 : 0
             MouseArea {
@@ -2483,6 +2532,41 @@ Item {
     }
   }
 
+  // ============================================================ rename a group
+  Rectangle {
+    visible: tasks.renamingGroup !== ""
+    z: 57
+    anchors.centerIn: parent
+    width: 340
+    height: 92
+    radius: 16
+    color: tasks.cc.paper
+    border.color: tasks.cc.ink
+    border.width: 2
+    CcHeading { x: 16; y: 14; cc: tasks.cc; text: "RENAME GROUP · " + tasks.renamingGroup.toUpperCase() }
+    Rectangle {
+      x: 14; y: 40
+      width: parent.width - 28
+      height: 32
+      radius: 16
+      color: Qt.rgba(1, 1, 1, 0.75)
+      border.color: tasks.cc.ink
+      border.width: 2
+      TextInput {
+        id: renameGroupInput
+        x: 12
+        width: parent.width - 24
+        anchors.verticalCenter: parent.verticalCenter
+        color: tasks.cc.ink
+        font.family: tasks.cc.font
+        font.pixelSize: 13
+        clip: true
+        Keys.onReturnPressed: tasks.finishRenameGroup(text.trim())
+        Keys.onEscapePressed: { tasks.renamingGroup = ""; tasks.forceActiveFocus() }
+      }
+    }
+  }
+
   // ================================================================ keys help
   Rectangle {
     visible: tasks.showHelp
@@ -2506,7 +2590,7 @@ Item {
                            ["Space", "mark finished"], ["e  F2", "rename"], ["g", "group menu"], ["A", "archive"], ["d d", "delete"], ["f", "show / hide finished"],
                            ["J K  Shift ↑↓", "move a todo"], ["drag", "move (into another group, too)"],
                            ["←  z  (or click a heading)", "fold its group"], ["g  /  right-click on a heading", "group menu: archive or delete the group"],
-                           ["A  on a heading", "archive the whole group"], ["d d  on a group in the g menu", "delete that group"], ["Enter  Space  →  on a heading", "fold / unfold"]]],
+                           ["A  on a heading", "archive the whole group"], ["e  /  d d  on a heading (any tab)", "rename / delete the group"], ["d d  on a group in the g menu", "delete that group"], ["Enter  Space  →  on a heading", "fold / unfold"]]],
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space  Enter", "to do → in progress → done"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
           ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],

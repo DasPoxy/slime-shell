@@ -61,7 +61,8 @@ remembers its own folds across restarts.
 
 On a group heading, **A** archives the whole group, and **g** (or a
 right-click) opens a group menu to archive or delete it. In any group menu,
-**d d** on a group deletes that group — its todos just become ungrouped.
+**d d** on a group deletes that group — its todos just become ungrouped. On
+any group heading, on every tab, **e** renames the group and **d d** deletes it.
 
 Right-click a todo for the same group menu (existing groups, a new one, no
 group, rename, archive, delete). Each group gets its own colour. Drag todos
@@ -133,6 +134,7 @@ slime-tasks order <id> <id> …                   # put todos in this order
 slime-tasks group-order <group> <group> …       # put groups in this order
 slime-tasks group-archive <group>               # archive every todo in a group
 slime-tasks group-delete <group>                # remove a group (todos kept, ungrouped)
+slime-tasks group-rename <old> <new>            # rename a group (keeps colour and order)
 slime-tasks archive <id>   /   unarchive <id>
 slime-tasks --help                              # everything else
 ```

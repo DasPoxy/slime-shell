@@ -388,7 +388,28 @@ float notch(vec2 p) {
     return min(d, min(cornerPiece(p, group0, false, barLen), cornerPiece(p, group2, true, barLen)));
 }
 
+// Corner patches (4): a lumpy blob of goo centred on each end of the edge —
+// i.e. nested right into the screen's corners.
+const float CORNER_R = 66.0;
+float cornerLen() { float l = orient < 1.5 ? screenSize.x : screenSize.y; return l > 0.0 ? l : resolution.x; }
+float cornerBlob(vec2 p, vec2 c, float seed) {
+    vec2 q = p - c;
+    float a = atan(q.y, q.x);
+    float r = CORNER_R * (1.0 + 0.07 * sin(a * 3.0 + time * 0.7 + seed) + 0.04 * sin(a * 7.0 - time * 1.1 + seed * 2.0));
+    return length(q) - r;
+}
+float corners(vec2 p) {
+    return min(cornerBlob(p, vec2(0.0), 0.0), cornerBlob(p, vec2(cornerLen(), 0.0), 3.0));
+}
+// the blobs' underside above x (for hanging drips), or -1
+float cornerEdge(float x) {
+    float dx = min(x, cornerLen() - x);
+    float r = CORNER_R * 0.92;
+    return dx < r - 8.0 ? sqrt(r * r - dx * dx) - 3.0 : -1.0;
+}
+
 float baseShape(vec2 p) {
+    if (barShape > 3.5) return corners(p);
     if (barShape < 0.5) return p.y - barEdge(p.x);
     if (barShape < 1.5) return podsAll(p);
     if (barShape < 2.5) return islands(p);
@@ -407,6 +428,7 @@ float podBottom(vec4 b, float x, float extra) {
     return b.y + b.w + PAD * 0.55 + extra;
 }
 float dripEdge(float x) {
+    if (barShape > 3.5) return cornerEdge(x);
     if (barShape < 0.5) return barEdge(x);
     float e = -1.0;
     if (barShape < 1.5) {

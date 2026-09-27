@@ -45,6 +45,7 @@ Commands (all print JSON; errors go to stderr with exit status 1):
   group-color GROUP #RRGGBB
   group-order GROUP [GROUP ...]     put groups in this order
   group-delete GROUP                remove a group (its todos become ungrouped)
+  group-rename OLD NEW              rename a group (keeps its colour and place)
   group-archive GROUP               archive every todo in a group
   log ID MESSAGE [--by WHO] [--sub N]  append a task-log entry (about sub-todo N)
   log-show ID                       -> {"entries": [{n, time, by, sub, text}]}
@@ -397,6 +398,24 @@ def run(argv):
             g.pop(name, None)
             save_groups(root, g, [x for x in group_order(root) if x != name])
             return {"deleted": name, "ungrouped": n}
+        if cmd == "group-rename":
+            old, new = rest[0].strip(), " ".join(rest[1:]).strip()
+            if not old or not new:
+                raise Fail("group-rename needs the old and the new name")
+            if new != old and new in groups(root):
+                raise Fail(f"there's already a group called '{new}'")
+            n = 0
+            for arch in (False, True):
+                for i in all_ids(root, arch):
+                    t = load(root, i, arch)
+                    if t["meta"].get("group", "") == old:
+                        t["meta"]["group"] = new
+                        save(t)
+                        n += 1
+            g = groups(root)
+            g[new] = g.pop(old, {"color": PALETTE[len(g) % len(PALETTE)]})
+            save_groups(root, g, [new if x == old else x for x in group_order(root)])
+            return {"renamed": old, "to": new, "todos": n}
         if cmd == "group-archive":
             name = " ".join(rest).strip()
             done = []

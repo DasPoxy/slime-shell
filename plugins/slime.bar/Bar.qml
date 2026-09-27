@@ -2268,8 +2268,8 @@ Item {
     }
 
     // ---- Desktop styling: slime patches in the far corners ----
-    // The bar's own scene (the notch shape's corner pieces) drawn on the edge
-    // across from the bar, in two small click-through windows, so they follow
+    // The bar's own scene (its corner-blob shape) drawn on the edge across
+    // from the bar, in two small click-through windows, so they follow
     // the bar's material, colour, shading, drips and animation.
     QtObject {
       id: patchWin                   // what SlimeScene reads off a bar window
@@ -2318,7 +2318,7 @@ Item {
           anchors.fill: parent
           win: patchWin
           orient: ({ top: 0, bottom: 1, left: 2, right: 3 })[patch.edge]
-          barShape: 3
+          barShape: 4               // corner blobs, centred on the corners
           eggDrip: Qt.vector4d(0, 0, 0, 0)
           origin: Qt.vector2d(
             patch.edge === "right" ? patch.sw - patch.width : (!patch.vert && patch.farEnd) ? patch.sw - patch.width : 0,
