@@ -9,6 +9,8 @@ import Quickshell.Io
 // rewrites just that line, and refuses if the note changed meanwhile.
 Item {
   id: tasks
+  // the command centre's text size (Settings → Command centre → text size)
+  readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1
 
   property var cc: null
   property real listHeight: 300
@@ -107,7 +109,7 @@ Item {
         : "\uf07c  " + tasks.folder.replace(/^\/home\/[^/]+/, "~") + (tasks.source === "envy" ? "  (Envy vault)" : tasks.source === "default" ? "  (found automatically)" : "")
       color: tasks.cc.ink
       font.family: tasks.cc.font
-      font.pixelSize: 11
+      font.pixelSize: Math.round(11 * tasks.fs)
       opacity: 0.8
     }
     Rectangle {
@@ -125,7 +127,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         color: tasks.cc.ink
         font.family: tasks.cc.font
-        font.pixelSize: 12
+        font.pixelSize: Math.round(12 * tasks.fs)
         clip: true
         Keys.onReturnPressed: tasks.setFolder(text)
         Keys.onEscapePressed: tasks.editingFolder = false
@@ -155,7 +157,7 @@ Item {
     text: "Tasks are \"- [ ]\" lines in any .md file in that folder. Leave the folder empty to go back to automatic (Envy, ~/Notes, ~/Documents/Notes)."
     color: tasks.cc.ink
     font.family: tasks.cc.font
-    font.pixelSize: 12
+    font.pixelSize: Math.round(12 * tasks.fs)
     opacity: 0.7
   }
 
@@ -187,7 +189,7 @@ Item {
           text: "  " + group.modelData.note
           color: tasks.cc.ink
           font.family: tasks.cc.font
-          font.pixelSize: 13
+          font.pixelSize: Math.round(13 * tasks.fs)
           font.weight: Font.Black
         }
 
@@ -212,8 +214,7 @@ Item {
                 text: ""
                 color: tasks.cc.slime
                 font.family: tasks.cc.font
-                font.pixelSize: 9
-              }
+                font.pixelSize: Math.round(9 * tasks.fs) }
             }
             Text {
               id: label
@@ -227,7 +228,7 @@ Item {
               color: tasks.cc.ink
               opacity: task.modelData.done ? 0.5 : 1
               font.family: tasks.cc.font
-              font.pixelSize: 12
+              font.pixelSize: Math.round(12 * tasks.fs)
               font.strikeout: task.modelData.done
             }
             MouseArea {

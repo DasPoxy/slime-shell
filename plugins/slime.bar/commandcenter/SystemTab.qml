@@ -10,6 +10,8 @@ import "../ui"
 // showing.
 Item {
   id: sys
+  // the command centre's text size (Settings → Command centre → text size)
+  readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1
 
   property var cc: null
   property var sample: null
@@ -175,16 +177,15 @@ Item {
         Row {
           spacing: 8
           SlimeGear { kind: "anvil"; bar: sys.cc.bar; size: 22; lit: sys.cpu > 0.25; anchors.verticalCenter: parent.verticalCenter }
-          Text { text: "CPU"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 14 }
+          Text { text: "CPU"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(14 * sys.fs) }
         }
         Text {
           text: Math.round(sys.cpu * 100) + "%" + (sys.sample && sys.sample.cpuTemp ? "   " + sys.sample.cpuTemp + "°C" : "")
-          color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 26
-        }
+          color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(26 * sys.fs) }
         Graph { width: parent.width; values: sys.cpuHistory }
         Text {
           text: sys.sample ? "load " + sys.sample.load : ""
-          color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 11; opacity: 0.7
+          color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: Math.round(11 * sys.fs); opacity: 0.7
         }
       }
 
@@ -192,17 +193,16 @@ Item {
         Row {
           spacing: 8
           SlimeGear { kind: "book"; bar: sys.cc.bar; size: 22; lit: true; anchors.verticalCenter: parent.verticalCenter }
-          Text { text: "MEMORY"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 14 }
+          Text { text: "MEMORY"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(14 * sys.fs) }
         }
         Text {
           text: sys.sample ? sys.cc.formatBytes(sys.sample.memUsed) + " / " + sys.cc.formatBytes(sys.sample.memTotal) : "…"
-          color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 20
-        }
+          color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(20 * sys.fs) }
         Graph { width: parent.width; values: sys.memHistory }
         Text {
           text: sys.sample && sys.sample.swapTotal > 0
             ? "swap " + sys.cc.formatBytes(sys.sample.swapUsed) + " / " + sys.cc.formatBytes(sys.sample.swapTotal) : ""
-          color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 11; opacity: 0.7
+          color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: Math.round(11 * sys.fs); opacity: 0.7
         }
       }
 
@@ -213,8 +213,7 @@ Item {
           SlimeGear { kind: "orb"; bar: sys.cc.bar; size: 22; net: "ethernet"; anchors.verticalCenter: parent.verticalCenter }
           Text {
             text: sys.sample && sys.sample.gpu ? sys.sample.gpu.name.replace(/^NVIDIA (GeForce )?/, "") : ""
-            color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 14
-          }
+            color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(14 * sys.fs) }
         }
         AdventureMeter {
           cc: sys.cc
@@ -236,7 +235,7 @@ Item {
         Row {
           spacing: 8
           SlimeGear { kind: "chest"; bar: sys.cc.bar; size: 22; lit: false; anchors.verticalCenter: parent.verticalCenter }
-          Text { text: "DISKS"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: 14 }
+          Text { text: "DISKS"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(14 * sys.fs) }
         }
         Repeater {
           // / and /home on one filesystem report identical numbers; show it once.
@@ -273,19 +272,18 @@ Item {
           width: parent.width - 180
           text: modelData.name
           elide: Text.ElideRight
-          color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 12; font.bold: true
+          color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: Math.round(12 * sys.fs); font.bold: true
         }
         Text {
           width: 80
           horizontalAlignment: Text.AlignRight
           text: modelData.cpu.toFixed(1) + "%"
-          color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 12
-        }
+          color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: Math.round(12 * sys.fs) }
         Text {
           width: 100
           horizontalAlignment: Text.AlignRight
           text: sys.cc.formatBytes(modelData.mem)
-          color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: 12; opacity: 0.8
+          color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: Math.round(12 * sys.fs); opacity: 0.8
         }
       }
     }

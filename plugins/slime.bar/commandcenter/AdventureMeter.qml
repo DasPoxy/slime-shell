@@ -7,6 +7,8 @@ import QtQuick.Shapes
 // trodden dark. Label and value sit above the road, as with a plain meter.
 Item {
   id: meter
+  // the command centre's text size (Settings → Command centre → text size)
+  readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1
 
   required property var cc
   property string label: ""
@@ -32,7 +34,7 @@ Item {
     text: meter.label
     color: meter.ink
     font.family: meter.cc.font
-    font.pixelSize: 12
+    font.pixelSize: Math.round(12 * meter.fs)
     font.bold: true
   }
   Text {
@@ -40,7 +42,7 @@ Item {
     text: meter.value
     color: meter.ink
     font.family: meter.cc.font
-    font.pixelSize: 12
+    font.pixelSize: Math.round(12 * meter.fs)
     opacity: 0.85
   }
 

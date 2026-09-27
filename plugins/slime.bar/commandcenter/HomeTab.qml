@@ -13,6 +13,8 @@ import "../SlimeHub.js" as SlimeHub
 // notifications on the right.
 Item {
   id: home
+  // the command centre's text size (Settings → Command centre → text size)
+  readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1
 
   property var cc: null
   readonly property real colWidth: (width - 20) / 2
@@ -149,6 +151,7 @@ Item {
           kind: slot.spec.kind
           label: slot.spec.label
           labelSide: "below"
+          labelRoom: toggleRow.slot - 4
           size: 30
           phase: slot.index * 0.9
           active: slot.spec.on
@@ -181,7 +184,7 @@ Item {
         color: home.cc.ink
         font.family: home.cc.displayFont
         font.weight: home.cc.displayWeight
-        font.pixelSize: 46
+        font.pixelSize: Math.round(46 * home.fs)
         MouseArea {
           anchors.fill: parent
           cursorShape: Qt.PointingHandCursor
@@ -198,14 +201,13 @@ Item {
           color: home.cc.ink
           font.family: home.cc.displayFont
           font.weight: home.cc.displayWeight
-          font.pixelSize: 15
-        }
+          font.pixelSize: Math.round(15 * home.fs) }
         Text {
           anchors.right: home.cc.bar.clockTimeFirst ? undefined : parent.right
           text: Qt.formatDate(clock.date, "d MMMM yyyy")
           color: home.cc.ink
           font.family: home.cc.font
-          font.pixelSize: 12
+          font.pixelSize: Math.round(12 * home.fs)
           opacity: 0.8
         }
       }
@@ -314,28 +316,33 @@ Item {
         Row {
           spacing: 12
           Text {
+            id: weatherIcon
             text: cloud.icon
             color: home.cc.ink
             font.family: home.cc.font
-            font.pixelSize: 34
-          }
+            font.pixelSize: Math.round(34 * home.fs) }
           Text {
+            id: weatherTemp
             anchors.verticalCenter: parent.verticalCenter
             text: home.weather ? home.weather.reportTempNum + home.weather.tempUnit : ""
             color: home.cc.ink
             font.family: home.cc.displayFont
             font.weight: home.cc.displayWeight
-            font.pixelSize: 28
-          }
+            font.pixelSize: Math.round(28 * home.fs) }
           Column {
+            id: weatherPlace
             anchors.verticalCenter: parent.verticalCenter
+            // what's left of the card (bigger text sizes elide instead of spilling)
+            readonly property real room: weatherColumn.width - weatherIcon.width - weatherTemp.width - 24
             Text {
+              width: Math.min(implicitWidth, weatherPlace.room); elide: Text.ElideRight
               text: home.weather ? home.weather.reportLocation : ""
-              color: home.cc.ink; font.family: home.cc.font; font.pixelSize: 12; font.bold: true
+              color: home.cc.ink; font.family: home.cc.font; font.pixelSize: Math.round(12 * home.fs); font.bold: true
             }
             Text {
+              width: Math.min(implicitWidth, weatherPlace.room); elide: Text.ElideRight
               text: home.weather ? "feels " + home.weather.reportFeels + " · " + home.weather.reportWind + " · " + home.weather.reportHumidity : ""
-              color: home.cc.ink; font.family: home.cc.font; font.pixelSize: 10; opacity: 0.75
+              color: home.cc.ink; font.family: home.cc.font; font.pixelSize: Math.round(10 * home.fs); opacity: 0.75
             }
           }
         }
@@ -350,16 +357,15 @@ Item {
               Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: home.weather.dayIcon(modelData)
-                color: home.cc.ink; font.family: home.cc.font; font.pixelSize: 16
-              }
+                color: home.cc.ink; font.family: home.cc.font; font.pixelSize: Math.round(16 * home.fs) }
               Column {
                 Text {
                   text: home.weather.dayName(modelData.date).toUpperCase()
-                  color: home.cc.ink; font.family: home.cc.font; font.pixelSize: 9; font.bold: true; opacity: 0.7
+                  color: home.cc.ink; font.family: home.cc.font; font.pixelSize: Math.round(9 * home.fs); font.bold: true; opacity: 0.7
                 }
                 Text {
                   text: home.weather.bareTempForDay(modelData, "max") + " " + home.weather.bareTempForDay(modelData, "min")
-                  color: home.cc.ink; font.family: home.cc.font; font.pixelSize: 11; font.bold: true
+                  color: home.cc.ink; font.family: home.cc.font; font.pixelSize: Math.round(11 * home.fs); font.bold: true
                 }
               }
             }
@@ -410,7 +416,7 @@ Item {
           text: soundRow.audio ? Math.round(soundRow.audio.volume * 100) + "%" : ""
           color: home.cc.ink
           font.family: home.cc.font
-          font.pixelSize: 12
+          font.pixelSize: Math.round(12 * home.fs)
           font.bold: true
         }
       }
@@ -463,7 +469,7 @@ Item {
           color: home.cc.ink
           font.family: home.cc.displayFont
           font.weight: home.cc.displayWeight
-          font.pixelSize: 14
+          font.pixelSize: Math.round(14 * home.fs)
           MouseArea {   // click the title to jump back to today
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
@@ -495,7 +501,7 @@ Item {
             text: Qt.locale().dayName((calendar.firstDay + index) % 7, Locale.ShortFormat).slice(0, 2)
             color: home.cc.ink
             font.family: home.cc.font
-            font.pixelSize: 10
+            font.pixelSize: Math.round(10 * home.fs)
             font.bold: true
             opacity: 0.6
           }
@@ -519,7 +525,7 @@ Item {
               color: parent.today ? home.cc.slime : home.cc.ink
               opacity: parent.inMonth ? 1 : 0.35
               font.family: home.cc.font
-              font.pixelSize: 12
+              font.pixelSize: Math.round(12 * home.fs)
               font.bold: parent.today
             }
           }
@@ -561,7 +567,7 @@ Item {
       text: "All quiet in the ooze."
       color: home.cc.ink
       font.family: home.cc.font
-      font.pixelSize: 12
+      font.pixelSize: Math.round(12 * home.fs)
       opacity: 0.6
     }
     Repeater {
@@ -585,7 +591,7 @@ Item {
               elide: Text.ElideRight
               color: home.cc.ink
               font.family: home.cc.font
-              font.pixelSize: 12
+              font.pixelSize: Math.round(12 * home.fs)
               font.bold: true
             }
             Text {
@@ -593,7 +599,7 @@ Item {
               text: home.ago(modelData.timestamp)
               color: home.cc.ink
               font.family: home.cc.font
-              font.pixelSize: 10
+              font.pixelSize: Math.round(10 * home.fs)
               opacity: 0.6
             }
           }
@@ -607,7 +613,7 @@ Item {
             wrapMode: Text.Wrap
             color: home.cc.ink
             font.family: home.cc.font
-            font.pixelSize: 11
+            font.pixelSize: Math.round(11 * home.fs)
             opacity: 0.8
           }
         }

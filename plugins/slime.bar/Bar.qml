@@ -217,6 +217,7 @@ Item {
   property int desktopCorners: 0            // rounded screen corners: radius in px, 0 = off
   property bool cornerSlime: false          // slime patches in the corners across from the bar
   property bool ccKeyboard: true            // command centre keyboard navigation
+  property real ccFontScale: 1.0            // command centre text size (0.8 – 1.4)
   property bool ccSidebarCollapsed: false   // command centre's tab sidebar folded to icons
   readonly property var monsterHues: ["bright_green", "bright_cyan", "bright_magenta", "bright_yellow", "bright_blue", "bright_red",
     "green", "cyan", "magenta", "yellow"]
@@ -322,7 +323,7 @@ Item {
   // written (debounced) whenever one of these changes.
   readonly property var skinKeys: ["slimeRole", "gradientRole", "shadingStyle", "slimeFps", "dripAmount",
     "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material", "dripStyle", "monsterColor",
-    "desktopCorners", "cornerSlime", "ccKeyboard", "ccSidebarCollapsed"]
+    "desktopCorners", "cornerSlime", "ccKeyboard", "ccSidebarCollapsed", "ccFontScale"]
   property bool skinLoaded: false
   // A layer change made while the bar surface is still being set up is lost,
   // so "behind" only takes effect once the bar has been mapped for a moment.
@@ -369,6 +370,7 @@ Item {
   onDesktopCornersChanged: skinSaveTimer.restart()
   onCornerSlimeChanged: skinSaveTimer.restart()
   onCcKeyboardChanged: skinSaveTimer.restart()
+  onCcFontScaleChanged: skinSaveTimer.restart()
   onCcSidebarCollapsedChanged: skinSaveTimer.restart()
   // the edge across from the bar (for the corner patches)
   readonly property string oppositeEdge: ({ top: "bottom", bottom: "top", left: "right", right: "left" })[position] || "bottom"

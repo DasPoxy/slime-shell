@@ -11,6 +11,8 @@ import "../../slime.menu/Fuzzy.js" as Fuzzy
 // autostart.lua is listed read-only underneath.
 Item {
   id: startup
+  // the command centre's text size (Settings → Command centre → text size)
+  readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1
 
   property var cc: null
   property var apps: []                 // [{id, name, workspace, enabled}]
@@ -132,7 +134,7 @@ Item {
           text: row.modelData.name
           color: startup.cc.ink
           font.family: startup.cc.font
-          font.pixelSize: 13
+          font.pixelSize: Math.round(13 * startup.fs)
           font.bold: true
         }
         // workspace picker: auto, then 1..10
@@ -154,7 +156,7 @@ Item {
                 text: parent.index === 0 ? "auto" : (parent.index === 10 ? "0" : parent.index)
                 color: parent.on ? startup.cc.slime : startup.cc.ink
                 font.family: startup.cc.font
-                font.pixelSize: 10
+                font.pixelSize: Math.round(10 * startup.fs)
                 font.bold: true
               }
               MouseArea {
@@ -197,8 +199,7 @@ Item {
         text: ""
         color: startup.cc.ink
         font.family: startup.cc.font
-        font.pixelSize: 13
-      }
+        font.pixelSize: Math.round(13 * startup.fs) }
       CcFocus { onActivate: search.forceActiveFocus() }
       TextInput {
         id: search
@@ -207,7 +208,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         color: startup.cc.ink
         font.family: startup.cc.font
-        font.pixelSize: 14
+        font.pixelSize: Math.round(14 * startup.fs)
         font.bold: true
         clip: true
         onTextChanged: startup.query = text
@@ -221,8 +222,7 @@ Item {
         color: startup.cc.ink
         opacity: 0.5
         font.family: startup.cc.font
-        font.pixelSize: 13
-      }
+        font.pixelSize: Math.round(13 * startup.fs) }
     }
     Flow {
       width: column.width
@@ -247,7 +247,7 @@ Item {
       text: "Hooking into ~/.config/hypr/autostart.lua…"
       color: startup.cc.ink
       font.family: startup.cc.font
-      font.pixelSize: 11
+      font.pixelSize: Math.round(11 * startup.fs)
       opacity: 0.7
     }
 
@@ -266,7 +266,7 @@ Item {
         text: "•  " + modelData
         color: startup.cc.ink
         font.family: startup.cc.font
-        font.pixelSize: 12
+        font.pixelSize: Math.round(12 * startup.fs)
         opacity: 0.8
       }
     }

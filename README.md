@@ -206,7 +206,9 @@ omarchy-shell shell toggle <widget id>           # any bar widget's panel, e.g. 
 
 Command centre → **Settings** (sections fold open and closed):
 
-- **Command centre** — keyboard navigation on / off
+- **Command centre** — keyboard navigation on / off, and a text size slider
+  (80–140%) for the command centre and its tabs (the bar clock keeps its own
+  size, in its menu)
 - **Desktop styling** — rounded screen corners (off / small / medium / large)
   and slime patches in the corners across from the bar, mirroring its look
 - **Slime** — colour, gradient partner, material, bar position, bar shape,

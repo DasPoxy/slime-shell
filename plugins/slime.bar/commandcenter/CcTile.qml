@@ -3,6 +3,8 @@ import QtQuick
 // Quick-toggle tile: a big glyph over a label, inked solid when on.
 Rectangle {
   id: tile
+  // the command centre's text size (Settings → Command centre → text size)
+  readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1
   required property var cc
   property string icon: ""
   property string label: ""
@@ -29,14 +31,18 @@ Rectangle {
       text: tile.icon
       color: tile.on ? tile.cc.slime : tile.cc.ink
       font.family: tile.cc.font
-      font.pixelSize: 18
-    }
+      font.pixelSize: Math.round(18 * tile.fs) }
     Text {
       anchors.horizontalCenter: parent.horizontalCenter
+      // shrinks to fit the tile at bigger text sizes
+      width: Math.min(implicitWidth, tile.width - 4)
+      horizontalAlignment: Text.AlignHCenter
+      fontSizeMode: Text.HorizontalFit
+      minimumPixelSize: 8
       text: tile.label
       color: tile.on ? tile.cc.slime : tile.cc.ink
       font.family: tile.cc.font
-      font.pixelSize: 11
+      font.pixelSize: Math.round(11 * tile.fs)
       font.bold: true
     }
   }

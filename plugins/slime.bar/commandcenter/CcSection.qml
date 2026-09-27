@@ -7,6 +7,8 @@ import QtQuick
 // options are added.
 Column {
   id: section
+  // the command centre's text size (Settings → Command centre → text size)
+  readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1
 
   required property var cc
   property string title: ""
@@ -56,7 +58,7 @@ Column {
       text: ""
       color: section.cc.ink
       font.family: section.cc.font
-      font.pixelSize: 12
+      font.pixelSize: Math.round(12 * section.fs)
       rotation: section.open ? 90 : 0
       Behavior on rotation { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
     }

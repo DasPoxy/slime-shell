@@ -4,6 +4,8 @@ import QtQuick
 // the slime when off.
 Rectangle {
   id: button
+  // the command centre's text size (Settings → Command centre → text size)
+  readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1
   required property var cc
   property string text: ""
   property string icon: ""
@@ -32,15 +34,14 @@ Rectangle {
       text: button.icon
       color: button.on ? button.cc.slime : button.cc.ink
       font.family: button.cc.font
-      font.pixelSize: button.fontSize + 1
-    }
+      font.pixelSize: Math.round((button.fontSize + 1) * button.fs) }
     Text {
       visible: button.text !== ""
       anchors.verticalCenter: parent.verticalCenter
       text: button.text
       color: button.on ? button.cc.slime : button.cc.ink
       font.family: button.cc.font
-      font.pixelSize: button.fontSize
+      font.pixelSize: Math.round((button.fontSize) * button.fs)
       font.bold: true
     }
   }

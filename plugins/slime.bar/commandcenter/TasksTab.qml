@@ -17,6 +17,8 @@ import "../ui"
 // for the keys.
 Item {
   id: tasks
+  // the command centre's text size (Settings → Command centre → text size)
+  readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1
 
   property var cc: null
   readonly property var bar: cc ? cc.bar : null
@@ -290,15 +292,14 @@ Item {
     Row {
       x: 12; spacing: 7
       anchors.verticalCenter: parent.verticalCenter
-      Text { anchors.verticalCenter: parent.verticalCenter; text: sh.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 9 }
-      Text { anchors.verticalCenter: parent.verticalCenter; text: "\uf247"; color: tasks.superColor(sh.name); style: Text.Outline; styleColor: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 13 }
-      Text { anchors.verticalCenter: parent.verticalCenter; text: sh.name; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: 14 }
+      Text { anchors.verticalCenter: parent.verticalCenter; text: sh.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
+      Text { anchors.verticalCenter: parent.verticalCenter; text: "\uf247"; color: tasks.superColor(sh.name); style: Text.Outline; styleColor: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(13 * tasks.fs) }
+      Text { anchors.verticalCenter: parent.verticalCenter; text: sh.name; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: Math.round(14 * tasks.fs) }
       Text {
         anchors.verticalCenter: parent.verticalCenter
         visible: sh.collapsed
         text: sh.count + (sh.count === 1 ? " todo" : " todos")
-        color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 10
-      }
+        color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs) }
     }
     MouseArea {
       id: shMouse
@@ -1232,8 +1233,7 @@ Item {
       text: index % 2 ? "♪" : "♫"
       color: tasks.cc.ink
       opacity: 0.35 * (1 - rise)
-      font.pixelSize: 14 + index % 3 * 3
-    }
+      font.pixelSize: 14 + index % 3 * 3 }
   }
 
   // the swallowed tavern's regulars, drifting through the goo behind it all
@@ -1324,8 +1324,7 @@ Item {
         color: sign.on ? tasks.cc.ink : Qt.rgba(tasks.cc.ink.r, tasks.cc.ink.g, tasks.cc.ink.b, 0.75)
         font.family: tasks.cc.displayFont
         font.weight: tasks.cc.displayWeight
-        font.pixelSize: 15
-      }
+        font.pixelSize: Math.round(15 * tasks.fs) }
     }
     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { tasks.tab = sign.key; tasks.forceActiveFocus() } }
   }
@@ -1347,7 +1346,7 @@ Item {
     color: tasks.cc.ink
     opacity: tasks.error !== "" ? 1 : 0.55
     font.family: tasks.cc.font
-    font.pixelSize: 11
+    font.pixelSize: Math.round(11 * tasks.fs)
     width: Math.min(implicitWidth, parent.width - signs.width - 20)
     elide: Text.ElideRight
     MouseArea { anchors.fill: parent; onClicked: tasks.showHelp = !tasks.showHelp }
@@ -1375,7 +1374,7 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
       color: tasks.cc.ink
       font.family: tasks.cc.font
-      font.pixelSize: 12
+      font.pixelSize: Math.round(12 * tasks.fs)
       clip: true
       Keys.onReturnPressed: {
         var t = text.trim()
@@ -1406,8 +1405,7 @@ Item {
       text: parent.state3 === "done" ? "" : parent.state3 === "doing" ? "" : ""
       color: parent.state3 === "done" ? tasks.cc.slime : tasks.cc.ink
       font.family: tasks.cc.font
-      font.pixelSize: 8
-    }
+      font.pixelSize: Math.round(8 * tasks.fs) }
   }
 
   component Meter: Rectangle {
@@ -1505,15 +1503,14 @@ Item {
               x: 6 + (row.modelData.depth || 0) * 16
               spacing: 6
               anchors.verticalCenter: parent.verticalCenter
-              Text { anchors.verticalCenter: parent.verticalCenter; text: row.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 9 }
+              Text { anchors.verticalCenter: parent.verticalCenter; text: row.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
               Rectangle { width: 12; height: 12; radius: 6; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(row.modelData.name); border.color: tasks.cc.ink; border.width: 1.2; visible: !!row.modelData.name }
               CcHeading { cc: tasks.cc; anchors.verticalCenter: parent.verticalCenter; text: !row.modelData.name ? "NO GROUP" : row.modelData.name.toUpperCase() }
               Text {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: !!row.modelData.collapsed
                 text: row.modelData.count + (row.modelData.count === 1 ? " todo" : " todos")
-                color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 10
-              }
+                color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs) }
             }
             MouseArea {
               id: headMouse
@@ -1560,7 +1557,7 @@ Item {
               opacity: parent.t && parent.t.done ? 0.5 : 1
               font.strikeout: parent.t ? parent.t.done : false
               font.family: tasks.cc.font
-              font.pixelSize: 13
+              font.pixelSize: Math.round(13 * tasks.fs)
               font.bold: true
             }
             Text {
@@ -1569,8 +1566,7 @@ Item {
               anchors.verticalCenter: parent.verticalCenter
               text: parent.t && parent.t.subs.length ? parent.t.counts.done + "/" + parent.t.subs.length : ""
               color: tasks.cc.ink; opacity: 0.7
-              font.family: tasks.cc.font; font.pixelSize: 11
-            }
+              font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs) }
             MouseArea {
               id: todoMouse
               anchors.fill: parent
@@ -1673,8 +1669,7 @@ Item {
             color: tasks.cc.ink
             font.family: tasks.cc.displayFont
             font.weight: tasks.cc.displayWeight
-            font.pixelSize: 18
-          }
+            font.pixelSize: Math.round(18 * tasks.fs) }
           TextInput {
             id: renameInput
             visible: activeFocus
@@ -1682,7 +1677,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             color: tasks.cc.ink
             font.family: tasks.cc.font
-            font.pixelSize: 16
+            font.pixelSize: Math.round(16 * tasks.fs)
             font.bold: true
             Keys.onReturnPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["rename", tasks.selected.id, text.trim()]); tasks.forceActiveFocus() }
             Keys.onEscapePressed: tasks.forceActiveFocus()
@@ -1695,8 +1690,7 @@ Item {
           Text {
             text: tasks.selected ? (tasks.selected.group || "no group") + "  ·  " + tasks.selected.counts.done + " of " + tasks.selected.subs.length + " done" + (tasks.selected.counts.doing ? "  ·  " + tasks.selected.counts.doing + " in progress" : "") : ""
             color: tasks.cc.ink; opacity: 0.7
-            font.family: tasks.cc.font; font.pixelSize: 11
-          }
+            font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs) }
         }
         Field {
           id: subField
@@ -1755,8 +1749,7 @@ Item {
             font.strikeout: subRow.modelData.state === "done"
             font.italic: subRow.modelData.state === "doing"
             font.family: tasks.cc.font
-            font.pixelSize: 12
-          }
+            font.pixelSize: Math.round(12 * tasks.fs) }
           opacity: tasks.dragSub === index ? 0.45 : 1
           MouseArea {
             anchors.fill: parent; anchors.leftMargin: 28
@@ -1806,7 +1799,7 @@ Item {
         width: subList.width - 40
         color: tasks.cc.ink
         font.family: tasks.cc.font
-        font.pixelSize: 12
+        font.pixelSize: Math.round(12 * tasks.fs)
         Rectangle { anchors.fill: parent; anchors.margins: -4; z: -1; radius: 6; color: Qt.rgba(1, 1, 1, 0.9); border.color: tasks.cc.ink }
         Keys.onReturnPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["sub-edit", tasks.selected.id, String(index), text.trim()]); tasks.forceActiveFocus() }
         Keys.onEscapePressed: tasks.forceActiveFocus()
@@ -1819,8 +1812,7 @@ Item {
       wrapMode: Text.Wrap
       text: "No todos yet. Type one on the left and press Enter — each opens into its own list of sub-todos."
       color: tasks.cc.ink; opacity: 0.7
-      font.family: tasks.cc.font; font.pixelSize: 12
-    }
+      font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs) }
   }
   property var subInput: null
   property var logInput: null
@@ -1868,15 +1860,14 @@ Item {
           Row {
             x: 6 + (logRow.modelData.depth || 0) * 16; spacing: 6
             anchors.verticalCenter: parent.verticalCenter
-            Text { anchors.verticalCenter: parent.verticalCenter; text: logRow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 9 }
+            Text { anchors.verticalCenter: parent.verticalCenter; text: logRow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
             Rectangle { width: 12; height: 12; radius: 6; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(logRow.modelData.name); border.color: tasks.cc.ink; border.width: 1.2; visible: !!logRow.modelData.name }
             CcHeading { cc: tasks.cc; anchors.verticalCenter: parent.verticalCenter; text: !logRow.modelData.name ? "NO GROUP" : logRow.modelData.name.toUpperCase() }
             Text {
               anchors.verticalCenter: parent.verticalCenter
               visible: !!logRow.modelData.collapsed
               text: logRow.modelData.count + (logRow.modelData.count === 1 ? " todo" : " todos")
-              color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 10
-            }
+              color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs) }
           }
           MouseArea {
             id: logHeadMouse
@@ -1906,12 +1897,11 @@ Item {
         Column {
           x: 14; anchors.verticalCenter: parent.verticalCenter
           width: parent.width - 22
-          Text { width: parent.width; elide: Text.ElideRight; text: parent.parent.modelData.title; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 12; font.bold: true }
+          Text { width: parent.width; elide: Text.ElideRight; text: parent.parent.modelData.title; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs); font.bold: true }
           Text {
             width: parent.width; elide: Text.ElideRight
             text: (parent.parent.modelData.counts.doing ? " " + parent.parent.modelData.counts.doing + " in progress · " : "") + parent.parent.modelData.logCount + " log entries"
-            color: tasks.cc.ink; opacity: 0.65; font.family: tasks.cc.font; font.pixelSize: 10
-          }
+            color: tasks.cc.ink; opacity: 0.65; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs) }
         }
         MouseArea { anchors.fill: parent; onClicked: { tasks.logCursor = ""; tasks.selectedId = parent.modelData.id; tasks.forceActiveFocus() } }
         }
@@ -1970,8 +1960,7 @@ Item {
                   textFormat: Text.PlainText
                   color: tasks.cc.ink
                   font.family: tasks.cc.font
-                  font.pixelSize: 11
-                }
+                  font.pixelSize: Math.round(11 * tasks.fs) }
                 MouseArea {
                   id: laneMouse
                   anchors.fill: parent
@@ -2067,7 +2056,7 @@ Item {
             x: 4
             spacing: 8
             anchors.verticalCenter: parent.verticalCenter
-            Text { anchors.verticalCenter: parent.verticalCenter; text: logItem.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 9 }
+            Text { anchors.verticalCenter: parent.verticalCenter; text: logItem.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
             StateBox { anchors.verticalCenter: parent.verticalCenter; visible: !!logItem.modelData.sub; state3: logItem.modelData.sub ? logItem.modelData.sub.state : "todo" }
             Text {
               anchors.verticalCenter: parent.verticalCenter
@@ -2077,8 +2066,7 @@ Item {
               text: logItem.modelData.kind !== "head" ? "" : (logItem.modelData.sub ? logItem.modelData.sub.text : "About the whole todo")
                 + (logItem.modelData.collapsed ? "   ·   " + logItem.modelData.count + (logItem.modelData.count === 1 ? " entry" : " entries") : "")
               color: tasks.cc.ink
-              font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: 13
-            }
+              font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: Math.round(13 * tasks.fs) }
           }
           Rectangle {
           id: entryBox
@@ -2096,7 +2084,7 @@ Item {
             x: 10; y: 6
             text: parent.modelData.time + (parent.modelData.by ? "  ·  " + parent.modelData.by : "")
             color: tasks.cc.ink; opacity: 0.7
-            font.family: tasks.cc.font; font.pixelSize: 10; font.bold: true
+            font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs); font.bold: true
           }
           // what it's about: the todo, and the sub-todo if there is one
           Rectangle {
@@ -2114,7 +2102,7 @@ Item {
               textFormat: Text.PlainText
               text: "\uf0ae  " + (tasks.selected ? tasks.selected.title : "") + (parent.parent.modelData.sub ? "   \u21b3  " + parent.parent.modelData.sub : "")
               color: tasks.cc.ink
-              font.family: tasks.cc.font; font.pixelSize: 10; font.bold: true
+              font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs); font.bold: true
             }
           }
           Text {
@@ -2126,8 +2114,7 @@ Item {
             textFormat: Text.MarkdownText
             color: tasks.cc.ink
             font.family: tasks.cc.font
-            font.pixelSize: 12
-          }
+            font.pixelSize: Math.round(12 * tasks.fs) }
           MouseArea {
             anchors.fill: parent
             onClicked: { tasks.logPane = "entries"; tasks.logEntry = tasks.logEntryRows.indexOf(logItem.index); tasks.forceActiveFocus() }
@@ -2141,8 +2128,7 @@ Item {
           wrapMode: Text.Wrap
           text: "Nothing logged yet. Agents and scripts add entries with\n  slime-tasks log <id> \"…\"   and move sub-todos with   slime-tasks start/finish <id> <n>."
           color: tasks.cc.ink; opacity: 0.65
-          font.family: tasks.cc.font; font.pixelSize: 11
-        }
+          font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs) }
       }
     }
   }
@@ -2192,32 +2178,32 @@ Item {
           visible: prow.modelData.kind === "super"
           x: 12; anchors.verticalCenter: parent.verticalCenter
           spacing: 8
-          Text { text: prow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
-          Text { text: "\uf247"; color: tasks.superColor(prow.modelData.name); style: Text.Outline; styleColor: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 14; anchors.verticalCenter: parent.verticalCenter }
-          Text { text: prow.modelData.kind === "super" ? prow.modelData.name : ""; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: 16; anchors.verticalCenter: parent.verticalCenter }
-          Text { text: prow.modelData.kind !== "super" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+          Text { text: prow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
+          Text { text: "\uf247"; color: tasks.superColor(prow.modelData.name); style: Text.Outline; styleColor: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(14 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
+          Text { text: prow.modelData.kind === "super" ? prow.modelData.name : ""; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: Math.round(16 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
+          Text { text: prow.modelData.kind !== "super" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
         }
         // group
         Row {
           visible: prow.modelData.kind === "group"
           x: 10; anchors.verticalCenter: parent.verticalCenter
           spacing: 8
-          Text { text: tasks.groupCollapsed(prow.modelData.name, "progress") ? "" : ""; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
+          Text { text: tasks.groupCollapsed(prow.modelData.name, "progress") ? "" : ""; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
           Rectangle { width: 12; height: 12; radius: 6; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(prow.modelData.name); border.color: tasks.cc.ink; border.width: 1.2; visible: prow.modelData.name !== "" }
-          Text { text: !prow.modelData.name ? "No group" : prow.modelData.name; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: 15; anchors.verticalCenter: parent.verticalCenter }
-          Text { text: prow.modelData.kind !== "group" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+          Text { text: !prow.modelData.name ? "No group" : prow.modelData.name; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: Math.round(15 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
+          Text { text: prow.modelData.kind !== "group" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
         }
         // todo
         Row {
           visible: prow.modelData.kind === "todo"
           x: 10; anchors.verticalCenter: parent.verticalCenter
           spacing: 8
-          Text { text: prow.modelData.kind === "todo" && prow.modelData.t.subs.length ? (tasks.expanded["t:" + prow.modelData.t.id] ? "" : "") : " "; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 9; anchors.verticalCenter: parent.verticalCenter }
+          Text { text: prow.modelData.kind === "todo" && prow.modelData.t.subs.length ? (tasks.expanded["t:" + prow.modelData.t.id] ? "" : "") : " "; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
           Text {
             width: prow.width * 0.4
             elide: Text.ElideRight
             text: prow.modelData.kind === "todo" ? prow.modelData.t.title : ""
-            color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 12; font.bold: true
+            color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs); font.bold: true
             anchors.verticalCenter: parent.verticalCenter
           }
         }
@@ -2229,7 +2215,7 @@ Item {
           StateBox { state3: prow.modelData.kind === "sub" ? prow.modelData.s.state : "todo"; anchors.verticalCenter: parent.verticalCenter; scale: 0.8 }
           Text {
             text: prow.modelData.kind === "sub" ? prow.modelData.s.text : ""
-            color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 11
+            color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs)
             opacity: prow.modelData.kind === "sub" && prow.modelData.s.state === "done" ? 0.55 : 1
             anchors.verticalCenter: parent.verticalCenter
           }
@@ -2252,7 +2238,7 @@ Item {
           width: 38
           horizontalAlignment: Text.AlignRight
           text: Math.round(100 * ((prow.modelData.kind === "group" || prow.modelData.kind === "super") ? prow.modelData.pct : prow.modelData.kind === "todo" ? tasks.pct(prow.modelData.t) : 0)) + "%"
-          color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 12; font.bold: true
+          color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs); font.bold: true
         }
         CcButton {
           id: archiveBtn
@@ -2345,15 +2331,14 @@ Item {
             visible: arow.modelData.kind === "head"
             spacing: 6
             anchors.verticalCenter: parent.verticalCenter
-            Text { anchors.verticalCenter: parent.verticalCenter; text: arow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 9 }
+            Text { anchors.verticalCenter: parent.verticalCenter; text: arow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
             Rectangle { width: 10; height: 10; radius: 5; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(arow.modelData.name); border.color: tasks.cc.ink; border.width: 1; visible: !!arow.modelData.name }
             CcHeading { cc: tasks.cc; anchors.verticalCenter: parent.verticalCenter; text: arow.modelData.kind !== "head" ? "" : arow.modelData.name ? arow.modelData.name.toUpperCase() : "NO GROUP" }
             Text {
               anchors.verticalCenter: parent.verticalCenter
               visible: !!arow.modelData.collapsed
               text: arow.modelData.count + (arow.modelData.count === 1 ? " todo" : " todos")
-              color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 10
-            }
+              color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs) }
           }
           Item {
             visible: arow.modelData.kind === "todo"
@@ -2373,8 +2358,7 @@ Item {
               anchors.verticalCenter: parent.verticalCenter
               elide: Text.ElideRight
               text: parent.t.title + "  ·  " + parent.t.counts.done + "/" + parent.t.subs.length
-              color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 12
-            }
+              color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs) }
             MouseArea {
               anchors.fill: parent
               anchors.rightMargin: restoreBtn.width + 8
@@ -2515,8 +2499,7 @@ Item {
                 return it.kind === "rename" ? "  rename" : it.kind === "archive" ? "  archive"
                   : it.kind === "restore" ? "  restore" : "  delete"
               }
-              color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 12
-            }
+              color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs) }
           }
           MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: menu.run(parent.modelData) }
         }
@@ -2527,8 +2510,7 @@ Item {
         wrapMode: Text.Wrap
         text: menu.headSuper !== "" ? "deleting a super group keeps its groups" : "d d on a group deletes it (its todos just lose the group)"
         color: tasks.cc.ink; opacity: 0.55
-        font.family: tasks.cc.font; font.pixelSize: 9
-      }
+        font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
       Field {
         visible: menu.headSuper === ""
         width: menuCol.width
@@ -2563,6 +2545,7 @@ Item {
     readonly property string font: tasks.cc.font
     readonly property string displayFont: viewer.font
     readonly property int displayWeight: Font.Normal
+    readonly property real fontScale: tasks.fs
     readonly property color wash: Qt.rgba(1, 0.95, 0.85, 0.5)
   }
   Rectangle {
@@ -2688,7 +2671,7 @@ Item {
           elide: Text.ElideRight
           text: viewer.e.time + (viewer.e.by ? "  ·  " + viewer.e.by : "")
           color: viewer.ink; opacity: 0.7
-          font.family: viewer.font; font.pixelSize: 12; font.bold: true
+          font.family: viewer.font; font.pixelSize: Math.round(12 * tasks.fs); font.bold: true
         }
         Row {
           id: viewButtons
@@ -2715,7 +2698,7 @@ Item {
           textFormat: Text.PlainText
           text: "\uf0ae  " + (tasks.selected ? tasks.selected.title : "") + (viewer.e.sub ? "   \u21b3  " + viewer.e.sub : "")
           color: viewer.ink
-          font.family: viewer.font; font.pixelSize: 12; font.bold: true
+          font.family: viewer.font; font.pixelSize: Math.round(12 * tasks.fs); font.bold: true
         }
       }
     }
@@ -2738,7 +2721,7 @@ Item {
         textFormat: Text.MarkdownText
         color: viewer.ink
         font.family: viewer.font
-        font.pixelSize: 19
+        font.pixelSize: Math.round(19 * tasks.fs)
         lineHeight: 1.2
       }
     }
@@ -2768,7 +2751,7 @@ Item {
           selectByMouse: true
           color: viewer.ink
           font.family: "monospace"
-          font.pixelSize: 14
+          font.pixelSize: Math.round(14 * tasks.fs)
           onCursorRectangleChanged: {
             if (cursorRectangle.y < editFlick.contentY) editFlick.contentY = cursorRectangle.y
             else if (cursorRectangle.y + cursorRectangle.height > editFlick.contentY + editFlick.height)
@@ -2812,7 +2795,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         color: tasks.cc.ink
         font.family: tasks.cc.font
-        font.pixelSize: 13
+        font.pixelSize: Math.round(13 * tasks.fs)
         clip: true
         Keys.onReturnPressed: tasks.finishRenameGroup(text.trim())
         Keys.onEscapePressed: { tasks.renamingGroup = ""; tasks.renamingIsSuper = false; tasks.forceActiveFocus() }
@@ -2866,8 +2849,8 @@ Item {
               Row {
                 required property var modelData
                 spacing: 6
-                Text { text: parent.modelData[0]; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 12; font.bold: true }
-                Text { text: parent.modelData[1]; color: tasks.cc.ink; opacity: 0.75; font.family: tasks.cc.font; font.pixelSize: 12 }
+                Text { text: parent.modelData[0]; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs); font.bold: true }
+                Text { text: parent.modelData[1]; color: tasks.cc.ink; opacity: 0.75; font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs) }
               }
             }
           }
@@ -2878,8 +2861,7 @@ Item {
         wrapMode: Text.Wrap
         text: "Text boxes: Enter saves, Esc leaves. Your todos are plain markdown in " + tasks.folder.replace(/^\/home\/[^/]+/, "~") + " — open them in Envy or any notes app."
         color: tasks.cc.ink; opacity: 0.7
-        font.family: tasks.cc.font; font.pixelSize: 11
-      }
+        font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs) }
     }
     MouseArea { anchors.fill: parent; onClicked: tasks.showHelp = false }
   }

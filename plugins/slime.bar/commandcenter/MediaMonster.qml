@@ -10,6 +10,8 @@ import "../ui"
 // length (browsers, often) get a chomping wave instead of a fake progress.
 Item {
   id: monster
+  // the command centre's text size (Settings → Command centre → text size)
+  readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1
 
   required property var cc
   property var player: null
@@ -187,7 +189,7 @@ Item {
         elide: Text.ElideRight
         color: monster.ink
         font.family: monster.cc.font
-        font.pixelSize: 13
+        font.pixelSize: Math.round(13 * monster.fs)
         font.weight: Font.Black
       }
       Text {
@@ -196,7 +198,7 @@ Item {
         elide: Text.ElideRight
         color: monster.ink
         font.family: monster.cc.font
-        font.pixelSize: 11
+        font.pixelSize: Math.round(11 * monster.fs)
         opacity: 0.75
       }
       Row {
@@ -213,7 +215,7 @@ Item {
             text: modelData[0]
             color: monster.ink
             font.family: monster.cc.font
-            font.pixelSize: 17
+            font.pixelSize: Math.round(17 * monster.fs)
             scale: controlHover.hovered ? 1.2 : 1
             Behavior on scale { NumberAnimation { duration: 150 } }
             HoverHandler { id: controlHover }
@@ -295,7 +297,7 @@ Item {
       text: monster.player ? monster.clockText(monster.player.position) : ""
       color: monster.ink
       font.family: monster.cc.font
-      font.pixelSize: 10
+      font.pixelSize: Math.round(10 * monster.fs)
       font.bold: true
     }
     Text {
@@ -304,7 +306,7 @@ Item {
       text: monster.knownLength ? monster.clockText(monster.player.length) : ""
       color: monster.ink
       font.family: monster.cc.font
-      font.pixelSize: 10
+      font.pixelSize: Math.round(10 * monster.fs)
       font.bold: true
       opacity: 0.7
     }

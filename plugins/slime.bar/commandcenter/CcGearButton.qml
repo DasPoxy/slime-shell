@@ -7,11 +7,14 @@ import "../ui"
 // other state properties pass straight through to the gear.
 Item {
   id: button
+  // the command centre's text size (Settings → Command centre → text size)
+  readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1
 
   required property var cc
   property string kind: "cottage"
   property string label: ""
   property string labelSide: "right"   // right, below, none
+  property real labelRoom: 0            // > 0: a "below" label shrinks to fit this width
   property real size: 26
   property bool active: false
   property real phase: 0
@@ -32,7 +35,7 @@ Item {
   readonly property real grow: active ? 1.12 : (hover.hovered ? 1.06 : 1)
 
   implicitWidth: labelSide === "right" ? size + (label !== "" ? 8 + labelText.implicitWidth : 0)
-    : Math.max(size, labelSide === "below" ? labelText.implicitWidth : 0)
+    : Math.max(size, labelSide === "below" ? labelText.width : 0)
   implicitHeight: labelSide === "below" ? size + 4 + labelText.implicitHeight : size
 
   HoverHandler { id: hover }
@@ -64,13 +67,17 @@ Item {
   Text {
     id: labelText
     visible: button.label !== "" && button.labelSide !== "none"
-    x: button.labelSide === "right" ? button.size + 8 : (button.width - implicitWidth) / 2
+    x: button.labelSide === "right" ? button.size + 8 : (button.width - width) / 2
+    width: button.labelSide === "below" && button.labelRoom > 0 ? Math.min(implicitWidth, button.labelRoom) : implicitWidth
+    horizontalAlignment: Text.AlignHCenter
+    fontSizeMode: Text.HorizontalFit
+    minimumPixelSize: 7
     y: button.labelSide === "right" ? (button.size - implicitHeight) / 2 : button.size + 4
     text: button.label
     color: button.cc.ink
     opacity: button.active || hover.hovered ? 1 : 0.72
     font.family: button.cc.font
-    font.pixelSize: button.labelSide === "below" ? 10 : 13
+    font.pixelSize: Math.round((button.labelSide === "below" ? 10 : 13) * button.fs)
     font.weight: button.active ? Font.Black : Font.Bold
   }
 

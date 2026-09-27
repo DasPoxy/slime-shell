@@ -6,6 +6,8 @@ import Quickshell.Io
 // shortcuts to the widget settings that live elsewhere.
 Item {
   id: settings
+  // the command centre's text size (Settings → Command centre → text size)
+  readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1
 
   property var cc: null
   readonly property var bar: cc ? cc.bar : null
@@ -108,6 +110,38 @@ Item {
         options: [["on", true], ["off", false]]
         current: settings.bar.ccKeyboard
         onPicked: value => settings.bar.ccKeyboard = value
+      }
+      Column {
+        id: textSize
+        width: parent ? parent.width : 0
+        spacing: 2
+        CcHeading {
+          cc: settings.cc
+          text: "TEXT SIZE · " + Math.round(sizeSlider.liveValue * 100) + "%  (THE BAR'S CLOCK HAS ITS OWN, IN ITS MENU)"
+        }
+        Row {
+          spacing: 8
+          SlimeSlider {
+            id: sizeSlider
+            anchors.verticalCenter: parent.verticalCenter
+            width: textSize.width - resetSize.width - 8
+            cc: settings.cc
+            minimum: 0.8
+            maximum: 1.4
+            step: 0.05
+            value: settings.bar.ccFontScale
+            // applied on release: re-laying out every tab mid-drag is jumpy
+            onReleased: v => settings.bar.ccFontScale = Math.round(v * 20) / 20
+          }
+          CcButton {
+            id: resetSize
+            anchors.verticalCenter: parent.verticalCenter
+            cc: settings.cc
+            text: "100%"
+            on: settings.bar.ccFontScale === 1
+            onClicked: settings.bar.ccFontScale = 1
+          }
+        }
       }
     }
 
@@ -265,7 +299,7 @@ Item {
         wrapMode: Text.Wrap
         color: settings.cc.ink
         font.family: settings.cc.font
-        font.pixelSize: 12
+        font.pixelSize: Math.round(12 * settings.fs)
         text: {
           var u = settings.update
           if (!u) return ""
@@ -287,7 +321,7 @@ Item {
           text: "•  " + modelData
           color: settings.cc.ink
           font.family: settings.cc.font
-          font.pixelSize: 11
+          font.pixelSize: Math.round(11 * settings.fs)
           opacity: 0.85
         }
       }

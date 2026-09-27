@@ -9,6 +9,8 @@ import Quickshell.Widgets
 // and anything else watching the current-background link follow along).
 Item {
   id: walls
+  // the command centre's text size (Settings → Command centre → text size)
+  readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1
 
   property var cc: null
   property string current: ""
@@ -109,8 +111,7 @@ Item {
           text: ""
           color: walls.cc.slime
           font.family: walls.cc.font
-          font.pixelSize: 11
-        }
+          font.pixelSize: Math.round(11 * walls.fs) }
       }
 
       HoverHandler { id: hover }

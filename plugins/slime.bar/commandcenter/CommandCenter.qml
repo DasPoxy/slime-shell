@@ -28,6 +28,9 @@ Item {
   // decorative slime face for big text only (clocks, temperatures, headings)
   readonly property string displayFont: bar.displayFontFamily
   readonly property int displayWeight: bar.displayWeight
+  // text size for the command centre and its tabs (the bar's clock keeps its own)
+  readonly property real fontScale: bar.ccFontScale
+  readonly property real fs: fontScale
   readonly property color wash: Qt.rgba(1, 1, 1, 0.45)
 
   // [id, gear kind, label, file]
@@ -42,7 +45,7 @@ Item {
   // the tab sidebar folds down to just its icons (button at its top-right
   // corner, or t), handing the room to the tab; remembered
   readonly property bool sidebarCollapsed: bar.ccSidebarCollapsed === true
-  property real sidebarWidth: sidebarCollapsed ? 50 : 128
+  property real sidebarWidth: sidebarCollapsed ? 50 : Math.round(128 + Math.max(0, fontScale - 1) * 150)   // wider for bigger text
   Behavior on sidebarWidth { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
   function toggleSidebar() { bar.ccSidebarCollapsed = !sidebarCollapsed }
   readonly property string tabSource: {
@@ -360,8 +363,7 @@ Item {
           + "The Tasks tab has its own keys (? there)."
       color: center.ink
       font.family: "monospace"
-      font.pixelSize: 12
-    }
+      font.pixelSize: Math.round(12 * center.fs) }
   }
 
   // scroll indicator, only when the tab doesn't fit
