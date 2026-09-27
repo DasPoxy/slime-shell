@@ -43,7 +43,7 @@ Commands (all print JSON; errors go to stderr with exit status 1):
   finish ID N [NOTE] [--by WHO]     sub-todo -> done, and log it
   group ID GROUP                    "" ungroups
   group-color GROUP #RRGGBB
-  log ID MESSAGE [--by WHO]         append a task-log entry
+  log ID MESSAGE [--by WHO] [--sub N]  append a task-log entry (about sub-todo N)
   log-show ID                       -> {"entries": [{time, by, text}]}
   archive ID / unarchive ID
   search QUERY [--archived]         titles and sub-todos containing QUERY
@@ -209,16 +209,22 @@ def log_entries(root, tid, archived=False):
         for line in f.read().split("\n"):
             m = re.match(r"^## (\d{4}-\d\d-\d\d \d\d:\d\d)(?: · (.*))?$", line)
             if m:
-                cur = {"time": m.group(1), "by": m.group(2) or "", "text": ""}
+                by, _, sub = (m.group(2) or "").partition(" · ")
+                cur = {"time": m.group(1), "by": by.strip(), "sub": sub.strip(), "text": ""}
                 entries.append(cur)
             elif cur is not None:
                 cur["text"] += line + "\n"
     for e in entries:
         e["text"] = e["text"].strip()
+        # older entries: the sub-todo is named in "Started: …" / "Finished: …"
+        if not e["sub"]:
+            m = re.match(r"^(?:Started|Finished): (.*)", e["text"])
+            if m:
+                e["sub"] = m.group(1).split("\n")[0].strip()
     return entries
 
 
-def append_log(root, tid, message, by="", archived=False):
+def append_log(root, tid, message, by="", archived=False, sub=""):
     p = log_path(root, tid, archived)
     if not os.path.exists(p):
         title = load(root, tid, archived)["title"]
@@ -226,7 +232,9 @@ def append_log(root, tid, message, by="", archived=False):
     else:
         with open(p) as f:
             head = f.read().rstrip("\n") + "\n"
-    write(p, head + f"\n## {now()}" + (f" · {by}" if by else "") + f"\n{message.strip()}\n")
+    # heading: "## <time> · <who> · <sub-todo>" (who / sub-todo optional)
+    tag = (f" · {by or 'anon'} · {sub}" if sub else f" · {by}" if by else "")
+    write(p, head + f"\n## {now()}{tag}\n{message.strip()}\n")
 
 
 def summary(root, tid, archived=False):
@@ -295,7 +303,7 @@ def run(argv):
         todos.sort(key=lambda t: (t["order"] or 10**9, t["created"] or ""))
         return {"folder": root, "groups": groups(root), "todos": todos}
     if cmd == "log-show":
-        return {"entries": log_entries(root, rest[0], archived)}
+        return {"title": load(root, rest[0], archived)["title"], "entries": log_entries(root, rest[0], archived)}
     if cmd in ("search", "find"):
         q = " ".join(rest).lower()
         out = []
@@ -397,10 +405,11 @@ def run(argv):
                 note = " ".join(rest[2:]).strip()
                 verb = "Started" if cmd == "start" else "Finished"
                 save(t)
-                append_log(root, tid, f"{verb}: {s['text']}" + (f"\n\n{note}" if note else ""), by, archived)
+                append_log(root, tid, f"{verb}: {s['text']}" + (f"\n\n{note}" if note else ""), by, archived, s["text"])
                 return summary(root, tid, archived)
         elif cmd == "log":
-            append_log(root, tid, " ".join(rest[1:]), by, archived)
+            sub = sub_at(t, opts["sub"])["text"] if opts.get("sub", "") != "" else ""
+            append_log(root, tid, " ".join(rest[1:]), by, archived, sub)
             return {"logged": tid}
         else:
             raise Fail(f"unknown command '{cmd}' (see --help)")

@@ -45,6 +45,8 @@ Item {
   property string archiveQuery: ""
   property bool showNotes: false
   property string logPane: "list"             // log tab: list | lanes
+  property string progressPane: "list"        // progress tab: list | archive
+  property int archiveIndex: 0
   property int logSub: 0                      // which sub-todo, in the lanes
 
   implicitHeight: 620
@@ -189,7 +191,8 @@ Item {
   }
   onTabChanged: refresh()
   onSelectedIdChanged: { logEntries = []; subIndex = 0; logSub = 0; if (tab === "log") refresh() }
-  onArchiveQueryChanged: refresh()
+  onArchiveQueryChanged: { refresh(); archiveIndex = 0 }
+  onArchivedTodosChanged: if (archiveIndex >= archivedTodos.length) archiveIndex = Math.max(0, archivedTodos.length - 1)
   // agents edit the files while you watch: keep polling while the tab is up
   Timer { interval: 2000; repeat: true; running: tasks.visible; triggeredOnStart: true; onTriggered: tasks.refresh() }
 
@@ -270,7 +273,8 @@ Item {
     if (txt === "1" || txt === "2" || txt === "3") { tab = ["todo", "log", "progress"][Number(txt) - 1]; event.accepted = true; return }
     var up = k === Qt.Key_Up || txt === "k", down = k === Qt.Key_Down || txt === "j"
     // Esc with nothing to back out of closes the command centre
-    if (k === Qt.Key_Escape && !(tab === "todo" && pane === "subs") && !(tab === "log" && logPane === "lanes") && !showHelp) {
+    if (k === Qt.Key_Escape && !(tab === "todo" && pane === "subs") && !(tab === "log" && logPane === "lanes")
+        && !(tab === "progress" && progressPane === "archive") && !showHelp) {
       if (closeRequest) closeRequest()
       else if (bar) bar.commandCenterOpen = false
       event.accepted = true; return
@@ -335,12 +339,28 @@ Item {
     } else {
       var rows = progressRows.filter(function(r) { return r.kind !== "sub" })
       var r = rows[Math.min(progressIndex, rows.length - 1)]
-      if (up) progressIndex = Math.max(0, progressIndex - 1)
-      else if (down) progressIndex = Math.min(rows.length - 1, progressIndex + 1)
-      else if ((k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space) && r) toggleExpand(r)
-      else if (txt === "A" && r && r.kind === "todo") act(["archive", r.t.id])
-      else if (txt === "/") archiveInput.forceActiveFocus()
-      else return
+      var na = archivedTodos.length
+      if (txt === "/") archiveInput.forceActiveFocus()
+      else if (progressPane === "list") {
+        // down past the last row drops into the archive
+        if (up) progressIndex = Math.max(0, progressIndex - 1)
+        else if (down && progressIndex >= rows.length - 1 && na) { progressPane = "archive"; archiveIndex = Math.min(archiveIndex, na - 1) }
+        else if (down) progressIndex = Math.min(rows.length - 1, progressIndex + 1)
+        else if ((k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space) && r) toggleExpand(r)
+        else if (txt === "A" && r && r.kind === "todo") act(["archive", r.t.id])
+        else return
+      } else {
+        // up past the first archived list climbs back into the progress rows
+        if (up && archiveIndex <= 0) { progressPane = "list"; progressIndex = Math.max(0, rows.length - 1) }
+        else if (up) archiveIndex--
+        else if (down) archiveIndex = Math.min(na - 1, archiveIndex + 1)
+        else if ((k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "r") && na) {
+          var a = archivedTodos[Math.min(archiveIndex, na - 1)]
+          act(["unarchive", a.id], function(res) { tasks.selectedId = res.id; tasks.tab = "todo"; tasks.progressPane = "list" })
+        }
+        else if (k === Qt.Key_Escape) progressPane = "list"
+        else return
+      }
     }
     event.accepted = true
   }
@@ -727,7 +747,9 @@ Item {
     property string placeholder: ""
     // stay in the box after Enter (for typing several in a row)
     property bool keepFocus: false
+    property bool clearOnEnter: true
     signal accepted(string text)
+    signal entered()
     height: 30
     radius: 15
     color: Qt.rgba(1, 1, 1, fieldInput.activeFocus ? 0.72 : 0.5)
@@ -744,9 +766,10 @@ Item {
       clip: true
       Keys.onReturnPressed: {
         var t = text.trim()
-        text = ""
+        if (field.clearOnEnter) text = ""
         if (t !== "") field.accepted(t)
         if (!field.keepFocus) tasks.forceActiveFocus()
+        field.entered()
       }
       Keys.onEscapePressed: { text = ""; tasks.forceActiveFocus() }
       Text {
@@ -1263,8 +1286,15 @@ Item {
         id: logField
         y: lanes.height + 10
         width: parent.width
-        placeholder: "write in the log…  (w)"
-        onAccepted: t => { if (tasks.selected) tasks.act(["log", tasks.selected.id, t, "--by", "you"]) }
+        // in the lanes, a note is about the sub-todo you've picked there
+        readonly property var about: tasks.logPane === "lanes" && tasks.selected && tasks.selected.subs[tasks.logSub] ? tasks.selected.subs[tasks.logSub] : null
+        placeholder: about ? "write in the log about “" + about.text + "”…  (w)" : "write in the log…  (w)"
+        onAccepted: t => {
+          if (!tasks.selected) return
+          var args = ["log", tasks.selected.id, t, "--by", "you"]
+          if (about) args = args.concat(["--sub", String(tasks.logSub)])
+          tasks.act(args)
+        }
         Component.onCompleted: logInput = logField.input
       }
       CcHeading { y: lanes.height + 50; cc: tasks.cc; text: "  LOG" + (tasks.logEntries.length ? " — " + tasks.logEntries.length + " ENTRIES, NEWEST FIRST" : "") }
@@ -1280,7 +1310,7 @@ Item {
         delegate: Rectangle {
           required property var modelData
           width: logList.width
-          height: entryText.implicitHeight + 34
+          height: entryText.implicitHeight + 54
           radius: 12
           color: Qt.rgba(1, 1, 1, 0.5)
           Text {
@@ -1289,9 +1319,28 @@ Item {
             color: tasks.cc.ink; opacity: 0.7
             font.family: tasks.cc.font; font.pixelSize: 10; font.bold: true
           }
+          // what it's about: the todo, and the sub-todo if there is one
+          Rectangle {
+            x: 8; y: 21
+            width: Math.min(parent.width - 16, aboutText.implicitWidth + 16)
+            height: 18
+            radius: 9
+            color: Qt.rgba(tasks.cc.ink.r, tasks.cc.ink.g, tasks.cc.ink.b, 0.12)
+            Rectangle { x: 0; width: 5; height: parent.height; radius: 2.5; color: tasks.selected ? tasks.colorOf(tasks.selected.group) : "transparent" }
+            Text {
+              id: aboutText
+              x: 9; anchors.verticalCenter: parent.verticalCenter
+              width: parent.width - 14
+              elide: Text.ElideRight
+              textFormat: Text.PlainText
+              text: "\uf0ae  " + (tasks.selected ? tasks.selected.title : "") + (parent.parent.modelData.sub ? "   \u21b3  " + parent.parent.modelData.sub : "")
+              color: tasks.cc.ink
+              font.family: tasks.cc.font; font.pixelSize: 10; font.bold: true
+            }
+          }
           Text {
             id: entryText
-            x: 10; y: 22
+            x: 10; y: 42
             width: parent.width - 20
             text: parent.modelData.text
             wrapMode: Text.Wrap
@@ -1338,7 +1387,7 @@ Item {
           for (var i = 0; i < index; i++) if (tasks.progressRows[i].kind !== "sub") n++
           return n
         }
-        readonly property bool sel: modelData.kind !== "sub" && navIndex === tasks.progressIndex
+        readonly property bool sel: modelData.kind !== "sub" && navIndex === tasks.progressIndex && tasks.progressPane === "list"
         readonly property real indent: modelData.kind === "group" ? 0 : modelData.kind === "todo" ? 18 : 44
         x: indent
         width: progressList.width - indent
@@ -1441,21 +1490,35 @@ Item {
           id: archiveField
           width: 260
           placeholder: "search the archive…  (/)"
+          clearOnEnter: false
+          onEntered: if (tasks.archivedTodos.length) { tasks.progressPane = "archive"; tasks.archiveIndex = 0 }
           input.onTextChanged: tasks.archiveQuery = input.text
           Component.onCompleted: archiveInput = archiveField.input
         }
       }
       ListView {
+        id: archiveList
         x: 12; y: 48
         width: parent.width - 24
         height: parent.height - 56
         clip: true
         spacing: 4
         model: tasks.archivedTodos
+        currentIndex: tasks.archiveIndex
+        onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
         delegate: Item {
           required property var modelData
+          required property int index
           width: ListView.view.width
           height: 28
+          Rectangle {
+            anchors.fill: parent
+            anchors.leftMargin: -6; anchors.rightMargin: -2
+            radius: 10
+            visible: tasks.progressPane === "archive" && parent.index === tasks.archiveIndex
+            color: Qt.rgba(1, 1, 1, 0.7)
+            border.color: tasks.cc.ink; border.width: 2
+          }
           Rectangle { width: 6; height: 20; radius: 3; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(parent.modelData.group) }
           Text {
             x: 14; width: parent.width - restoreBtn.width - 24
@@ -1470,7 +1533,7 @@ Item {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             icon: ""; text: "restore"; fontSize: 10
-            onClicked: tasks.act(["unarchive", parent.modelData.id], function(r) { tasks.selectedId = r.id; tasks.tab = "todo" })
+            onClicked: tasks.act(["unarchive", parent.modelData.id], function(r) { tasks.selectedId = r.id; tasks.tab = "todo"; tasks.progressPane = "list" })
           }
         }
       }
@@ -1586,8 +1649,9 @@ Item {
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space  Enter", "to do → in progress → done"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
           ["TASK LOG", [["↑ ↓", "pick a todo"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
-                        ["w", "write in the log"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
-          ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["A", "archive"], ["/", "search the archive"]]]
+                        ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
+          ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["A", "archive"], ["↓ past the end", "into the archive"],
+                        ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list"], ["↑ at the top  Esc", "back up"]]]
         ]
         Column {
           required property var modelData

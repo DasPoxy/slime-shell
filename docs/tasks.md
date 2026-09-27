@@ -29,8 +29,11 @@ Everything is keyboard driven — press **?** in the tab for the full list:
   **A** archive · **d d** delete · **f** show/hide finished ·
   **J/K** or **Shift+↑↓** move the todo / sub-todo
 - Task Log: **↑↓** pick · **→/Enter** into the lanes, then **→/Space** move a
-  sub-todo on and **←** back · **w** write in the log · **PgUp/PgDn** scroll
-- Progress: **↑↓** pick · **Enter/Space** expand · **A** archive · **/** search the archive
+  sub-todo on and **←** back · **w** write in the log (about the sub-todo
+  picked in the lanes) · **PgUp/PgDn** scroll
+- Progress: **↑↓** pick · **Enter/Space** expand · **A** archive · **↓** past
+  the end drops into the archive, where **Enter/r** restores and **↑**/**Esc**
+  climb back · **/** search the archive (Enter drops into the results)
 
 Right-click a todo for the same group menu (existing groups, a new one, no
 group, rename, archive, delete). Each group gets its own colour. Drag todos
@@ -66,8 +69,10 @@ created: 2026-09-26 13:40
 - [x] one that's finished
 ```
 
-A log file is a list of `## <date time> · <who>` entries with markdown under
-each (code blocks included).
+A log file is a list of `## <date time> · <who> · <sub-todo>` entries (the
+sub-todo part only when an entry is about one) with markdown under each, code
+blocks included. The Task Log tab labels every entry with its todo and
+sub-todo.
 
 **With Envy (or another notes app):** point it at the folder, or move the
 folder inside your vault and tell Slime-Tasks where it went:
@@ -92,7 +97,7 @@ slime-tasks list                                # every todo and sub-todo
 slime-tasks add "Overhaul the tasks tab" --group "Slime Shell"
 slime-tasks sub-add <id> "Backend CLI"
 slime-tasks start <id> <n> "picking this up" --by claude     # -> in progress, logged
-slime-tasks log <id> "progress, output, findings…" --by claude
+slime-tasks log <id> "progress, output, findings…" --by claude [--sub <n>]
 slime-tasks finish <id> <n> "done: 12 tests pass" --by claude  # -> done, logged
 slime-tasks sub-set <id> <n> todo|doing|done [--expect TEXT]
 slime-tasks order <id> <id> …                   # put todos in this order
