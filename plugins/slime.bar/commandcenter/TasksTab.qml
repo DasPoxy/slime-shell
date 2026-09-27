@@ -59,6 +59,13 @@ Item {
     viewEditing = false
     if (edit) startEdit()
   }
+  // a sub-todo, opened over the whole panel the same way (Enter on it)
+  function openSub(t, i, edit) {
+    if (!t || !t.subs[i]) return
+    var st = t.subs[i].state
+    openEntry({ isSub: true, n: i, text: t.subs[i].text, by: "", sub: "",
+                time: "sub-todo " + (i + 1) + "  ·  " + (st === "done" ? "done" : st === "doing" ? "in progress" : "to do") }, edit)
+  }
   function copyEntry(e) {
     if (!e) return
     Quickshell.execDetached(["wl-copy", "--", e.text])
@@ -77,7 +84,8 @@ Item {
     var text = viewEditor.text.trim()
     if (text === "" || text === viewEntry.text) { viewEditing = false; forceActiveFocus(); return }
     var before = viewEntry.text, n = viewEntry.n
-    act(["log-edit", selected.id, String(n), text, "--expect", before])
+    if (viewEntry.isSub) act(["sub-edit", selected.id, String(n), text])
+    else act(["log-edit", selected.id, String(n), text, "--expect", before])
     viewEntry = Object.assign({}, viewEntry, { text: text })
     viewEditing = false
     forceActiveFocus()
@@ -823,7 +831,8 @@ Item {
         else if (up) subIndex = Math.max(0, subIndex - 1)
         else if (down) subIndex = Math.min(n - 1, subIndex + 1)
         else if (k === Qt.Key_Left || k === Qt.Key_Escape || txt === "h") pane = "list"
-        else if ((k === Qt.Key_Space || k === Qt.Key_Return || k === Qt.Key_Enter) && t && n) cycle(t, subIndex)
+        else if (k === Qt.Key_Space && t && n) cycle(t, subIndex)
+        else if ((k === Qt.Key_Return || k === Qt.Key_Enter) && t && n) openSub(t, subIndex, false)
         else if (txt === "a" && t) subInput.forceActiveFocus()
         else if ((txt === "e" || k === Qt.Key_F2) && t && n) { subEdit.index = subIndex; subEdit.text = t.subs[subIndex].text; subEdit.forceActiveFocus() }
         else if ((txt === "d" || k === Qt.Key_Delete) && t && n) { act(["sub-delete", t.id, String(subIndex)]); subIndex = Math.max(0, subIndex - 1) }
@@ -887,6 +896,7 @@ Item {
         else if (down && logSub >= ln - 1 && ne) { logPane = "entries"; logEntry = 0 }   // on into the log
         else if (down) logSub = Math.min(ln - 1, logSub + 1)
         else if ((k === Qt.Key_Right || txt === "l" || k === Qt.Key_Space) && ln) shift(lt, logSub, 1)
+        else if ((k === Qt.Key_Return || k === Qt.Key_Enter) && ln) openSub(lt, logSub, false)
         else if ((k === Qt.Key_Left || txt === "h") && ln) {
           if (lt.subs[logSub].state === "todo") logPane = "list"
           else shift(lt, logSub, -1)
@@ -1454,8 +1464,7 @@ Item {
         model: tasks.todoRows
         currentIndex: {
           for (var i = 0; i < tasks.todoRows.length; i++)
-            if (tasks.todoRows[i].kind === "group" ? "g:" + tasks.todoRows[i].name === tasks.cursorKey
-                : tasks.todoRows[i].t.id === tasks.cursorKey) return i
+            if (tasks.todoNav[i] === tasks.cursorKey) return i
           return -1
         }
         highlightFollowsCurrentItem: false
@@ -2834,11 +2843,12 @@ Item {
                            ["Space", "mark finished"], ["e  F2", "rename"], ["g", "group menu"], ["A", "archive"], ["d d", "delete"], ["f", "show / hide finished"],
                            ["J K  Shift ↑↓", "move a todo"], ["drag", "move (into another group, too)"],
                            ["←  z  (or click a heading)", "fold its group"], ["g  /  right-click on a heading", "group menu: archive or delete the group"],
-                           ["A  on a heading", "archive the whole group"], ["e  /  d d  on a heading (any tab)", "rename / delete the group"], ["d d  on a group in the g menu", "delete that group"], ["Enter  Space  →  on a heading", "fold / unfold"]]],
-          ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space  Enter", "to do → in progress → done"], ["a", "add"], ["e", "edit"],
+                           ["A  on a heading", "archive the whole group"], ["e  /  d d  on a heading (any tab)", "rename / delete the group"], ["d d  on a group in the g menu", "delete that group"], ["Enter  Space  →  on a heading", "fold / unfold"],
+                           ["g  on a group: into / new super group", "super groups hold groups; their headings take the same keys"]]],
+          ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space", "to do → in progress → done"], ["Enter", "open it over the panel (c copy · e edit)"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
           ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
-          ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s", "log newest first / by sub-todo"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
+          ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s", "log newest first / by sub-todo"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Enter on a sub-todo", "open it over the panel"],
                         ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
           ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
                         ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list (you stay in the archive)"], ["g  /  right-click", "group, restore or delete an archived list"], ["←  z  /  Enter  →  on a heading", "fold / unfold an archive group"], ["↑ at the top  Esc", "back up"]]]

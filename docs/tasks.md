@@ -25,7 +25,8 @@ Everything is keyboard driven — press **?** in the tab for the full list:
 
 - **Tab / 1 2 3** switch tabs · **Esc** backs out (or closes the command centre)
 - Todo: **↑↓** pick · **→/Enter** open sub-todos · **n** new · **a** add sub-todo ·
-  **Space** finish / cycle a sub-todo · **e** rename/edit · **g** group menu ·
+  **Space** finish / cycle a sub-todo · **Enter** on a sub-todo opens it over
+  the panel to read, copy (**c**) or edit (**e**) · **e** rename/edit · **g** group menu ·
   **A** archive · **d d** delete · **f** show/hide finished ·
   **J/K** or **Shift+↑↓** move the todo / sub-todo
 
