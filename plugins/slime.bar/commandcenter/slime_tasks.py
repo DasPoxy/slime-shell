@@ -45,7 +45,8 @@ Commands (all print JSON; errors go to stderr with exit status 1):
   group-color GROUP #RRGGBB
   group-order GROUP [GROUP ...]     put groups in this order
   log ID MESSAGE [--by WHO] [--sub N]  append a task-log entry (about sub-todo N)
-  log-show ID                       -> {"entries": [{time, by, text}]}
+  log-show ID                       -> {"entries": [{n, time, by, sub, text}]}
+  log-edit ID N TEXT [--expect OLD]  rewrite entry N's text (0 = oldest)
   archive ID / unarchive ID
   search QUERY [--archived]         titles and sub-todos containing QUERY
   find TEXT                         todos whose title contains TEXT (for agents)
@@ -220,7 +221,7 @@ def log_entries(root, tid, archived=False):
             m = re.match(r"^## (\d{4}-\d\d-\d\d \d\d:\d\d)(?: · (.*))?$", line)
             if m:
                 by, _, sub = (m.group(2) or "").partition(" · ")
-                cur = {"time": m.group(1), "by": by.strip(), "sub": sub.strip(), "text": ""}
+                cur = {"n": len(entries), "time": m.group(1), "by": by.strip(), "sub": sub.strip(), "text": ""}
                 entries.append(cur)
             elif cur is not None:
                 cur["text"] += line + "\n"
@@ -232,6 +233,27 @@ def log_entries(root, tid, archived=False):
             if m:
                 e["sub"] = m.group(1).split("\n")[0].strip()
     return entries
+
+
+LOG_HEAD = re.compile(r"^## \d{4}-\d\d-\d\d \d\d:\d\d(?: · .*)?$")
+
+
+def edit_log(root, tid, n, text, expect=None, archived=False):
+    """Replace the body of entry n (0 = oldest), keeping its heading."""
+    p = log_path(root, tid, archived)
+    if not os.path.exists(p):
+        raise Fail(f"'{tid}' has no log")
+    with open(p) as f:
+        lines = f.read().split("\n")
+    heads = [i for i, l in enumerate(lines) if LOG_HEAD.match(l)]
+    if not 0 <= n < len(heads):
+        raise Fail(f"the log has no entry {n}")
+    start, end = heads[n] + 1, heads[n + 1] if n + 1 < len(heads) else len(lines)
+    if expect is not None and "\n".join(lines[start:end]).strip() != expect.strip():
+        raise Fail("that log entry changed meanwhile — reopen it and try again")
+    body = text.strip().split("\n") + [""]
+    lines[start:end] = body
+    write(p, "\n".join(lines).rstrip("\n") + "\n")
 
 
 def append_log(root, tid, message, by="", archived=False, sub=""):
@@ -421,6 +443,9 @@ def run(argv):
                 save(t)
                 append_log(root, tid, f"{verb}: {s['text']}" + (f"\n\n{note}" if note else ""), by, archived, s["text"])
                 return summary(root, tid, archived)
+        elif cmd == "log-edit":
+            edit_log(root, tid, int(rest[1]), " ".join(rest[2:]), opts.get("expect"), archived)
+            return {"edited": tid, "n": int(rest[1])}
         elif cmd == "log":
             sub = sub_at(t, opts["sub"])["text"] if opts.get("sub", "") != "" else ""
             append_log(root, tid, " ".join(rest[1:]), by, archived, sub)

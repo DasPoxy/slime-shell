@@ -45,6 +45,9 @@ remembers its own folds across restarts.
   an entry · **s** shows the log newest first or in sections by sub-todo
   (sections fold like groups: **←**/**z** on an entry folds its section,
   **Enter/Space/→** on a heading unfolds it; remembered per todo) ·
+  **Enter** on an entry opens it over the whole panel for reading, where
+  **c** copies it, **e** edits its text (**Ctrl+S** saves, **Esc** cancels)
+  and **Esc** closes; **c** / **e** work on the highlighted entry too ·
   **w** write in the log (about the sub-todo picked in the lanes) ·
   **PgUp/PgDn** scroll
 - Progress: **↑↓** pick · **Enter/Space** expand · **A** archive · **↓** past
@@ -114,6 +117,7 @@ slime-tasks add "Overhaul the tasks tab" --group "Slime Shell"
 slime-tasks sub-add <id> "Backend CLI"
 slime-tasks start <id> <n> "picking this up" --by claude     # -> in progress, logged
 slime-tasks log <id> "progress, output, findings…" --by claude [--sub <n>]
+slime-tasks log-edit <id> <n> "new text" [--expect "old text"]   # n: 0 = oldest
 slime-tasks finish <id> <n> "done: 12 tests pass" --by claude  # -> done, logged
 slime-tasks sub-set <id> <n> todo|doing|done [--expect TEXT]
 slime-tasks order <id> <id> …                   # put todos in this order

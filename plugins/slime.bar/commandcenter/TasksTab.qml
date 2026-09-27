@@ -48,6 +48,40 @@ Item {
   property string logPane: "list"             // log tab: list | lanes
   property string progressPane: "list"        // progress tab: list | archive
   property int logEntry: 0                    // which log entry, in the entries pane
+  // ---- one log entry, opened over the whole panel (Enter) ----
+  property var viewEntry: null                // the entry being read
+  property bool viewEditing: false
+  property string copiedNote: ""
+  function openEntry(e, edit) {
+    viewEntry = e
+    viewEditing = false
+    if (edit) startEdit()
+  }
+  function copyEntry(e) {
+    if (!e) return
+    Quickshell.execDetached(["wl-copy", "--", e.text])
+    copiedNote = "copied to the clipboard"
+    copiedTimer.restart()
+  }
+  function startEdit() {
+    if (!viewEntry) return
+    viewEditing = true
+    viewEditor.text = viewEntry.text
+    viewEditor.forceActiveFocus()
+    viewEditor.cursorPosition = viewEditor.text.length
+  }
+  function saveEdit() {
+    if (!viewEntry || !selected) return
+    var text = viewEditor.text.trim()
+    if (text === "" || text === viewEntry.text) { viewEditing = false; forceActiveFocus(); return }
+    var before = viewEntry.text, n = viewEntry.n
+    act(["log-edit", selected.id, String(n), text, "--expect", before])
+    viewEntry = Object.assign({}, viewEntry, { text: text })
+    viewEditing = false
+    forceActiveFocus()
+  }
+  function closeEntry() { viewEntry = null; viewEditing = false; forceActiveFocus() }
+  Timer { id: copiedTimer; interval: 1600; onTriggered: tasks.copiedNote = "" }
   property string progressFollow: ""          // re-find this row after a move ("g:…" / "t:…")
   // logs by time (newest first) or in sections per sub-todo; remembered
   readonly property bool logBySub: !!(bar && bar.ccSections && bar.ccSections["tasks-log-by-sub"])
@@ -439,6 +473,18 @@ Item {
   // ---- keyboard --------------------------------------------------------------------
   Keys.onPressed: event => {
     var k = event.key, txt = event.text
+    if (viewEntry) {
+      // the entry viewer takes the keys while it's open
+      if (k === Qt.Key_Escape || k === Qt.Key_Backspace || txt === "q") closeEntry()
+      else if (txt === "c") copyEntry(viewEntry)
+      else if (txt === "e") startEdit()
+      else if (k === Qt.Key_Down || txt === "j") viewFlick.flick(0, -700)
+      else if (k === Qt.Key_Up || txt === "k") viewFlick.flick(0, 700)
+      else if (k === Qt.Key_PageDown || k === Qt.Key_Space) viewFlick.flick(0, -2200)
+      else if (k === Qt.Key_PageUp) viewFlick.flick(0, 2200)
+      event.accepted = true
+      return
+    }
     if (txt === "?") { showHelp = !showHelp; event.accepted = true; return }
     if (k === Qt.Key_Tab || k === Qt.Key_Backtab) {
       var order = ["todo", "log", "progress"]
@@ -523,6 +569,9 @@ Item {
         else if (onHead && (k === Qt.Key_Right || txt === "l")) setSectionFolded(headText(lp), false)
         else if (onHead && !lp.collapsed && (k === Qt.Key_Left || txt === "h")) setSectionFolded(headText(lp), true)
         else if (logBySub && lp && lp.kind === "entry" && (k === Qt.Key_Left || txt === "h" || txt === "z")) foldSectionOf(lp)
+        else if (lp && lp.kind === "entry" && (k === Qt.Key_Return || k === Qt.Key_Enter)) openEntry(lp.e, false)
+        else if (lp && lp.kind === "entry" && txt === "c") copyEntry(lp.e)
+        else if (lp && lp.kind === "entry" && txt === "e") openEntry(lp.e, true)
         else if (k === Qt.Key_Left || k === Qt.Key_Escape || txt === "h") logPane = "list"
         else return
       }
@@ -1729,7 +1778,11 @@ Item {
             font.family: tasks.cc.font
             font.pixelSize: 12
           }
-          MouseArea { anchors.fill: parent; onClicked: { tasks.logPane = "entries"; tasks.logEntry = tasks.logEntryRows.indexOf(logItem.index); tasks.forceActiveFocus() } }
+          MouseArea {
+            anchors.fill: parent
+            onClicked: { tasks.logPane = "entries"; tasks.logEntry = tasks.logEntryRows.indexOf(logItem.index); tasks.forceActiveFocus() }
+            onDoubleClicked: tasks.openEntry(logItem.modelData.e, false)
+          }
           }
         }
         Text {
@@ -2006,6 +2059,132 @@ Item {
     onClicked: { menu.visible = false; tasks.forceActiveFocus() }
   }
 
+  // ============================================================ log entry viewer
+  // One entry over the whole panel, for reading (and copying / editing).
+  Rectangle {
+    id: viewer
+    visible: tasks.viewEntry !== null
+    z: 58
+    anchors.fill: parent
+    radius: 16
+    color: tasks.cc.paper
+    border.color: tasks.cc.ink
+    border.width: 2
+    MouseArea { anchors.fill: parent }       // nothing underneath takes clicks
+    readonly property var e: tasks.viewEntry || ({ time: "", by: "", sub: "", text: "" })
+
+    // header: when, who, what it's about, and the buttons
+    Column {
+      id: viewHead
+      x: 22; y: 18
+      width: parent.width - 44
+      spacing: 6
+      Row {
+        width: parent.width
+        spacing: 8
+        Text {
+          width: parent.width - viewButtons.width - 8
+          anchors.verticalCenter: parent.verticalCenter
+          elide: Text.ElideRight
+          text: viewer.e.time + (viewer.e.by ? "  ·  " + viewer.e.by : "")
+          color: tasks.cc.ink; opacity: 0.7
+          font.family: tasks.cc.font; font.pixelSize: 12; font.bold: true
+        }
+        Row {
+          id: viewButtons
+          spacing: 6
+          anchors.verticalCenter: parent.verticalCenter
+          CcButton { cc: tasks.cc; icon: "\uf0c5"; text: tasks.copiedNote !== "" ? "copied!" : "copy  (c)"; fontSize: 11; on: tasks.copiedNote !== ""; onClicked: tasks.copyEntry(tasks.viewEntry) }
+          CcButton { cc: tasks.cc; visible: !tasks.viewEditing; icon: "\uf044"; text: "edit  (e)"; fontSize: 11; onClicked: tasks.startEdit() }
+          CcButton { cc: tasks.cc; visible: tasks.viewEditing; icon: "\uf00c"; text: "save  (Ctrl+S)"; fontSize: 11; on: true; onClicked: tasks.saveEdit() }
+          CcButton { cc: tasks.cc; visible: tasks.viewEditing; icon: "\uf00d"; text: "cancel  (Esc)"; fontSize: 11; onClicked: { tasks.viewEditing = false; tasks.forceActiveFocus() } }
+          CcButton { cc: tasks.cc; visible: !tasks.viewEditing; icon: "\uf00d"; text: "close  (Esc)"; fontSize: 11; onClicked: tasks.closeEntry() }
+        }
+      }
+      Rectangle {
+        width: Math.min(parent.width, viewAbout.implicitWidth + 20)
+        height: 24
+        radius: 12
+        color: Qt.rgba(tasks.cc.ink.r, tasks.cc.ink.g, tasks.cc.ink.b, 0.12)
+        Rectangle { width: 6; height: parent.height; radius: 3; color: tasks.selected ? tasks.colorOf(tasks.selected.group) : "transparent" }
+        Text {
+          id: viewAbout
+          x: 12; anchors.verticalCenter: parent.verticalCenter
+          width: parent.width - 18
+          elide: Text.ElideRight
+          textFormat: Text.PlainText
+          text: "\uf0ae  " + (tasks.selected ? tasks.selected.title : "") + (viewer.e.sub ? "   \u21b3  " + viewer.e.sub : "")
+          color: tasks.cc.ink
+          font.family: tasks.cc.font; font.pixelSize: 12; font.bold: true
+        }
+      }
+    }
+
+    // reading
+    Flickable {
+      id: viewFlick
+      visible: !tasks.viewEditing
+      x: 22; y: viewHead.y + viewHead.height + 14
+      width: parent.width - 44
+      height: parent.height - y - 18
+      clip: true
+      contentHeight: viewText.implicitHeight
+      boundsBehavior: Flickable.StopAtBounds
+      Text {
+        id: viewText
+        width: viewFlick.width
+        text: viewer.e.text
+        wrapMode: Text.Wrap
+        textFormat: Text.MarkdownText
+        color: tasks.cc.ink
+        font.family: tasks.cc.font
+        font.pixelSize: 16
+        lineHeight: 1.15
+      }
+    }
+
+    // editing: the entry's raw markdown
+    Rectangle {
+      visible: tasks.viewEditing
+      x: 16; y: viewHead.y + viewHead.height + 10
+      width: parent.width - 32
+      height: parent.height - y - 14
+      radius: 12
+      color: Qt.rgba(1, 1, 1, 0.75)
+      border.color: tasks.cc.ink
+      border.width: 1.6
+      Flickable {
+        id: editFlick
+        anchors.fill: parent
+        anchors.margins: 10
+        clip: true
+        contentHeight: viewEditor.implicitHeight
+        boundsBehavior: Flickable.StopAtBounds
+        TextEdit {
+          id: viewEditor
+          width: editFlick.width
+          wrapMode: TextEdit.Wrap
+          textFormat: TextEdit.PlainText
+          selectByMouse: true
+          color: tasks.cc.ink
+          font.family: "monospace"
+          font.pixelSize: 14
+          onCursorRectangleChanged: {
+            if (cursorRectangle.y < editFlick.contentY) editFlick.contentY = cursorRectangle.y
+            else if (cursorRectangle.y + cursorRectangle.height > editFlick.contentY + editFlick.height)
+              editFlick.contentY = cursorRectangle.y + cursorRectangle.height - editFlick.height
+          }
+          Keys.onPressed: event => {
+            if (event.key === Qt.Key_Escape) { tasks.viewEditing = false; tasks.forceActiveFocus(); event.accepted = true }
+            else if ((event.key === Qt.Key_S || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && (event.modifiers & Qt.ControlModifier)) {
+              tasks.saveEdit(); event.accepted = true
+            }
+          }
+        }
+      }
+    }
+  }
+
   // ================================================================ keys help
   Rectangle {
     visible: tasks.showHelp
@@ -2032,7 +2211,7 @@ Item {
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space  Enter", "to do → in progress → done"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
           ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
-          ["TASK LOG", [["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s", "log newest first / by sub-todo"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
+          ["TASK LOG", [["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s", "log newest first / by sub-todo"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
                         ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
           ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
                         ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list"], ["↑ at the top  Esc", "back up"]]]
