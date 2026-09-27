@@ -165,7 +165,7 @@ Item {
 
     CcSection {
       cc: settings.cc
-      title: "SlimeS-Dock"
+      title: "Dock"
       kind: "chest"
       ChoiceRow {
         title: "DOCK"

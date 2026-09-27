@@ -3367,31 +3367,73 @@ Item {
       width: Math.min(parent.width - 40, 640)
       height: Math.min(parent.height - 80, 460)
       readonly property real t: tasks.bar ? tasks.bar.animTime : 0
-      Repeater {
-        model: 6
-        Rectangle {
-          required property int index
-          readonly property real len: 18 + ((index * 37) % 23) + 6 * Math.sin(ooze.t * 1.3 + index * 1.7)
-          x: ooze.width * (0.1 + index * 0.155) + ((index * 13) % 17)
-          y: ooze.height - 14
-          width: 12 + (index % 3) * 4; height: len + 14
-          radius: width / 2
-          color: tasks.cc.slime
-          border.color: tasks.cc.ink; border.width: 2
-        }
+      // the bar's own slime (its shader, as a free-standing blob): same
+      // material, colour, shading and drips as the bar
+      ShaderEffect {
+        x: -20; y: -10
+        width: ooze.width + 40
+        height: ooze.height + 110
+        readonly property var bar: tasks.bar
+        visible: !!bar && picker.visible
+        fragmentShader: Qt.resolvedUrl("../shaders/slime.frag.qsb")
+        // every shader uniform set explicitly: unset ones are not guaranteed to be 0
+        property vector4d cullRect: Qt.vector4d(0, 0, 0, 0)
+        property real clipTop: -100000
+        property real poolDepth: 0
+        property vector2d origin: Qt.vector2d(0, 0)
+        property vector4d bulb0: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb1: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb2: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb3: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb4: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb5: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb6: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb7: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb8: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb9: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb10: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb11: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb12: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb13: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb14: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb15: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb16: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb17: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb18: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb19: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb20: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb21: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb22: Qt.vector4d(0, 0, 0, 0)
+        property vector4d bulb23: Qt.vector4d(0, 0, 0, 0)
+        property real blobMode: 1
+        property real orient: 0
+        property vector2d screenSize: Qt.vector2d(0, 0)
+        property real barShape: 0
+        property real material: bar ? bar.materialId : 0
+        property vector4d dripStyle: bar ? bar.dripStyleVec : Qt.vector4d(1, 1, 0, 1)
+        property vector4d dripExtra: bar ? bar.dripExtraVec : Qt.vector4d(0, 0, 0, 0)
+        property vector4d cava0: bar ? bar.cava0 : Qt.vector4d(0, 0, 0, 0)
+        property vector4d cava1: bar ? bar.cava1 : Qt.vector4d(0, 0, 0, 0)
+        property vector4d cava2: bar ? bar.cava2 : Qt.vector4d(0, 0, 0, 0)
+        property vector4d cava3: bar ? bar.cava3 : Qt.vector4d(0, 0, 0, 0)
+        property vector4d cavaOpts: bar ? bar.cavaOpts : Qt.vector4d(0, 0, 0, 0)
+        property vector4d eggDrip: Qt.vector4d(0, 0, 0, 0)
+        property vector4d group0: Qt.vector4d(0, 0, 0, 0)
+        property vector4d group1: Qt.vector4d(0, 0, 0, 0)
+        property vector4d group2: Qt.vector4d(0, 0, 0, 0)
+        property real time: bar ? bar.animTime : 0
+        property real barHeight: 10
+        property real openProgress: 1
+        property real dripAmount: bar ? bar.dripLevel : 1
+        property real shadingStyle: bar ? bar.shadingStyle : 3
+        property vector2d resolution: Qt.vector2d(width, height)
+        property vector4d panelRect: Qt.vector4d(20, 10, ooze.width, ooze.height - 4)
+        property color slimeColor: bar ? bar.slimeColor : "black"
+        property color slimeColor2: bar ? bar.slimeColor2 : "black"
+        property color paperColor: bar ? bar.paperColor : "white"
       }
-      Rectangle {
-        anchors.fill: parent
-        radius: 26
-        color: tasks.cc.slime
-        border.color: tasks.cc.ink; border.width: 2.5
-        // a sheen across the top
-        Rectangle { x: 18; y: 8; width: parent.width * 0.4; height: 8; radius: 4; color: "white"; opacity: 0.35 }
-        MouseArea { anchors.fill: parent }
-      }
-      // hide the drips' tops where they meet the blob
-      Rectangle { x: 20; y: ooze.height - 20; width: ooze.width - 40; height: 16; color: tasks.cc.slime }
-
+      // the blob takes clicks (nothing underneath does)
+      MouseArea { anchors.fill: parent }
       Column {
         x: 18; y: 18
         width: ooze.width - 36
