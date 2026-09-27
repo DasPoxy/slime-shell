@@ -214,7 +214,7 @@ Command centre → **Settings** (sections fold open and closed):
   size, in its menu)
 - **Desktop styling** — rounded screen corners (off / small / medium / large)
   and slime patches in the corners across from the bar, mirroring its look
-- **SlimeS-Dock** — a dock of apps, folders and files made of the bar's own
+- **Dock** (SlimeS-Dock) — a dock of apps, folders and files made of the bar's own
   slime, on any screen edge the bar isn't on (move the bar onto it and the
   dock moves across); centred or at either end, where it melts into the
   corner slime; optionally hidden until hovered; three icon sizes. The **+**
