@@ -59,6 +59,10 @@ remembers its own folds across restarts.
   right-click gives a menu to set its group, restore or delete it, and
   **↑**/**Esc** climb back · **/** search the archive (Enter drops into the results)
 
+On a group heading, **A** archives the whole group, and **g** (or a
+right-click) opens a group menu to archive or delete it. In any group menu,
+**d d** on a group deletes that group — its todos just become ungrouped.
+
 Right-click a todo for the same group menu (existing groups, a new one, no
 group, rename, archive, delete). Each group gets its own colour. Drag todos
 and sub-todos to reorder them; drop a todo in another group (or on its
@@ -127,6 +131,8 @@ slime-tasks finish <id> <n> "done: 12 tests pass" --by claude  # -> done, logged
 slime-tasks sub-set <id> <n> todo|doing|done [--expect TEXT]
 slime-tasks order <id> <id> …                   # put todos in this order
 slime-tasks group-order <group> <group> …       # put groups in this order
+slime-tasks group-archive <group>               # archive every todo in a group
+slime-tasks group-delete <group>                # remove a group (todos kept, ungrouped)
 slime-tasks archive <id>   /   unarchive <id>
 slime-tasks --help                              # everything else
 ```

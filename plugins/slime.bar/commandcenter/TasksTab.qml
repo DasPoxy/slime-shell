@@ -505,8 +505,24 @@ Item {
     act(["delete", id])
   }
   Timer { id: disarm; interval: 2500; onTriggered: tasks.armedDelete = "" }
+  // the same menu on a group heading: archive or delete the whole group
+  function openGroupMenu(name, x, y) {
+    if (!name) return                         // "no group" isn't a group
+    menu.archived = false
+    menu.todo = null
+    menu.headGroup = name
+    menu.armed = ""
+    menu.x = Math.max(0, Math.min(tasks.width - menu.width, x))
+    menu.y = Math.max(50, Math.min(tasks.height - menu.height, y))
+    menu.index = 0
+    menu.visible = true
+    menu.forceActiveFocus()
+  }
+  function archiveGroup(name) { if (name) act(["group-archive", name]) }
   function openMenu(t, x, y, archived) {
     menu.archived = !!archived
+    menu.headGroup = ""
+    menu.armed = ""
     menu.todo = t
     menu.x = Math.max(0, Math.min(tasks.width - menu.width, x))
     menu.y = Math.max(50, Math.min(tasks.height - menu.height, y))
@@ -556,6 +572,8 @@ Item {
         else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z") toggleGroup(gname)
         else if (k === Qt.Key_Right || txt === "l") { if (groupCollapsed(gname)) setGroupCollapsed(gname, false) }
         else if (k === Qt.Key_Left || txt === "h") { if (!groupCollapsed(gname)) setGroupCollapsed(gname, true) }
+        else if (txt === "g") openGroupMenu(gname, tasks.width * 0.2, 120)
+        else if (txt === "A") archiveGroup(gname)
         else if (txt === "n") newInput.forceActiveFocus()
         else if (txt === "f") showDone = !showDone
         else return
@@ -628,6 +646,8 @@ Item {
         if (shiftMove) moveGroup(lg, up ? -1 : 1)
         else if (up || down) moveLogCursor(up ? -1 : 1)
         else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z") toggleLogGroup(lg)
+        else if (txt === "g") openGroupMenu(lg, tasks.width * 0.1, 120)
+        else if (txt === "A") archiveGroup(lg)
         else if (k === Qt.Key_Right || txt === "l") setGroupCollapsed(lg, false, "log")
         else if (k === Qt.Key_Left || txt === "h") setGroupCollapsed(lg, true, "log")
         else return
@@ -672,6 +692,8 @@ Item {
         else if (r && r.kind === "group" && (k === Qt.Key_Right || txt === "l")) setGroupCollapsed(r.name, false, "progress")
         else if (r && r.kind === "group" && (k === Qt.Key_Left || txt === "h")) setGroupCollapsed(r.name, true, "progress")
         else if (r && r.kind === "group" && txt === "z") toggleExpand(r)
+        else if (r && r.kind === "group" && txt === "g") openGroupMenu(r.name, tasks.width * 0.3, 120)
+        else if (r && r.kind === "group" && txt === "A") archiveGroup(r.name)
         else if (r && r.kind === "todo" && (k === Qt.Key_Right || txt === "l")) { if (r.t.subs.length) setSubsOpen(r.t.id, true) }
         else if (r && r.kind === "todo" && (k === Qt.Key_Left || txt === "h")) {
           if (expanded["t:" + r.t.id]) setSubsOpen(r.t.id, false)
@@ -1246,7 +1268,12 @@ Item {
               hoverEnabled: true
               cursorShape: Qt.PointingHandCursor
               enabled: row.modelData.kind === "group"
-              onClicked: { tasks.pane = "list"; tasks.cursor = "g:" + row.modelData.name; tasks.toggleGroup(row.modelData.name); tasks.forceActiveFocus() }
+              acceptedButtons: Qt.LeftButton | Qt.RightButton
+              onClicked: mouse => {
+                tasks.pane = "list"; tasks.cursor = "g:" + row.modelData.name; tasks.forceActiveFocus()
+                if (mouse.button === Qt.RightButton) { var p = mapToItem(tasks, mouse.x, mouse.y); tasks.openGroupMenu(row.modelData.name, p.x, p.y) }
+                else tasks.toggleGroup(row.modelData.name)
+              }
             }
           }
           // a todo
@@ -1593,7 +1620,12 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             enabled: logRow.modelData.kind === "group"
-            onClicked: { tasks.logPane = "list"; tasks.logCursor = "g:" + logRow.modelData.name; tasks.toggleLogGroup(logRow.modelData.name); tasks.forceActiveFocus() }
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: mouse => {
+              tasks.logPane = "list"; tasks.logCursor = "g:" + logRow.modelData.name; tasks.forceActiveFocus()
+              if (mouse.button === Qt.RightButton) { var p = mapToItem(tasks, mouse.x, mouse.y); tasks.openGroupMenu(logRow.modelData.name, p.x, p.y) }
+              else tasks.toggleLogGroup(logRow.modelData.name)
+            }
           }
         }
         Rectangle {
@@ -2098,11 +2130,26 @@ Item {
     property var todo: null
     property int index: 0
     property bool archived: false          // opened on an archived todo
+    property string headGroup: ""          // opened on a group heading
+    property string armed: ""              // group waiting for the second d
     readonly property var groupNames: tasks.allGroupNames()
-    // items: each group, "no group", then actions
-    readonly property var items: groupNames.map(function(g) { return { kind: "group", name: g } })
-      .concat([{ kind: "group", name: "" }])
-      .concat(archived ? [{ kind: "restore" }, { kind: "delete" }] : [{ kind: "rename" }, { kind: "archive" }, { kind: "delete" }])
+    // items: each group, "no group", then actions (on a heading: group actions)
+    readonly property var items: headGroup !== ""
+      ? [{ kind: "archiveGroup", name: headGroup }, { kind: "deleteGroup", name: headGroup }]
+      : groupNames.map(function(g) { return { kind: "group", name: g } })
+        .concat([{ kind: "group", name: "" }])
+        .concat(archived ? [{ kind: "restore" }, { kind: "delete" }]
+          : [{ kind: "rename" }, { kind: "archive" }]
+            .concat(todo && todo.group ? [{ kind: "archiveGroup", name: todo.group }] : [])
+            .concat([{ kind: "delete" }]))
+    function deleteGroup(name) {
+      if (!name) return
+      if (armed !== name) { armed = name; return }      // d d, like deleting a todo
+      armed = ""
+      tasks.act(["group-delete", name])
+      visible = false
+      tasks.forceActiveFocus()
+    }
     readonly property var arch: archived ? ["--archived"] : []
     visible: false
     z: 50
@@ -2113,6 +2160,8 @@ Item {
     border.color: tasks.cc.ink
     border.width: 2
     function run(it) {
+      if (it.kind === "archiveGroup") { tasks.archiveGroup(it.name); visible = false; tasks.forceActiveFocus(); return }
+      if (it.kind === "deleteGroup") { deleteGroup(it.name); return }
       if (!todo) return
       if (it.kind === "group") tasks.act(["group", todo.id, it.name].concat(arch))
       else if (it.kind === "restore") tasks.restoreArchived(todo)
@@ -2127,7 +2176,11 @@ Item {
       else if (event.key === Qt.Key_Up || event.text === "k") index = Math.max(0, index - 1)
       else if (event.key === Qt.Key_Down || event.text === "j") index = Math.min(items.length - 1, index + 1)
       else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) run(items[index])
-      else if (event.text === "n") groupInput.forceActiveFocus()
+      // d d on a group (or on a heading's menu) deletes the group
+      else if ((event.text === "d" || event.key === Qt.Key_Delete) && items[index] && (items[index].kind === "group" || items[index].kind === "deleteGroup") && items[index].name)
+        deleteGroup(items[index].name)
+      else if (event.text === "A" && headGroup !== "") { tasks.archiveGroup(headGroup); visible = false; tasks.forceActiveFocus() }
+      else if (event.text === "n" && headGroup === "") groupInput.forceActiveFocus()
       else return
       event.accepted = true
     }
@@ -2136,7 +2189,7 @@ Item {
       x: 10; y: 10
       width: parent.width - 20
       spacing: 3
-      CcHeading { cc: tasks.cc; text: "GROUP" }
+      CcHeading { cc: tasks.cc; text: menu.headGroup !== "" ? "GROUP · " + menu.headGroup.toUpperCase() : "GROUP" }
       Repeater {
         model: menu.items
         Rectangle {
@@ -2145,7 +2198,8 @@ Item {
           width: menuCol.width
           height: 24
           radius: 8
-          color: index === menu.index ? Qt.rgba(tasks.cc.ink.r, tasks.cc.ink.g, tasks.cc.ink.b, 0.15) : "transparent"
+          readonly property bool armedHere: menu.armed !== "" && (modelData.kind === "group" || modelData.kind === "deleteGroup") && modelData.name === menu.armed
+          color: armedHere ? Qt.rgba(1, 0.4, 0.4, 0.6) : index === menu.index ? Qt.rgba(tasks.cc.ink.r, tasks.cc.ink.g, tasks.cc.ink.b, 0.15) : "transparent"
           Row {
             x: 6; anchors.verticalCenter: parent.verticalCenter
             spacing: 6
@@ -2153,6 +2207,9 @@ Item {
             Text {
               text: {
                 var it = parent.parent.modelData
+                if (parent.parent.armedHere) return "\uf1f8  d again: delete group " + it.name
+                if (it.kind === "archiveGroup") return "\uf187  archive the whole group"
+                if (it.kind === "deleteGroup") return "\uf1f8  delete group  (d d)"
                 if (it.kind === "group") return (it.name === "" ? "no group" : it.name) + (menu.todo && menu.todo.group === it.name ? "  " : "")
                 return it.kind === "rename" ? "  rename" : it.kind === "archive" ? "  archive"
                   : it.kind === "restore" ? "  restore" : "  delete"
@@ -2163,7 +2220,16 @@ Item {
           MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: menu.run(parent.modelData) }
         }
       }
+      Text {
+        visible: menu.headGroup === "" && !menu.archived
+        width: menuCol.width
+        wrapMode: Text.Wrap
+        text: "d d on a group deletes it (its todos just lose the group)"
+        color: tasks.cc.ink; opacity: 0.55
+        font.family: tasks.cc.font; font.pixelSize: 9
+      }
       Field {
+        visible: menu.headGroup === ""
         width: menuCol.width
         placeholder: "new group…  (n)"
         onAccepted: t => { if (menu.todo) tasks.act(["group", menu.todo.id, t].concat(menu.arch)); menu.visible = false; tasks.forceActiveFocus() }
@@ -2436,7 +2502,8 @@ Item {
           ["TODO · LIST", [["↑ ↓  j k", "pick a todo"], ["→  Enter", "open its sub-todos"], ["n", "new todo"], ["a", "add a sub-todo"],
                            ["Space", "mark finished"], ["e  F2", "rename"], ["g", "group menu"], ["A", "archive"], ["d d", "delete"], ["f", "show / hide finished"],
                            ["J K  Shift ↑↓", "move a todo"], ["drag", "move (into another group, too)"],
-                           ["←  z  (or click a heading)", "fold its group"], ["Enter  Space  →  on a heading", "fold / unfold"]]],
+                           ["←  z  (or click a heading)", "fold its group"], ["g  /  right-click on a heading", "group menu: archive or delete the group"],
+                           ["A  on a heading", "archive the whole group"], ["d d  on a group in the g menu", "delete that group"], ["Enter  Space  →  on a heading", "fold / unfold"]]],
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space  Enter", "to do → in progress → done"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
           ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],

@@ -44,6 +44,8 @@ Commands (all print JSON; errors go to stderr with exit status 1):
   group ID GROUP                    "" ungroups
   group-color GROUP #RRGGBB
   group-order GROUP [GROUP ...]     put groups in this order
+  group-delete GROUP                remove a group (its todos become ungrouped)
+  group-archive GROUP               archive every todo in a group
   log ID MESSAGE [--by WHO] [--sub N]  append a task-log entry (about sub-todo N)
   log-show ID                       -> {"entries": [{n, time, by, sub, text}]}
   log-edit ID N TEXT [--expect OLD]  rewrite entry N's text (0 = oldest)
@@ -380,6 +382,32 @@ def run(argv):
                     t["meta"]["order"] = str(n)
                     save(t)
             return {"order": ids + rest_ids}
+        if cmd == "group-delete":
+            # the group goes; its todos (active and archived) just lose it
+            name = " ".join(rest).strip()
+            n = 0
+            for arch in (False, True):
+                for i in all_ids(root, arch):
+                    t = load(root, i, arch)
+                    if t["meta"].get("group", "") == name:
+                        t["meta"]["group"] = ""
+                        save(t)
+                        n += 1
+            g = groups(root)
+            g.pop(name, None)
+            save_groups(root, g, [x for x in group_order(root) if x != name])
+            return {"deleted": name, "ungrouped": n}
+        if cmd == "group-archive":
+            name = " ".join(rest).strip()
+            done = []
+            for i in all_ids(root):
+                t = load(root, i)
+                if t["meta"].get("group", "") == name:
+                    shutil.move(t["path"], os.path.join(root, "Archive", i + ".md"))
+                    if os.path.exists(log_path(root, i)):
+                        shutil.move(log_path(root, i), log_path(root, i, True))
+                    done.append(i)
+            return {"archived": done}
         if cmd == "group-order":
             names = [n for n in rest if n]
             save_groups(root, groups(root), names + [n for n in group_order(root) if n not in names])
