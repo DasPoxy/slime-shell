@@ -1374,6 +1374,8 @@ Item {
   Component.onCompleted: {
     applyBarConfig()
     SlimeHub.register(root)
+    // your own wallpapers: the Wallpapers tab lists whatever is dropped in here
+    Quickshell.execDetached(["mkdir", "-p", Quickshell.env("HOME") + "/Pictures/SlimeS-Wallpapers"])
   }
 
   // Revealing the indicators widens their section, which can slide a neighbour

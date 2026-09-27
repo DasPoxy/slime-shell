@@ -29,10 +29,46 @@ Item {
     command: ["readlink", "-f", Quickshell.env("HOME") + "/.local/state/omarchy/current/background"]
     stdout: StdioCollector { onStreamFinished: walls.current = text.trim() }
   }
-  // make the folder, so there's somewhere to drop wallpapers
+  // (the folder is made at shell start; again here in case it was removed since)
   Component.onCompleted: {
     currentProbe.running = true
     Quickshell.execDetached(["mkdir", "-p", walls.myDir])
+  }
+
+  // each section folds open and closed (remembered, like the other folds)
+  readonly property var bar: cc ? cc.bar : null
+  function shut(key) { return !!(bar && bar.ccSections && bar.ccSections["walls-shut:" + key]) }
+  function toggle(key) {
+    if (!bar) return
+    var m = Object.assign({}, bar.ccSections)
+    if (m["walls-shut:" + key]) delete m["walls-shut:" + key]; else m["walls-shut:" + key] = true
+    bar.ccSections = m
+  }
+  // a section's heading: chevron + title, click (or Enter) folds it
+  component FoldHead: Item {
+    id: fh
+    property string key
+    property string title
+    width: parent ? parent.width - (extra ? extra.width + 8 : 0) : 0
+    property Item extra: null
+    height: Math.max(26, headText.implicitHeight + 8)
+    Rectangle {
+      anchors.fill: parent
+      radius: 9
+      color: fhMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.3) : "transparent"
+    }
+    Row {
+      x: 4; spacing: 8
+      anchors.verticalCenter: parent.verticalCenter
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: walls.shut(fh.key) ? "\uf054" : "\uf078"
+        color: walls.cc.ink; font.family: walls.cc.font; font.pixelSize: Math.round(9 * walls.fs)
+      }
+      CcHeading { id: headText; cc: walls.cc; anchors.verticalCenter: parent.verticalCenter; text: fh.title }
+    }
+    MouseArea { id: fhMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: walls.toggle(fh.key) }
+    CcFocus { onActivate: walls.toggle(fh.key) }
   }
 
   function setWallpaper(path) {
@@ -118,11 +154,11 @@ Item {
       id: header
       width: parent.width
       spacing: 8
-      CcHeading {
-        cc: walls.cc
+      FoldHead {
         anchors.verticalCenter: parent.verticalCenter
-        width: parent.width - nextButton.width - 8
-        text: files.count + " BACKGROUNDS IN THIS THEME"
+        extra: nextButton
+        key: "theme"
+        title: files.count + " BACKGROUNDS IN THIS THEME"
       }
       CcButton {
         id: nextButton
@@ -136,6 +172,7 @@ Item {
       }
     }
     Flow {
+      visible: !walls.shut("theme")
       width: parent.width
       spacing: 10
       Repeater {
@@ -148,11 +185,11 @@ Item {
     Row {
       width: parent.width
       spacing: 8
-      CcHeading {
-        cc: walls.cc
+      FoldHead {
         anchors.verticalCenter: parent.verticalCenter
-        width: parent.width - openButton.width - 8
-        text: mine.count + " OF YOUR OWN  ·  ~/PICTURES/SLIMES-WALLPAPERS"
+        extra: openButton
+        key: "mine"
+        title: mine.count + " OF YOUR OWN  ·  ~/PICTURES/SLIMES-WALLPAPERS"
       }
       CcButton {
         id: openButton
@@ -162,6 +199,7 @@ Item {
       }
     }
     Flow {
+      visible: !walls.shut("mine")
       width: parent.width
       spacing: 10
       Repeater {
@@ -170,7 +208,7 @@ Item {
       }
     }
     Text {
-      visible: mine.count === 0
+      visible: mine.count === 0 && !walls.shut("mine")
       width: parent.width
       wrapMode: Text.Wrap
       text: "Drop images into ~/Pictures/SlimeS-Wallpapers and they show up here, whatever the theme."

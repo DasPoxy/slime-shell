@@ -59,6 +59,8 @@ install_plugins() {
   # the tasks command, for agents and scripts
   mkdir -p "$HOME/.local/bin"
   ln -sfn "$repo/bin/slime-tasks" "$HOME/.local/bin/slime-tasks"
+  # your own wallpapers (the command centre's Wallpapers tab lists them too)
+  mkdir -p "$HOME/Pictures/SlimeS-Wallpapers"
 }
 
 case "${1:-status}" in
