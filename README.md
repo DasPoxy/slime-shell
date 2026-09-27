@@ -88,7 +88,8 @@ falls off with it, or turns up trapped in a panel's ooze.
   right; widgets bob in the goo.
 - **Command centre** — Home (quick toggles, clock, cloud-shaped weather,
   sound, the media monster, calendar, notifications), System (adventurers
-  marching on a dungeon), Wallpapers, Tasks, Start-Up (apps to launch at
+  marching on a dungeon), Wallpapers (the theme's, plus any you drop in
+  `~/Pictures/SlimeS-Wallpapers`), Tasks, Start-Up (apps to launch at
   login, and on which workspace) and Settings tabs. It fits any screen:
   capped to the space there is (tall tabs scroll) and scaled down on narrow
   or portrait screens. Keyboard driven too: arrows move a highlight between controls,
