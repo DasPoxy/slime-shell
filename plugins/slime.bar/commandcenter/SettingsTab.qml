@@ -165,6 +165,61 @@ Item {
 
     CcSection {
       cc: settings.cc
+      title: "SlimeS-Dock"
+      kind: "chest"
+      ChoiceRow {
+        title: "DOCK"
+        options: [["on", true], ["off", false]]
+        current: settings.bar.dockEnabled
+        onPicked: value => settings.bar.dockEnabled = value
+      }
+      ChoiceRow {
+        visible: settings.bar.dockEnabled
+        title: "EDGE (NOT THE BAR'S; MOVING THE BAR ONTO IT SENDS THE DOCK ACROSS)"
+        options: [["bottom", "bottom"], ["top", "top"], ["left", "left"], ["right", "right"]]
+          .filter(function(o) { return o[1] !== settings.bar.position })
+        current: settings.bar.dockEdgeEff
+        onPicked: value => settings.bar.dockEdge = value
+      }
+      ChoiceRow {
+        readonly property bool side: settings.bar.dockEdgeEff === "left" || settings.bar.dockEdgeEff === "right"
+        visible: settings.bar.dockEnabled
+        title: "ALONG THE EDGE" + (settings.bar.cornerSlime ? " (AT AN END IT MELTS INTO THE CORNER SLIME)" : "")
+        options: [[side ? "top" : "left", "start"], ["centre", "center"], [side ? "bottom" : "right", "end"]]
+        current: settings.bar.dockAlign
+        onPicked: value => settings.bar.dockAlign = value
+      }
+      ChoiceRow {
+        visible: settings.bar.dockEnabled
+        title: "HIDE UNTIL HOVERED"
+        options: [["no", false], ["yes", true]]
+        current: settings.bar.dockAutoHide
+        onPicked: value => settings.bar.dockAutoHide = value
+      }
+      ChoiceRow {
+        visible: settings.bar.dockEnabled
+        title: "ICON SIZE"
+        options: [["small", 36], ["medium", 44], ["large", 56]]
+        current: settings.bar.dockIconSize
+        onPicked: value => settings.bar.dockIconSize = value
+      }
+      CcButton {
+        cc: settings.cc
+        icon: "\uf067"
+        text: "add apps to the dock…"
+        onClicked: { settings.bar.dockEnabled = true; settings.bar.dockPanelRequest++ }
+      }
+      Text {
+        width: parent.width
+        wrapMode: Text.Wrap
+        text: "Drag folders or files onto the dock to pin them; right-click an icon to move or remove it. The + on the dock opens the same add-apps panel."
+        color: settings.cc.ink; opacity: 0.7
+        font.family: settings.cc.font; font.pixelSize: Math.round(11 * settings.fs)
+      }
+    }
+
+    CcSection {
+      cc: settings.cc
       title: "Slime"
       kind: "painting"
       defaultOpen: true

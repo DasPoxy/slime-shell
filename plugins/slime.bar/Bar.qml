@@ -12,6 +12,7 @@ import "BarModel.js" as BarModel
 import "SlimeHub.js" as SlimeHub
 import "commandcenter"
 import "ui"
+import "dock"
 
 // Slime Shell bar: a clone of the Omarchy bar engine (layout, widget slots,
 // drag/reorder, popouts, IPC all unchanged) with the slime skin painted by a
@@ -217,6 +218,50 @@ Item {
   property int desktopCorners: 0            // rounded screen corners: radius in px, 0 = off
   property bool cornerSlime: false          // slime patches in the corners across from the bar
   property bool ccKeyboard: true            // command centre keyboard navigation
+  // ---- SlimeS-Dock: a dock of apps / folders on a free screen edge ----
+  property bool dockEnabled: false
+  property string dockEdge: "bottom"
+  property string dockAlign: "center"       // start / center / end along its edge
+  property bool dockAutoHide: false         // tucked away until hovered
+  property int dockIconSize: 44
+  // never on the bar's edge: moving the bar onto the dock's edge sends the dock across
+  readonly property string dockEdgeEff: dockEdge === position ? oppositeEdge : dockEdge
+  // (moving the bar onto the dock's edge: see onPositionChanged further down)
+  property var dockItems: []                // {kind: "app", id} | {kind: "folder" | "file", path}
+  property int dockPanelRequest: 0          // bumped to open the add-apps panel (Settings, IPC)
+  function dockKey(it) { return it.kind === "app" ? "app:" + it.id : it.kind + ":" + it.path }
+  function dockHas(it) { var k = dockKey(it); return dockItems.some(function(x) { return dockKey(x) === k }) }
+  function dockAdd(it) { if (!it || dockHas(it)) return; dockItems = dockItems.concat([it]); dockSave() }
+  function dockRemove(i) { var a = dockItems.slice(); a.splice(i, 1); dockItems = a; dockSave() }
+  function dockRemoveItem(it) { var k = dockKey(it); dockItems = dockItems.filter(function(x) { return dockKey(x) !== k }); dockSave() }
+  function dockMove(i, dir) {
+    var j = i + dir
+    if (j < 0 || j >= dockItems.length) return
+    var a = dockItems.slice(), t = a[i]; a[i] = a[j]; a[j] = t
+    dockItems = a; dockSave()
+  }
+  function dockSave() { dockFile.setText(JSON.stringify({ items: dockItems }, null, 2) + "\n") }
+  FileView {
+    id: dockFile
+    path: Quickshell.env("HOME") + "/.config/omarchy/slime-shell/dock.json"
+    watchChanges: true
+    printErrors: false
+    onFileChanged: reload()
+    onLoaded: { try { root.dockItems = JSON.parse(text()).items || [] } catch (e) {} }
+  }
+  // the screen corners the far-corner slime patches sit in, and the one the
+  // dock melts into when it's pushed to that end of its edge ("" none)
+  function patchCorner(i) {
+    var e = oppositeEdge, v = e === "left" || e === "right"
+    return v ? (i ? "bottom" : "top") + "-" + e : e + "-" + (i ? "right" : "left")
+  }
+  readonly property string dockCorner: {
+    if (!dockEnabled || !cornerSlime || dockAlign === "center") return ""
+    var e = dockEdgeEff, v = e === "left" || e === "right", first = dockAlign === "start"
+    var c = v ? (first ? "top" : "bottom") + "-" + e : e + "-" + (first ? "left" : "right")
+    return c === patchCorner(0) || c === patchCorner(1) ? c : ""
+  }
+
   // cava drip style (Settings → Motion, shown while it's picked)
   property int cavaBars: 80                 // bars across the whole bar
   property bool cavaMirror: false           // bass in the middle, treble out to both ends
@@ -357,7 +402,8 @@ Item {
   readonly property var skinKeys: ["slimeRole", "gradientRole", "shadingStyle", "slimeFps", "dripAmount",
     "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material", "dripStyle", "monsterColor",
     "desktopCorners", "cornerSlime", "ccKeyboard", "ccSidebarCollapsed", "ccFontScale",
-    "cavaBars", "cavaMirror", "cavaSens", "cavaReach", "cavaWidth", "cavaSmooth"]
+    "cavaBars", "cavaMirror", "cavaSens", "cavaReach", "cavaWidth", "cavaSmooth",
+    "dockEnabled", "dockEdge", "dockAlign", "dockAutoHide", "dockIconSize"]
   property bool skinLoaded: false
   // A layer change made while the bar surface is still being set up is lost,
   // so "behind" only takes effect once the bar has been mapped for a moment.
@@ -411,6 +457,11 @@ Item {
   onCavaReachChanged: skinSaveTimer.restart()
   onCavaWidthChanged: skinSaveTimer.restart()
   onCavaSmoothChanged: skinSaveTimer.restart()
+  onDockEnabledChanged: skinSaveTimer.restart()
+  onDockEdgeChanged: skinSaveTimer.restart()
+  onDockAlignChanged: skinSaveTimer.restart()
+  onDockAutoHideChanged: skinSaveTimer.restart()
+  onDockIconSizeChanged: skinSaveTimer.restart()
   onCcSidebarCollapsedChanged: skinSaveTimer.restart()
   // the edge across from the bar (for the corner patches)
   readonly property string oppositeEdge: ({ top: "bottom", bottom: "top", left: "right", right: "left" })[position] || "bottom"
@@ -480,6 +531,19 @@ Item {
     function shape(name: string): void { root.barShape = name }
     function material(name: string): void { root.material = name }
     function drip(style: string): void { root.dripStyle = style }
+    // SlimeS-Dock: toggle | on | off | apps (the add-apps panel) |
+    // top / bottom / left / right (its edge) | start / center / end (along it) |
+    // autohide / pinned
+    // Desktop styling: slime in the far corners, on | off | toggle
+    function corners(action: string): void { root.cornerSlime = action === "toggle" ? !root.cornerSlime : action === "on" }
+    function dock(action: string): void {
+      if (action === "toggle") root.dockEnabled = !root.dockEnabled
+      else if (action === "on" || action === "off") root.dockEnabled = action === "on"
+      else if (action === "apps") { root.dockEnabled = true; root.dockPanelRequest++ }
+      else if (["top", "bottom", "left", "right"].indexOf(action) >= 0) root.dockEdge = action
+      else if (["start", "center", "end"].indexOf(action) >= 0) root.dockAlign = action
+      else if (action === "autohide" || action === "pinned") root.dockAutoHide = action === "autohide"
+    }
     // (shh) summon the easter egg now
     function egg(): void { root.startEgg("") }
     function eggAs(kind: string): void { root.startEgg(kind) }
@@ -1768,7 +1832,10 @@ Item {
   }
 
   onRequestedTransparentChanged: scheduleTransparentForegroundRefresh()
-  onPositionChanged: scheduleTransparentForegroundRefresh()
+  onPositionChanged: {
+    scheduleTransparentForegroundRefresh()
+    if (dockEdge === position) dockEdge = oppositeEdge     // the dock moves across
+  }
   onThemeForegroundChanged: scheduleTransparentForegroundRefresh()
   onThemeContrastForegroundChanged: scheduleTransparentForegroundRefresh()
   onForegroundOverrideChanged: scheduleTransparentForegroundRefresh()
@@ -2346,7 +2413,8 @@ Item {
         readonly property real along: 200
         readonly property real away: root.barSize + patchWin.dripRoom
         screen: barWindow.screen
-        visible: barWindow.visible
+        // the dock draws this corner's blob itself when it melts into it
+        visible: barWindow.visible && root.patchCorner(index) !== root.dockCorner
         color: "transparent"
         surfaceFormat.opaque: false
         exclusionMode: ExclusionMode.Ignore
@@ -2374,6 +2442,97 @@ Item {
             patch.edge === "right" ? patch.sw - patch.width : (!patch.vert && patch.farEnd) ? patch.sw - patch.width : 0,
             patch.edge === "bottom" ? patch.sh - patch.height : (patch.vert && patch.farEnd) ? patch.sh - patch.height : 0)
         }
+      }
+    }
+
+    // ---- SlimeS-Dock ----
+    // The bar's own scene with the dock shape (5) on the dock's edge, so it
+    // wears the bar's material, colour, shading and drips; the icons, menu and
+    // add-apps panel are dock/DockContent.qml. Everything here is in bar space:
+    // `along` the edge from the screen's start, `away` from the edge.
+    QtObject {
+      id: dockWin
+      readonly property var screen: barWindow.screen
+      readonly property string edge: root.dockEdgeEff
+      readonly property bool vert: edge === "left" || edge === "right"
+      readonly property real len: screen ? (vert ? screen.height : screen.width) : 1920
+      readonly property int s: root.dockIconSize
+      readonly property int gap: 10
+      readonly property int count: root.dockItems.length + 1          // + the add button
+      readonly property real dockLen: count * s + (count + 1) * gap
+      readonly property bool mergeStart: root.dockCorner !== "" && root.dockAlign === "start"
+      readonly property bool mergeEnd: root.dockCorner !== "" && root.dockAlign === "end"
+      readonly property real a0: root.dockAlign === "start" ? (mergeStart ? 44 : 24)
+        : root.dockAlign === "end" ? len - dockLen - (mergeEnd ? 44 : 24)
+        : Math.round((len - dockLen) / 2)
+      readonly property real thick: s + 20
+      readonly property real panelW: 460
+      readonly property real panelH: 400
+      readonly property real panelX: Math.max(10, Math.min(len - panelW - 10, a0 + dockLen / 2 - panelW / 2))
+      readonly property real dripRoom: Math.min(barWindow.dripRoom, 170)
+      // the window along [w0, w1]; deep enough for the drips, or the panel / menu while open
+      readonly property real w0: mergeStart ? 0 : Math.max(0, Math.min(a0, panelX) - 70)
+      readonly property real w1: mergeEnd ? len : Math.min(len, Math.max(a0 + dockLen, panelX + panelW) + 70)
+      readonly property bool grown: dockContent.panelOpen || panelProgress > 0.001 || dockContent.menuIndex >= 0
+      readonly property real depth: thick + dripRoom + (grown ? panelH + 40 : 0)
+      property real panelProgress: 0
+      readonly property real ccProgress: panelProgress
+      readonly property real ccPanelX: panelX
+      readonly property real ccAlong: panelW
+      readonly property real ccAway: panelH
+      readonly property vector4d noBulb: Qt.vector4d(0, 0, 0, 0)
+      readonly property var bulbRects: []
+      readonly property var groupRects: [mergeStart ? Qt.vector4d(0, 0, 1, 1) : noBulb,
+        Qt.vector4d(a0, 4, dockLen, s + 8), mergeEnd ? Qt.vector4d(0, 0, 1, 1) : noBulb]
+    }
+    PanelWindow {
+      id: dockWindow
+      screen: barWindow.screen
+      visible: root.dockEnabled && root.slimeSkin && barWindow.visible
+      color: "transparent"
+      surfaceFormat.opaque: false
+      WlrLayershell.namespace: "slime-dock"
+      WlrLayershell.layer: WlrLayer.Top
+      WlrLayershell.keyboardFocus: dockContent.panelOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+      // shown for good, it keeps windows off its strip; hidden, it floats over them
+      exclusionMode: root.dockAutoHide ? ExclusionMode.Ignore : ExclusionMode.Normal
+      exclusiveZone: root.dockAutoHide ? 0 : dockWin.thick
+      readonly property string edge: dockWin.edge
+      readonly property bool vert: dockWin.vert
+      implicitWidth: vert ? dockWin.depth : dockWin.w1 - dockWin.w0
+      implicitHeight: vert ? dockWin.w1 - dockWin.w0 : dockWin.depth
+      anchors {
+        top: edge === "top" || vert
+        bottom: edge === "bottom"
+        left: edge === "left" || !vert
+        right: edge === "right"
+      }
+      // the bar's reserved strip pushes a side dock's window along; take it back off
+      readonly property real barPush: vert && root.position === "top" ? root.barSize : !vert && root.position === "left" ? root.barSize : 0
+      margins { left: vert ? 0 : dockWin.w0 - barPush; top: vert ? dockWin.w0 - barPush : 0 }
+      mask: Region { item: dockContent.hotArea }
+      readonly property real sw: screen ? screen.width : 0
+      readonly property real sh: screen ? screen.height : 0
+      SlimeScene {
+        anchors.fill: parent
+        win: dockWin
+        orient: ({ top: 0, bottom: 1, left: 2, right: 3 })[dockWindow.edge]
+        barShape: 5
+        barHeight: dockWin.thick
+        eggDrip: Qt.vector4d(0, 0, 0, 0)
+        dripExtra: Qt.vector4d(root.dripExtraVec.x, root.dripExtraVec.y, dockWin.depth, dockWin.thick + dockWin.dripRoom)
+        // tucked away: the whole scene slides out past the edge
+        readonly property real off: dockContent.hideOffset
+        origin: Qt.vector2d(
+          (dockWindow.edge === "right" ? dockWindow.sw - dockWindow.width - off : dockWindow.edge === "left" ? off : dockWin.w0),
+          (dockWindow.edge === "bottom" ? dockWindow.sh - dockWindow.height - off : dockWindow.edge === "top" ? off : dockWin.w0))
+      }
+      DockContent {
+        id: dockContent
+        anchors.fill: parent
+        bar: root
+        geo: dockWin
+        win: dockWindow
       }
     }
 

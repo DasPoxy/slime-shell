@@ -35,7 +35,7 @@ layout(std140, binding = 0) uniform buf {
     float poolDepth;
     vec2 origin;      // this window's top-left on the screen
     float blobMode;   // 1 = no bar: just a free-standing blob in panelRect
-    float barShape;   // 0 classic strip, 1 pills, 2 islands, 3 notch
+    float barShape;   // 0 classic strip, 1 pills, 2 islands, 3 notch, 4 corners, 5 dock
     vec4 dripStyle;   // speed x, thickness x, frozen (1 = hang still), density x
     vec4 dripExtra;   // x: shape 0 drip / 1 stringy / 2 mitosis; y: variable amount 0/1;
                       // z: how far falling goo may reach from the bar (0 = no limit)
@@ -454,7 +454,36 @@ float cornerEdge(float x) {
     return dx < r - 8.0 ? sqrt(r * r - dx * dx) - 3.0 : -1.0;
 }
 
+// The dock (5): a lump of goo hanging off its screen edge holding the icons
+// (group1), flaring into the edge like the notch; group0 / group2 (any
+// width) also melt a corner blob into its start / end, where it meets the
+// corner slimes.
+float dockShape(vec2 p) {
+    float d = 1e5;
+    if (group1.z > 0.0) {
+        vec2 c = group1.xy + group1.zw * 0.5;
+        vec2 hs = vec2(group1.z * 0.5 + PAD * 2.0, (group1.y + group1.w + PAD + 12.0) * 0.5);
+        float wob = 1.2 * sin(time * 0.9 + 2.0);
+        float body = sdRoundBox(p, vec2(c.x, hs.y - 12.0), hs + vec2(0.0, wob * 0.3), 18.0);
+        float lip = max(p.y - 4.0 - 1.5 * sin(p.x * 0.03 + time), abs(p.x - c.x) - hs.x - 36.0);
+        d = smin(body, lip, 16.0);
+    }
+    if (group0.z > 0.0) d = smin(d, cornerBlob(p, vec2(0.0), 0.0), 26.0);
+    if (group2.z > 0.0) d = smin(d, cornerBlob(p, vec2(cornerLen(), 0.0), 3.0), 26.0);
+    return d;
+}
+float dockEdge(float x) {
+    float e = -1.0;
+    if (group1.z > 0.0 && x > group1.x - PAD && x < group1.x + group1.z + PAD) e = group1.y + group1.w + PAD;
+    float r = CORNER_R * 0.92;
+    if (group0.z > 0.0 && x < r - 8.0) e = max(e, sqrt(r * r - x * x) - 3.0);
+    float dx = cornerLen() - x;
+    if (group2.z > 0.0 && dx < r - 8.0) e = max(e, sqrt(r * r - dx * dx) - 3.0);
+    return e;
+}
+
 float baseShape(vec2 p) {
+    if (barShape > 4.5) return dockShape(p);
     if (barShape > 3.5) return corners(p);
     if (barShape < 0.5) return p.y - barEdge(p.x);
     if (barShape < 1.5) return podsAll(p);
@@ -474,6 +503,7 @@ float podBottom(vec4 b, float x, float extra) {
     return b.y + b.w + PAD * 0.55 + extra;
 }
 float dripEdge(float x) {
+    if (barShape > 4.5) return dockEdge(x);
     if (barShape > 3.5) return cornerEdge(x);
     if (barShape < 0.5) return barEdge(x);
     float e = -1.0;

@@ -189,6 +189,8 @@ omarchy-shell slime-shell material slime|sinew|bone|plain
 omarchy-shell slime-shell shape classic|pills|islands|notch
 omarchy-shell slime-shell shading 0|1|2|3|4|5    # soft, anime, manga, print, cel, sketch
 omarchy-shell slime-shell drip drip|honey|rain|tar|frozen|stringy|lava|gelatinous|cava
+omarchy-shell slime-shell dock toggle|on|off|apps|top|bottom|left|right|start|center|end|autohide|pinned
+omarchy-shell slime-shell corners on|off|toggle
 omarchy-shell slime-shell layer above|behind     # draw over or behind windows
 omarchy-shell slime-shell toggleLayer            # flip between the two
 omarchy-shell slime-shell color <theme role>     # accent, green, cyan, …
@@ -212,6 +214,14 @@ Command centre → **Settings** (sections fold open and closed):
   size, in its menu)
 - **Desktop styling** — rounded screen corners (off / small / medium / large)
   and slime patches in the corners across from the bar, mirroring its look
+- **SlimeS-Dock** — a dock of apps, folders and files made of the bar's own
+  slime, on any screen edge the bar isn't on (move the bar onto it and the
+  dock moves across); centred or at either end, where it melts into the
+  corner slime; optionally hidden until hovered; three icon sizes. The **+**
+  on the dock oozes out a panel to search apps and add or remove them
+  (↑↓, Enter, Esc); drag folders or files onto the dock to pin them;
+  right-click an icon to launch, move or remove it. Pins live in
+  `~/.config/omarchy/slime-shell/dock.json`.
 - **Slime** — colour, gradient partner, material, bar position, bar shape,
   draw above/behind windows, bar debris, slime icon colours, shading (soft,
   anime, manga, print, cel, sketch)
