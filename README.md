@@ -220,7 +220,8 @@ Command centre → **Settings** (sections fold open and closed):
   corner slime; optionally hidden until hovered; three icon sizes. The **+**
   on the dock oozes out a panel to search apps and add or remove them
   (↑↓, Enter, Esc); drag folders or files onto the dock to pin them;
-  right-click an icon to launch, move or remove it. Pins live in
+  right-click an icon for a little drip of a menu to launch, move or remove
+  it (↑↓ Enter, Esc or a click elsewhere closes it). Pins live in
   `~/.config/omarchy/slime-shell/dock.json`.
 - **Slime** — colour, gradient partner, material, bar position, bar shape,
   draw above/behind windows, bar debris, slime icon colours, shading (soft,

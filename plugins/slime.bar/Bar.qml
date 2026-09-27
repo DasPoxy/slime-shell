@@ -2470,16 +2470,23 @@ Item {
       readonly property real panelH: 400
       readonly property real panelX: Math.max(10, Math.min(len - panelW - 10, a0 + dockLen / 2 - panelW / 2))
       readonly property real dripRoom: Math.min(barWindow.dripRoom, 170)
-      // the window along [w0, w1]; deep enough for the drips, or the panel / menu while open
-      readonly property real w0: mergeStart ? 0 : Math.max(0, Math.min(a0, panelX) - 70)
-      readonly property real w1: mergeEnd ? len : Math.min(len, Math.max(a0 + dockLen, panelX + panelW) + 70)
-      readonly property bool grown: dockContent.panelOpen || panelProgress > 0.001 || dockContent.menuIndex >= 0
-      readonly property real depth: thick + dripRoom + (grown ? panelH + 40 : 0)
+      // the right-click menu: a smaller drip hanging from its icon
+      readonly property real menuW: 230
+      readonly property real menuH: 166
+      readonly property real menuX: Math.max(10, Math.min(len - menuW - 10,
+        a0 + gap + s / 2 + Math.max(0, dockContent.menuFor) * (s + gap) - menuW / 2))
+      // the window along [w0, w1], always deep enough for the panel: it never
+      // resizes as a menu or panel opens and shuts (a resize made the dock jump)
+      // (room for a menu hanging from the first or last icon, too)
+      readonly property real w0: mergeStart ? 0 : Math.max(0, Math.min(a0 - menuW / 2, panelX) - 70)
+      readonly property real w1: mergeEnd ? len : Math.min(len, Math.max(a0 + dockLen + menuW / 2, panelX + panelW) + 70)
+      readonly property real depth: thick + dripRoom + panelH + 40
       property real panelProgress: 0
+      readonly property bool menuBlob: dockContent.blob === "menu"
       readonly property real ccProgress: panelProgress
-      readonly property real ccPanelX: panelX
-      readonly property real ccAlong: panelW
-      readonly property real ccAway: panelH
+      readonly property real ccPanelX: menuBlob ? menuX : panelX
+      readonly property real ccAlong: menuBlob ? menuW : panelW
+      readonly property real ccAway: menuBlob ? menuH : panelH
       readonly property vector4d noBulb: Qt.vector4d(0, 0, 0, 0)
       readonly property var bulbRects: []
       readonly property var groupRects: [mergeStart ? Qt.vector4d(0, 0, 1, 1) : noBulb,
@@ -2493,7 +2500,7 @@ Item {
       surfaceFormat.opaque: false
       WlrLayershell.namespace: "slime-dock"
       WlrLayershell.layer: WlrLayer.Top
-      WlrLayershell.keyboardFocus: dockContent.panelOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+      WlrLayershell.keyboardFocus: dockContent.panelOpen || dockContent.menuIndex >= 0 ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
       // shown for good, it keeps windows off its strip; hidden, it floats over them
       exclusionMode: root.dockAutoHide ? ExclusionMode.Ignore : ExclusionMode.Normal
       exclusiveZone: root.dockAutoHide ? 0 : dockWin.thick

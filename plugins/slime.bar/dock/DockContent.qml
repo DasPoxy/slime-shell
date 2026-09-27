@@ -64,6 +64,15 @@ Item {
     HoverHandler { onHoveredChanged: dock.hovered = hovered }
   }
 
+  // a click on the dock window's empty air closes an open menu / panel
+  MouseArea {
+    anchors.fill: parent
+    enabled: dock.menuIndex >= 0 || dock.panelOpen
+    acceptedButtons: Qt.LeftButton | Qt.RightButton
+    onClicked: dock.closeAll()
+  }
+  function closeAll() { if (menuIndex >= 0) closeMenu(); if (panelOpen) closePanel() }
+
   // ---- apps ----
   readonly property var allApps: DesktopEntries.applications.values
     .filter(function(e) { return !e.noDisplay })
@@ -142,7 +151,7 @@ Item {
         onClicked: mouse => {
           if (slot.isAdd) { dock.togglePanel(); return }
           if (mouse.button === Qt.RightButton) dock.openMenu(slot.index)
-          else { dock.menuIndex = -1; dock.launch(slot.it) }
+          else { dock.closeMenu(); dock.launch(slot.it) }
         }
       }
     }
@@ -216,8 +225,32 @@ Item {
   }
 
   // ---- right-click menu ----
+  // the menu is a drip of the dock's slime like the add-apps panel (the
+  // shader draws whichever `blob` is showing from geo.panelProgress)
   property int menuIndex: -1
-  function openMenu(i) { panelOpen = false; menuIndex = i }
+  property int menuFor: -1          // the icon the menu blob hangs from (kept while it shrinks away)
+  property string blob: "panel"
+  property int menuRow: 0
+  function openMenu(i) {
+    if (panelOpen) { panelOpen = false; geo.panelProgress = 0 }
+    if (menuIndex >= 0) geo.panelProgress = 0          // straight to the new icon's menu
+    blob = "menu"
+    menuFor = i
+    menuIndex = i
+    menuRow = 0
+    grow(1, 450)
+    menuKeys.forceActiveFocus()
+  }
+  function closeMenu() {
+    if (menuIndex < 0) return
+    menuIndex = -1
+    grow(0, 280)
+  }
+  function grow(to, ms) {
+    panelAnim.stop(); panelAnim.to = to; panelAnim.duration = ms
+    panelAnim.easing.type = to > 0 ? Easing.OutQuad : Easing.InQuad
+    panelAnim.start()
+  }
   readonly property var menuItems: {
     if (menuIndex < 0 || menuIndex >= bar.dockItems.length) return []
     var it = bar.dockItems[menuIndex]
@@ -232,37 +265,55 @@ Item {
   function runMenu(act) {
     var i = menuIndex, it = bar.dockItems[i]
     if (act === "open") launch(it)
-    else if (act === "back") { bar.dockMove(i, -1); menuIndex = i - 1; return }
-    else if (act === "on") { bar.dockMove(i, 1); menuIndex = i + 1; return }
+    else if (act === "back") { bar.dockMove(i, -1); menuIndex = i - 1; menuFor = i - 1; return }
+    else if (act === "on") { bar.dockMove(i, 1); menuIndex = i + 1; menuFor = i + 1; return }
     else if (act === "remove") bar.dockRemove(i)
-    menuIndex = -1
+    closeMenu()
   }
-  Rectangle {
+  Item {
     id: menu
-    visible: dock.menuIndex >= 0
-    readonly property point c: dock.pt(dock.itemAlong(Math.max(0, dock.menuIndex)), dock.geo.thick + 14)
-    width: 220
-    height: menuCol.implicitHeight + 16
-    // hangs inward from its icon
-    x: dock.edge === "left" ? c.x : dock.edge === "right" ? c.x - width
-      : Math.max(4, Math.min(dock.width - width - 4, c.x - width / 2))
-    y: dock.edge === "top" ? c.y : dock.edge === "bottom" ? c.y - height
-      : Math.max(4, Math.min(dock.height - height - 4, c.y - height / 2))
-    radius: 16
-    color: dock.bar.slimeColor
-    border.color: dock.bar.slimeInk; border.width: 2
+    readonly property rect r: dock.box(dock.geo.menuX + 10, dock.geo.menuX + dock.geo.menuW - 10,
+                                       dock.geo.thick + 10, dock.geo.thick + dock.geo.menuH - 20)
+    x: r.x; y: r.y; width: r.width; height: r.height
+    visible: dock.menuIndex >= 0 && dock.geo.panelProgress > 0.55
+    opacity: Math.max(0, (dock.geo.panelProgress - 0.55) / 0.45)
+    // keys: ↑↓ pick, Enter runs it, Esc closes
+    Item {
+      id: menuKeys
+      focus: dock.menuIndex >= 0
+      Keys.onPressed: event => {
+        var n = dock.menuItems.length
+        if (event.key === Qt.Key_Escape) dock.closeMenu()
+        else if (event.key === Qt.Key_Down || event.text === "j") dock.menuRow = Math.min(n - 1, dock.menuRow + 1)
+        else if (event.key === Qt.Key_Up || event.text === "k") dock.menuRow = Math.max(0, dock.menuRow - 1)
+        else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space)
+                 && dock.menuItems[dock.menuRow] && !dock.menuItems[dock.menuRow].off) dock.runMenu(dock.menuItems[dock.menuRow].act)
+        else return
+        event.accepted = true
+      }
+    }
     Column {
       id: menuCol
-      x: 8; y: 8
-      width: parent.width - 16
+      width: parent.width
       spacing: 2
+      Text {
+        width: parent.width
+        elide: Text.ElideRight
+        text: dock.menuIndex >= 0 && dock.menuIndex < dock.bar.dockItems.length ? dock.nameOf(dock.bar.dockItems[dock.menuIndex]).toUpperCase() : ""
+        color: dock.bar.slimeInk; opacity: 0.7
+        font.family: dock.bar.fontFamily; font.pixelSize: 10; font.bold: true; font.letterSpacing: 0.6
+        bottomPadding: 2
+      }
       Repeater {
         model: dock.menuItems
         Rectangle {
           required property var modelData
-          width: menuCol.width; height: 28; radius: 10
+          required property int index
+          readonly property bool here: dock.menuRow === index
+          width: menuCol.width; height: 26; radius: 10
           opacity: modelData.off ? 0.4 : 1
-          color: rowMouse.containsMouse && !modelData.off ? Qt.rgba(1, 1, 1, 0.55) : "transparent"
+          color: (here || rowMouse.containsMouse) && !modelData.off ? Qt.rgba(1, 1, 1, 0.6) : Qt.rgba(1, 1, 1, 0.15)
+          border.color: dock.bar.slimeInk; border.width: here ? 1.5 : 0
           Text {
             x: 10; anchors.verticalCenter: parent.verticalCenter
             width: parent.width - 16; elide: Text.ElideRight
@@ -276,6 +327,7 @@ Item {
             hoverEnabled: true
             enabled: !parent.modelData.off
             cursorShape: Qt.PointingHandCursor
+            onEntered: dock.menuRow = parent.index
             onClicked: dock.runMenu(parent.modelData.act)
           }
         }
@@ -288,16 +340,18 @@ Item {
   property bool panelOpen: false
   function togglePanel() { if (panelOpen) closePanel(); else openPanel() }
   function openPanel() {
-    menuIndex = -1
+    if (menuIndex >= 0) { menuIndex = -1; geo.panelProgress = 0 }
+    blob = "panel"
     panelOpen = true
     query.text = ""
     appList.currentIndex = 0
-    panelAnim.stop(); panelAnim.to = 1; panelAnim.duration = 600; panelAnim.easing.type = Easing.OutQuad; panelAnim.start()
+    grow(1, 600)
     query.forceActiveFocus()
   }
   function closePanel() {
+    if (!panelOpen) return
     panelOpen = false
-    panelAnim.stop(); panelAnim.to = 0; panelAnim.duration = 360; panelAnim.easing.type = Easing.InQuad; panelAnim.start()
+    grow(0, 360)
   }
   NumberAnimation { id: panelAnim; target: dock.geo; property: "panelProgress" }
   // Settings / IPC ask for the panel: open it on the focused screen's dock
@@ -318,7 +372,7 @@ Item {
   HyprlandFocusGrab {
     active: dock.grabReady
     windows: [dock.win]
-    onCleared: { dock.closePanel(); dock.menuIndex = -1 }
+    onCleared: dock.closeAll()
   }
 
   readonly property var shownApps: {
@@ -352,7 +406,7 @@ Item {
     readonly property rect r: dock.box(dock.geo.panelX + 14, dock.geo.panelX + dock.geo.panelW - 14,
                                        dock.geo.thick + 16, dock.geo.thick + dock.geo.panelH - 12)
     x: r.x; y: r.y; width: r.width; height: r.height
-    visible: dock.geo.panelProgress > 0.6
+    visible: dock.blob === "panel" && dock.geo.panelProgress > 0.6
     opacity: Math.max(0, (dock.geo.panelProgress - 0.6) / 0.4)
     FocusScope {
       anchors.fill: parent
