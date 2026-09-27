@@ -64,6 +64,14 @@ right-click) opens a group menu to archive or delete it. In any group menu,
 **d d** on a group deletes that group — its todos just become ungrouped. On
 any group heading, on every tab, **e** renames the group and **d d** deletes it.
 
+**Super groups** hold other groups. From a group's menu (**g** or right-click)
+pick *into super group …*, *out of super group …*, or type a name in *new
+super group…* (**n**). A super group's heading sits above its groups on all
+three tabs (Progress shows their combined %), and works just like a group
+heading: click / **Enter** / **z** / **←** **→** folds it, **e** renames it,
+**d d** deletes it (its groups are kept), **Shift+↑↓** moves it, and **g** or a
+right-click opens its menu.
+
 Right-click a todo for the same group menu (existing groups, a new one, no
 group, rename, archive, delete). Each group gets its own colour. Drag todos
 and sub-todos to reorder them; drop a todo in another group (or on its
@@ -79,7 +87,7 @@ Slime-Notes/
   Todos/<id>.md        one per todo
   Logs/<id>.md         its task log
   Archive/             archived todos (Archive/Logs/ their logs)
-  .slime/groups.json   group colours
+  .slime/groups.json   group colours, order and super groups
   .slime/trash/        deleted todos, just in case
 ```
 
@@ -135,6 +143,10 @@ slime-tasks group-order <group> <group> …       # put groups in this order
 slime-tasks group-archive <group>               # archive every todo in a group
 slime-tasks group-delete <group>                # remove a group (todos kept, ungrouped)
 slime-tasks group-rename <old> <new>            # rename a group (keeps colour and order)
+slime-tasks super-set <group> <super>           # put a group in a super group ("" takes it out)
+slime-tasks super-rename <old> <new>            # rename a super group
+slime-tasks super-delete <super>                # remove a super group (its groups are kept)
+slime-tasks super-order <super> <super> …       # put super groups in this order
 slime-tasks archive <id>   /   unarchive <id>
 slime-tasks --help                              # everything else
 ```

@@ -28,6 +28,8 @@ Item {
   property string folder: ""
   property var groupColors: ({})
   property var groupOrder: []                 // hand-set group order (slime_tasks group-order)
+  property var supersMap: ({})                // super groups (groups of groups): {name: {color}}
+  property var superOrderList: []
   property var todos: []
   property var archivedTodos: []
   property var logEntries: []
@@ -171,7 +173,7 @@ Item {
     if (progressFollow === "") return
     var nav = progressRows.filter(function(r) { return r.kind !== "sub" })
     for (var i = 0; i < nav.length; i++) {
-      var key = nav[i].kind === "group" ? "g:" + nav[i].name : "t:" + nav[i].t.id
+      var key = nav[i].kind === "group" ? "g:" + nav[i].name : nav[i].kind === "super" ? "s:" + nav[i].name : "t:" + nav[i].t.id
       if (key === progressFollow) { progressIndex = i; progressFollow = ""; return }
     }
   }
@@ -195,6 +197,114 @@ Item {
     return n === 0 ? 0 : t.counts.done / n
   }
 
+  // ---- super groups: groups that hold other groups ----
+  function superOf(g) {
+    var sup = g && groupColors[g] ? groupColors[g].super : ""
+    return sup && supersMap[sup] ? sup : ""
+  }
+  function superColor(n) { return supersMap[n] ? supersMap[n].color : tasks.cc.ink }
+  function superRank(n) { var i = superOrderList.indexOf(n); return i < 0 ? 100000 : i }
+  // the (sorted) group names arranged under their supers: each super (in
+  // super order) followed by its groups, then the groups not in one
+  function arrangeGroups(names) {
+    var bySup = {}, sups = [], plain = []
+    names.forEach(function(n) {
+      var sp = n ? superOf(n) : ""
+      if (sp) { if (!bySup[sp]) { bySup[sp] = []; sups.push(sp) } bySup[sp].push(n) }
+      else plain.push(n)
+    })
+    sups.sort(function(a, b) { return superRank(a) - superRank(b) || a.localeCompare(b) })
+    var out = []
+    sups.forEach(function(sp) {
+      out.push({ kind: "super", name: sp, members: bySup[sp] })
+      bySup[sp].forEach(function(n) { out.push({ kind: "g", name: n, depth: 1 }) })
+    })
+    plain.forEach(function(n) { out.push({ kind: "g", name: n, depth: 0 }) })
+    return out
+  }
+  function superCollapsed(n, scope) { return groupCollapsed("super:" + n, scope) }
+  function setSuperCollapsed(n, shut, scope) { setGroupCollapsed("super:" + n, shut, scope) }
+  function moveSuper(n, dir) {
+    var all = Object.keys(supersMap)
+    all.sort(function(a, b) { return superRank(a) - superRank(b) || a.localeCompare(b) })
+    var i = all.indexOf(n), j = i + dir
+    if (i < 0 || j < 0 || j >= all.length) return false
+    all.splice(i, 1); all.splice(j, 0, n)
+    act(["super-order"].concat(all))
+    return true
+  }
+  // the keys on a super heading (same as a group's); true if handled
+  function superKeys(n, scope, k, txt, up, down, shift, move) {
+    if ((up || down) && shift) { moveSuper(n, up ? -1 : 1); return true }
+    if (up || down) { move(up ? -1 : 1); return true }
+    if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "z") { setSuperCollapsed(n, !superCollapsed(n, scope), scope); return true }
+    if (k === Qt.Key_Right || txt === "l") { setSuperCollapsed(n, false, scope); return true }
+    if (k === Qt.Key_Left || txt === "h") { setSuperCollapsed(n, true, scope); return true }
+    if (txt === "e" || k === Qt.Key_F2) { startRenameSuper(n); return true }
+    if (txt === "d" || k === Qt.Key_Delete) { deleteSuperKey(n); return true }
+    if (txt === "g") { openSuperMenu(n, tasks.width * 0.2, 120); return true }
+    return false
+  }
+  property string armedSuper: ""
+  Timer { id: disarmSuper; interval: 2500; onTriggered: tasks.armedSuper = "" }
+  function deleteSuperKey(n) {
+    if (armedSuper !== n) { armedSuper = n; disarmSuper.restart(); return }
+    armedSuper = ""
+    act(["super-delete", n])
+  }
+  property bool renamingIsSuper: false
+  function startRenameSuper(n) {
+    renamingIsSuper = true
+    renamingGroup = n
+    renameGroupInput.text = n
+    renameGroupInput.selectAll()
+    renameGroupInput.forceActiveFocus()
+  }
+  function superHeadColor(n, here, hover) {
+    return armedSuper !== "" && armedSuper === n ? Qt.rgba(1, 0.4, 0.4, 0.65)
+      : here ? Qt.rgba(1, 1, 1, 0.65) : hover ? Qt.rgba(1, 1, 1, 0.35) : Qt.rgba(1, 1, 1, 0.2)
+  }
+
+  // A super group's heading (Todo and Task Log lists)
+  component SuperHead: Rectangle {
+    id: sh
+    property string name: ""
+    property bool collapsed: false
+    property int count: 0
+    property bool here: false
+    signal toggle()
+    signal menu(real x, real y)
+    radius: 10
+    color: tasks.superHeadColor(name, here, shMouse.containsMouse)
+    border.color: tasks.cc.ink
+    border.width: here ? 2 : 1
+    Rectangle { width: 7; height: parent.height; radius: 3.5; color: tasks.superColor(sh.name) }
+    Row {
+      x: 12; spacing: 7
+      anchors.verticalCenter: parent.verticalCenter
+      Text { anchors.verticalCenter: parent.verticalCenter; text: sh.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 9 }
+      Text { anchors.verticalCenter: parent.verticalCenter; text: "\uf247"; color: tasks.superColor(sh.name); style: Text.Outline; styleColor: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 13 }
+      Text { anchors.verticalCenter: parent.verticalCenter; text: sh.name; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: 14 }
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        visible: sh.collapsed
+        text: sh.count + (sh.count === 1 ? " todo" : " todos")
+        color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 10
+      }
+    }
+    MouseArea {
+      id: shMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      acceptedButtons: Qt.LeftButton | Qt.RightButton
+      onClicked: mouse => {
+        if (mouse.button === Qt.RightButton) { var p = mapToItem(tasks, mouse.x, mouse.y); sh.menu(p.x, p.y) }
+        else sh.toggle()
+      }
+    }
+  }
+
   // Todo tab: rows grouped by group (alphabetical), ungrouped last.
   readonly property var todoRows: {
     var byGroup = {}, names = [], loose = []
@@ -207,11 +317,19 @@ Item {
       } else loose.push(t)
     }
     sortGroups(names)
-    var rows = []
-    names.forEach(function(n) {
-      var shut = groupCollapsed(n)
-      rows.push({ kind: "group", name: n, count: byGroup[n].length, collapsed: shut })
-      if (!shut) byGroup[n].forEach(function(t) { rows.push({ kind: "todo", t: t }) })
+    var rows = [], shutSuper = false
+    arrangeGroups(names).forEach(function(it) {
+      if (it.kind === "super") {
+        shutSuper = superCollapsed(it.name, "")
+        var c = 0
+        it.members.forEach(function(m) { c += byGroup[m].length })
+        rows.push({ kind: "super", name: it.name, count: c, collapsed: shutSuper })
+        return
+      }
+      if (it.depth && shutSuper) return
+      var n = it.name, shut = groupCollapsed(n)
+      rows.push({ kind: "group", name: n, count: byGroup[n].length, collapsed: shut, depth: it.depth })
+      if (!shut) byGroup[n].forEach(function(t) { rows.push({ kind: "todo", t: t, depth: it.depth }) })
     })
     // loose todos get a heading (and can fold away) only beside real groups
     var looseShut = names.length > 0 && groupCollapsed("")
@@ -236,12 +354,12 @@ Item {
   // it's resting on a group heading ("" = on the selected todo)
   property string cursor: ""
   readonly property string cursorKey: cursor !== "" ? cursor : selectedId
-  readonly property var todoNav: todoRows.map(function(r) { return r.kind === "group" ? "g:" + r.name : r.t.id })
+  readonly property var todoNav: todoRows.map(function(r) { return r.kind === "group" ? "g:" + r.name : r.kind === "super" ? "s:" + r.name : r.t.id })
   function moveCursor(d) {
     if (todoNav.length === 0) return
     var i = todoNav.indexOf(cursorKey)
     var key = todoNav[Math.max(0, Math.min(todoNav.length - 1, i < 0 ? 0 : i + d))]
-    if (key.indexOf("g:") === 0) cursor = key
+    if (key.indexOf("g:") === 0 || key.indexOf("s:") === 0) cursor = key
     else { cursor = ""; selectedId = key }
   }
   function toggleGroup(name) {
@@ -260,11 +378,20 @@ Item {
       } else loose.push(t)
     })
     sortGroups(names)
-    var rows = []
-    names.forEach(function(n) {
+    var rows = [], shutSuper = false
+    arrangeGroups(names).forEach(function(it) {
+      if (it.kind === "super") {
+        shutSuper = superCollapsed(it.name, "log")
+        var c = 0
+        it.members.forEach(function(m) { c += byGroup[m].length })
+        rows.push({ kind: "super", name: it.name, count: c, collapsed: shutSuper })
+        return
+      }
+      if (it.depth && shutSuper) return
+      var n = it.name
       var shut = groupCollapsed(n, "log")
-      rows.push({ kind: "group", name: n, count: byGroup[n].length, collapsed: shut })
-      if (!shut) byGroup[n].forEach(function(t) { rows.push({ kind: "todo", t: t }) })
+      rows.push({ kind: "group", name: n, count: byGroup[n].length, collapsed: shut, depth: it.depth })
+      if (!shut) byGroup[n].forEach(function(t) { rows.push({ kind: "todo", t: t, depth: it.depth }) })
     })
     var looseShut = names.length > 0 && groupCollapsed("", "log")
     if (loose.length && names.length) rows.push({ kind: "group", name: "", count: loose.length, collapsed: looseShut })
@@ -272,12 +399,12 @@ Item {
     return rows
   }
   property string logCursor: ""                // "g:<group>" on a heading, "" on the selected todo
-  readonly property var logNav: logRows.map(function(r) { return r.kind === "group" ? "g:" + r.name : r.t.id })
+  readonly property var logNav: logRows.map(function(r) { return r.kind === "group" ? "g:" + r.name : r.kind === "super" ? "s:" + r.name : r.t.id })
   function moveLogCursor(d) {
     if (logNav.length === 0) return
     var i = logNav.indexOf(logCursor !== "" ? logCursor : selectedId)
     var key = logNav[Math.max(0, Math.min(logNav.length - 1, i < 0 ? 0 : i + d))]
-    if (key.indexOf("g:") === 0) logCursor = key
+    if (key.indexOf("g:") === 0 || key.indexOf("s:") === 0) logCursor = key
     else { logCursor = ""; selectedId = key }
   }
   function toggleLogGroup(name) {
@@ -302,19 +429,31 @@ Item {
       byGroup[g].push(todos[i])
     }
     names.sort(function(a, b) { return (a === "") - (b === "") || tasks.groupRank(a) - tasks.groupRank(b) || a.localeCompare(b) })
-    var rows = []
-    names.forEach(function(n) {
-      var list = byGroup[n], units = 0, done = 0
+    var rows = [], shutSuper = false
+    function tally(list) {
+      var units = 0, done = 0
       list.forEach(function(t) {
         var u = Math.max(1, t.subs.length)
         units += u
         done += t.done ? u : t.counts.done
       })
-      rows.push({ kind: "group", name: n, pct: units ? done / units : 0, count: list.length })
+      return [units, done]
+    }
+    tasks.arrangeGroups(names).forEach(function(it) {
+      if (it.kind === "super") {
+        shutSuper = tasks.superCollapsed(it.name, "progress")
+        var u = 0, d = 0, c = 0
+        it.members.forEach(function(m) { var tl = tally(byGroup[m]); u += tl[0]; d += tl[1]; c += byGroup[m].length })
+        rows.push({ kind: "super", name: it.name, pct: u ? d / u : 0, count: c, collapsed: shutSuper })
+        return
+      }
+      if (it.depth && shutSuper) return
+      var n = it.name, list = byGroup[n], tl = tally(list)
+      rows.push({ kind: "group", name: n, pct: tl[0] ? tl[1] / tl[0] : 0, count: list.length, depth: it.depth })
       if (tasks.groupCollapsed(n, "progress")) return
       list.forEach(function(t) {
-        rows.push({ kind: "todo", t: t })
-        if (tasks.expanded["t:" + t.id]) t.subs.forEach(function(s) { rows.push({ kind: "sub", t: t, s: s }) })
+        rows.push({ kind: "todo", t: t, depth: it.depth })
+        if (tasks.expanded["t:" + t.id]) t.subs.forEach(function(s) { rows.push({ kind: "sub", t: t, s: s, depth: it.depth }) })
       })
     })
     return rows
@@ -360,6 +499,8 @@ Item {
           tasks.folder = r.folder
           tasks.groupColors = r.groups
           tasks.groupOrder = r.groupOrder || []
+          tasks.supersMap = r.supers || ({})
+          tasks.superOrderList = r.superOrder || []
           tasks.todos = r.todos
           if (tasks.selectedId === "" || !tasks.selected) tasks.selectedId = tasks.todoOrder.length ? tasks.todoOrder[0] : ""
         } catch (e) { tasks.error = "couldn't read the notes folder" }
@@ -506,10 +647,23 @@ Item {
   }
   Timer { id: disarm; interval: 2500; onTriggered: tasks.armedDelete = "" }
   // the same menu on a group heading: archive or delete the whole group
+  function openSuperMenu(name, x, y) {
+    menu.archived = false
+    menu.todo = null
+    menu.headGroup = ""
+    menu.headSuper = name
+    menu.armed = ""
+    menu.x = Math.max(0, Math.min(tasks.width - menu.width, x))
+    menu.y = Math.max(50, Math.min(tasks.height - menu.height, y))
+    menu.index = 0
+    menu.visible = true
+    menu.forceActiveFocus()
+  }
   function openGroupMenu(name, x, y) {
     if (!name) return                         // "no group" isn't a group
     menu.archived = false
     menu.todo = null
+    menu.headSuper = ""
     menu.headGroup = name
     menu.armed = ""
     menu.x = Math.max(0, Math.min(tasks.width - menu.width, x))
@@ -538,9 +692,24 @@ Item {
   }
   function finishRenameGroup(to) {
     var from = renamingGroup
+    var isSuper = renamingIsSuper
     renamingGroup = ""
+    renamingIsSuper = false
     forceActiveFocus()
     if (!to || to === from) return
+    if (isSuper) {
+      if (bar && bar.ccSections) {
+        var ms = Object.assign({}, bar.ccSections)
+        ;["", "progress", "log"].forEach(function(sc) {
+          if (ms[foldKey("super:" + from, sc)]) { delete ms[foldKey("super:" + from, sc)]; ms[foldKey("super:" + to, sc)] = true }
+        })
+        bar.ccSections = ms
+      }
+      if (cursor === "s:" + from) cursor = "s:" + to
+      if (logCursor === "s:" + from) logCursor = "s:" + to
+      act(["super-rename", from, to])
+      return
+    }
     // folds follow the group to its new name
     if (bar && bar.ccSections) {
       var m = Object.assign({}, bar.ccSections)
@@ -560,6 +729,7 @@ Item {
   function openMenu(t, x, y, archived) {
     menu.archived = !!archived
     menu.headGroup = ""
+    menu.headSuper = ""
     menu.armed = ""
     menu.todo = t
     menu.x = Math.max(0, Math.min(tasks.width - menu.width, x))
@@ -605,7 +775,10 @@ Item {
     if (k === Qt.Key_Escape && showHelp) { showHelp = false; event.accepted = true; return }
     if (tab === "todo") {
       var t = selected
-      if (pane === "list" && cursor !== "") {
+      if (pane === "list" && cursor.indexOf("s:") === 0) {
+        // resting on a super group's heading
+        if (!superKeys(cursor.slice(2), "", k, txt, up, down, event.modifiers & Qt.ShiftModifier, moveCursor)) return
+      } else if (pane === "list" && cursor !== "") {
         // resting on a group heading
         var gname = cursor.slice(2)
         if ((up || down) && (event.modifiers & Qt.ShiftModifier)) moveGroup(gname, up ? -1 : 1)
@@ -683,6 +856,9 @@ Item {
         else if (k === Qt.Key_Left || k === Qt.Key_Escape || txt === "h") logPane = "list"
         else return
       }
+      else if (logPane === "list" && logCursor.indexOf("s:") === 0) {
+        if (!superKeys(logCursor.slice(2), "log", k, txt, up, down, shiftMove, moveLogCursor)) return
+      }
       else if (logPane === "list" && logCursor !== "") {
         // resting on a group heading
         var lg = logCursor.slice(2)
@@ -723,6 +899,12 @@ Item {
       var r = rows[Math.min(progressIndex, rows.length - 1)]
       var na = archivedTodos.length
       if (txt === "/") archiveInput.forceActiveFocus()
+      else if (progressPane === "list" && r && r.kind === "super"
+               && !(down && !(event.modifiers & Qt.ShiftModifier) && progressIndex >= rows.length - 1 && na)) {
+        if ((up || down) && (event.modifiers & Qt.ShiftModifier)) progressFollow = "s:" + r.name
+        if (!superKeys(r.name, "progress", k, txt, up, down, event.modifiers & Qt.ShiftModifier,
+                       function(d) { progressIndex = Math.max(0, Math.min(rows.length - 1, progressIndex + d)) })) return
+      }
       else if (progressPane === "list") {
         // down past the last row drops into the archive
         if ((up || down) && (event.modifiers & Qt.ShiftModifier) && r) {
@@ -773,6 +955,7 @@ Item {
     event.accepted = true
   }
   function toggleExpand(r) {
+    if (r.kind === "super") { setSuperCollapsed(r.name, !superCollapsed(r.name, "progress"), "progress"); return }
     if (r.kind === "group") { setGroupCollapsed(r.name, !groupCollapsed(r.name, "progress"), "progress"); return }
     setSubsOpen(r.t.id, !expanded["t:" + r.t.id])
   }
@@ -1149,7 +1332,8 @@ Item {
     anchors.right: parent.right
     y: 18
     text: tasks.error !== "" ? "  " + tasks.error
-      : tasks.armedGroup !== "" ? "d again: delete group " + tasks.armedGroup + " (its todos are kept)" : "? keys"
+      : tasks.armedGroup !== "" ? "d again: delete group " + tasks.armedGroup + " (its todos are kept)"
+      : tasks.armedSuper !== "" ? "d again: delete super group " + tasks.armedSuper + " (its groups are kept)" : "? keys"
     color: tasks.cc.ink
     opacity: tasks.error !== "" ? 1 : 0.55
     font.family: tasks.cc.font
@@ -1288,7 +1472,17 @@ Item {
           required property var modelData
           required property int index
           width: todoList.width
-          height: modelData.kind === "group" ? 24 : 38
+          height: modelData.kind === "group" ? 24 : modelData.kind === "super" ? 28 : 38
+          SuperHead {
+            visible: row.modelData.kind === "super"
+            anchors.fill: parent
+            name: row.modelData.kind === "super" ? row.modelData.name : ""
+            collapsed: !!row.modelData.collapsed
+            count: row.modelData.count || 0
+            here: row.modelData.kind === "super" && tasks.cursor === "s:" + row.modelData.name && tasks.pane === "list"
+            onToggle: { tasks.pane = "list"; tasks.cursor = "s:" + name; tasks.setSuperCollapsed(name, !collapsed, ""); tasks.forceActiveFocus() }
+            onMenu: (x, y) => { tasks.pane = "list"; tasks.cursor = "s:" + name; tasks.openSuperMenu(name, x, y) }
+          }
           // group header: click (or Enter / Space / ← → on it) folds it
           Rectangle {
             visible: row.modelData.kind === "group"
@@ -1299,7 +1493,7 @@ Item {
             border.color: tasks.cc.ink
             border.width: here ? 2 : 0
             Row {
-              x: 6
+              x: 6 + (row.modelData.depth || 0) * 16
               spacing: 6
               anchors.verticalCenter: parent.verticalCenter
               Text { anchors.verticalCenter: parent.verticalCenter; text: row.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 9 }
@@ -1330,6 +1524,7 @@ Item {
           Rectangle {
             visible: row.modelData.kind === "todo"
             anchors.fill: parent
+            anchors.leftMargin: (row.modelData.depth || 0) * 16
             readonly property var t: row.modelData.t
             readonly property bool sel: !!t && t.id === tasks.selectedId
             opacity: t && tasks.dragTodo === t.id ? 0.45 : 1
@@ -1641,7 +1836,17 @@ Item {
         id: logRow
         required property var modelData
         width: logTodoList.width
-        height: modelData.kind === "group" ? 24 : 44
+        height: modelData.kind === "group" ? 24 : modelData.kind === "super" ? 28 : 44
+        SuperHead {
+          visible: logRow.modelData.kind === "super"
+          anchors.fill: parent
+          name: logRow.modelData.kind === "super" ? logRow.modelData.name : ""
+          collapsed: !!logRow.modelData.collapsed
+          count: logRow.modelData.count || 0
+          here: logRow.modelData.kind === "super" && tasks.logCursor === "s:" + logRow.modelData.name && tasks.logPane === "list"
+          onToggle: { tasks.logPane = "list"; tasks.logCursor = "s:" + name; tasks.setSuperCollapsed(name, !collapsed, "log"); tasks.forceActiveFocus() }
+          onMenu: (x, y) => { tasks.logPane = "list"; tasks.logCursor = "s:" + name; tasks.openSuperMenu(name, x, y) }
+        }
         // group heading: click (or the keyboard) folds it
         Rectangle {
           visible: logRow.modelData.kind === "group"
@@ -1652,7 +1857,7 @@ Item {
           border.color: tasks.cc.ink
           border.width: here ? 2 : 0
           Row {
-            x: 6; spacing: 6
+            x: 6 + (logRow.modelData.depth || 0) * 16; spacing: 6
             anchors.verticalCenter: parent.verticalCenter
             Text { anchors.verticalCenter: parent.verticalCenter; text: logRow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 9 }
             Rectangle { width: 12; height: 12; radius: 6; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(logRow.modelData.name); border.color: tasks.cc.ink; border.width: 1.2; visible: !!logRow.modelData.name }
@@ -1681,6 +1886,7 @@ Item {
         Rectangle {
         visible: logRow.modelData.kind === "todo"
         anchors.fill: parent
+        anchors.leftMargin: (logRow.modelData.depth || 0) * 16
         readonly property var modelData: logRow.modelData.kind === "todo" ? logRow.modelData.t : ({ id: "", title: "", group: "", counts: { doing: 0 }, logCount: 0 })
         readonly property bool sel: modelData.id === tasks.selectedId
         radius: 12
@@ -1958,17 +2164,30 @@ Item {
           return n
         }
         readonly property bool sel: modelData.kind !== "sub" && navIndex === tasks.progressIndex && tasks.progressPane === "list"
-        readonly property real indent: modelData.kind === "group" ? 0 : modelData.kind === "todo" ? 18 : 44
+        readonly property real indent: (modelData.kind === "super" ? 0 : modelData.kind === "group" ? 0 : modelData.kind === "todo" ? 18 : 44)
+                                       + (modelData.depth || 0) * 16
         x: indent
         width: progressList.width - indent
         height: modelData.kind === "sub" ? 24 : 36
         radius: 12
         color: modelData.kind === "sub" ? "transparent"
           : modelData.kind === "group" && tasks.armedGroup !== "" && tasks.armedGroup === modelData.name ? Qt.rgba(1, 0.4, 0.4, 0.65)
+          : modelData.kind === "super" ? tasks.superHeadColor(modelData.name, sel, false)
           : sel ? Qt.rgba(1, 1, 1, 0.72) : tasks.cc.wash
         border.color: tasks.cc.ink
         border.width: sel ? 2 : 0
 
+        // super group
+        Rectangle { visible: prow.modelData.kind === "super"; width: 7; height: parent.height; radius: 3.5; color: tasks.superColor(prow.modelData.name) }
+        Row {
+          visible: prow.modelData.kind === "super"
+          x: 12; anchors.verticalCenter: parent.verticalCenter
+          spacing: 8
+          Text { text: prow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
+          Text { text: "\uf247"; color: tasks.superColor(prow.modelData.name); style: Text.Outline; styleColor: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 14; anchors.verticalCenter: parent.verticalCenter }
+          Text { text: prow.modelData.kind === "super" ? prow.modelData.name : ""; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: 16; anchors.verticalCenter: parent.verticalCenter }
+          Text { text: prow.modelData.kind !== "super" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+        }
         // group
         Row {
           visible: prow.modelData.kind === "group"
@@ -2012,7 +2231,7 @@ Item {
           anchors.right: pctText.left; anchors.rightMargin: 10
           anchors.verticalCenter: parent.verticalCenter
           width: parent.width * 0.3
-          value: prow.modelData.kind === "group" ? prow.modelData.pct : prow.modelData.kind === "todo" ? tasks.pct(prow.modelData.t) : 0
+          value: (prow.modelData.kind === "group" || prow.modelData.kind === "super") ? prow.modelData.pct : prow.modelData.kind === "todo" ? tasks.pct(prow.modelData.t) : 0
           fill: prow.modelData.kind === "group" && prow.modelData.name !== "" ? tasks.colorOf(prow.modelData.name) : tasks.cc.ink
         }
         Text {
@@ -2023,7 +2242,7 @@ Item {
           anchors.verticalCenter: parent.verticalCenter
           width: 38
           horizontalAlignment: Text.AlignRight
-          text: Math.round(100 * (prow.modelData.kind === "group" ? prow.modelData.pct : prow.modelData.kind === "todo" ? tasks.pct(prow.modelData.t) : 0)) + "%"
+          text: Math.round(100 * ((prow.modelData.kind === "group" || prow.modelData.kind === "super") ? prow.modelData.pct : prow.modelData.kind === "todo" ? tasks.pct(prow.modelData.t) : 0)) + "%"
           color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 12; font.bold: true
         }
         CcButton {
@@ -2183,11 +2402,16 @@ Item {
     property int index: 0
     property bool archived: false          // opened on an archived todo
     property string headGroup: ""          // opened on a group heading
+    property string headSuper: ""          // opened on a super group heading
     property string armed: ""              // group waiting for the second d
     readonly property var groupNames: tasks.allGroupNames()
     // items: each group, "no group", then actions (on a heading: group actions)
-    readonly property var items: headGroup !== ""
+    readonly property var items: headSuper !== ""
+      ? [{ kind: "renameSuper", name: headSuper }, { kind: "deleteSuper", name: headSuper }]
+      : headGroup !== ""
       ? [{ kind: "archiveGroup", name: headGroup }, { kind: "deleteGroup", name: headGroup }]
+        .concat(Object.keys(tasks.supersMap).sort().map(function(sp) { return { kind: "intoSuper", name: sp } }))
+        .concat(tasks.superOf(headGroup) ? [{ kind: "outOfSuper", name: tasks.superOf(headGroup) }] : [])
       : groupNames.map(function(g) { return { kind: "group", name: g } })
         .concat([{ kind: "group", name: "" }])
         .concat(archived ? [{ kind: "restore" }, { kind: "delete" }]
@@ -2213,6 +2437,14 @@ Item {
     border.width: 2
     function run(it) {
       if (it.kind === "archiveGroup") { tasks.archiveGroup(it.name); visible = false; tasks.forceActiveFocus(); return }
+      if (it.kind === "intoSuper") { tasks.act(["super-set", headGroup, it.name]); visible = false; tasks.forceActiveFocus(); return }
+      if (it.kind === "outOfSuper") { tasks.act(["super-set", headGroup, ""]); visible = false; tasks.forceActiveFocus(); return }
+      if (it.kind === "renameSuper") { visible = false; tasks.startRenameSuper(it.name); return }
+      if (it.kind === "deleteSuper") {
+        if (armed !== "s:" + it.name) { armed = "s:" + it.name; return }
+        armed = ""
+        tasks.act(["super-delete", it.name]); visible = false; tasks.forceActiveFocus(); return
+      }
       if (it.kind === "deleteGroup") { deleteGroup(it.name); return }
       if (!todo) return
       if (it.kind === "group") tasks.act(["group", todo.id, it.name].concat(arch))
@@ -2231,8 +2463,10 @@ Item {
       // d d on a group (or on a heading's menu) deletes the group
       else if ((event.text === "d" || event.key === Qt.Key_Delete) && items[index] && (items[index].kind === "group" || items[index].kind === "deleteGroup") && items[index].name)
         deleteGroup(items[index].name)
+      else if ((event.text === "d" || event.key === Qt.Key_Delete) && headSuper !== "") run({ kind: "deleteSuper", name: headSuper })
+      else if ((event.text === "e" || event.key === Qt.Key_F2) && headSuper !== "") run({ kind: "renameSuper", name: headSuper })
       else if (event.text === "A" && headGroup !== "") { tasks.archiveGroup(headGroup); visible = false; tasks.forceActiveFocus() }
-      else if (event.text === "n" && headGroup === "") groupInput.forceActiveFocus()
+      else if (event.text === "n" && headSuper === "") groupInput.forceActiveFocus()
       else return
       event.accepted = true
     }
@@ -2241,7 +2475,8 @@ Item {
       x: 10; y: 10
       width: parent.width - 20
       spacing: 3
-      CcHeading { cc: tasks.cc; text: menu.headGroup !== "" ? "GROUP · " + menu.headGroup.toUpperCase() : "GROUP" }
+      CcHeading { cc: tasks.cc; text: menu.headSuper !== "" ? "SUPER GROUP · " + menu.headSuper.toUpperCase()
+        : menu.headGroup !== "" ? "GROUP · " + menu.headGroup.toUpperCase() : "GROUP" }
       Repeater {
         model: menu.items
         Rectangle {
@@ -2250,7 +2485,8 @@ Item {
           width: menuCol.width
           height: 24
           radius: 8
-          readonly property bool armedHere: menu.armed !== "" && (modelData.kind === "group" || modelData.kind === "deleteGroup") && modelData.name === menu.armed
+          readonly property bool armedHere: menu.armed !== "" && ((modelData.kind === "group" || modelData.kind === "deleteGroup") && modelData.name === menu.armed
+                                                            || modelData.kind === "deleteSuper" && "s:" + modelData.name === menu.armed)
           color: armedHere ? Qt.rgba(1, 0.4, 0.4, 0.6) : index === menu.index ? Qt.rgba(tasks.cc.ink.r, tasks.cc.ink.g, tasks.cc.ink.b, 0.15) : "transparent"
           Row {
             x: 6; anchors.verticalCenter: parent.verticalCenter
@@ -2259,7 +2495,11 @@ Item {
             Text {
               text: {
                 var it = parent.parent.modelData
-                if (parent.parent.armedHere) return "\uf1f8  d again: delete group " + it.name
+                if (parent.parent.armedHere) return "\uf1f8  d again: delete " + (it.kind === "deleteSuper" ? "super group " : "group ") + it.name
+                if (it.kind === "intoSuper") return "\uf247  into super group " + it.name + (tasks.superOf(menu.headGroup) === it.name ? "  \uf00c" : "")
+                if (it.kind === "outOfSuper") return "\uf057  out of super group " + it.name
+                if (it.kind === "renameSuper") return "\uf044  rename super group  (e)"
+                if (it.kind === "deleteSuper") return "\uf1f8  delete super group  (d d)"
                 if (it.kind === "archiveGroup") return "\uf187  archive the whole group"
                 if (it.kind === "deleteGroup") return "\uf1f8  delete group  (d d)"
                 if (it.kind === "group") return (it.name === "" ? "no group" : it.name) + (menu.todo && menu.todo.group === it.name ? "  " : "")
@@ -2276,15 +2516,19 @@ Item {
         visible: menu.headGroup === "" && !menu.archived
         width: menuCol.width
         wrapMode: Text.Wrap
-        text: "d d on a group deletes it (its todos just lose the group)"
+        text: menu.headSuper !== "" ? "deleting a super group keeps its groups" : "d d on a group deletes it (its todos just lose the group)"
         color: tasks.cc.ink; opacity: 0.55
         font.family: tasks.cc.font; font.pixelSize: 9
       }
       Field {
-        visible: menu.headGroup === ""
+        visible: menu.headSuper === ""
         width: menuCol.width
-        placeholder: "new group…  (n)"
-        onAccepted: t => { if (menu.todo) tasks.act(["group", menu.todo.id, t].concat(menu.arch)); menu.visible = false; tasks.forceActiveFocus() }
+        placeholder: menu.headGroup !== "" ? "new super group for it…  (n)" : "new group…  (n)"
+        onAccepted: t => {
+          if (menu.headGroup !== "") tasks.act(["super-set", menu.headGroup, t])
+          else if (menu.todo) tasks.act(["group", menu.todo.id, t].concat(menu.arch))
+          menu.visible = false; tasks.forceActiveFocus()
+        }
         Component.onCompleted: groupInput = input
       }
     }
@@ -2543,7 +2787,7 @@ Item {
     color: tasks.cc.paper
     border.color: tasks.cc.ink
     border.width: 2
-    CcHeading { x: 16; y: 14; cc: tasks.cc; text: "RENAME GROUP · " + tasks.renamingGroup.toUpperCase() }
+    CcHeading { x: 16; y: 14; cc: tasks.cc; text: (tasks.renamingIsSuper ? "RENAME SUPER GROUP · " : "RENAME GROUP · ") + tasks.renamingGroup.toUpperCase() }
     Rectangle {
       x: 14; y: 40
       width: parent.width - 28
@@ -2562,7 +2806,7 @@ Item {
         font.pixelSize: 13
         clip: true
         Keys.onReturnPressed: tasks.finishRenameGroup(text.trim())
-        Keys.onEscapePressed: { tasks.renamingGroup = ""; tasks.forceActiveFocus() }
+        Keys.onEscapePressed: { tasks.renamingGroup = ""; tasks.renamingIsSuper = false; tasks.forceActiveFocus() }
       }
     }
   }

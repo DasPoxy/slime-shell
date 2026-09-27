@@ -116,7 +116,7 @@ falls off with it, or turns up trapped in a panel's ooze.
   centre's Tasks tab, or as a pop-out over everything (`omarchy-shell
   slime-shell tasks`). The slime has swallowed a whole tavern: signs on a
   beam, mead barrels, a bar, broken boards, and bards, knights, rogues and
-  orcs adrift in the goo. Todos with sub-todos and coloured groups; a live
+  orcs adrift in the goo. Todos with sub-todos, coloured groups and super groups; a live
   task log that you and your agents (`slime-tasks`) write to while sub-todos
   shift across *to do / in progress / done*; progress by group with an
   archive. Fully keyboard driven, drag to reorder, plain markdown in

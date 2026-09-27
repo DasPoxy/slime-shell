@@ -46,6 +46,10 @@ Commands (all print JSON; errors go to stderr with exit status 1):
   group-order GROUP [GROUP ...]     put groups in this order
   group-delete GROUP                remove a group (its todos become ungrouped)
   group-rename OLD NEW              rename a group (keeps its colour and place)
+  super-set GROUP SUPER             put a group in a super group ("" takes it out)
+  super-rename OLD NEW              rename a super group
+  super-delete SUPER                remove a super group (its groups are kept)
+  super-order SUPER [SUPER ...]     put super groups in this order
   group-archive GROUP               archive every todo in a group
   log ID MESSAGE [--by WHO] [--sub N]  append a task-log entry (about sub-todo N)
   log-show ID                       -> {"entries": [{n, time, by, sub, text}]}
@@ -209,9 +213,28 @@ def group_order(root):
         return []
 
 
-def save_groups(root, g, order=None):
+def group_file(root):
+    try:
+        with open(os.path.join(root, ".slime", "groups.json")) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def supers(root):
+    """Super groups: {name: {color}} (a group names its super in groups[g]["super"])."""
+    return group_file(root).get("supers", {})
+
+
+def super_order(root):
+    return group_file(root).get("superOrder", [])
+
+
+def save_groups(root, g, order=None, sup=None, sorder=None):
     write(os.path.join(root, ".slime", "groups.json"),
-          json.dumps({"groups": g, "order": group_order(root) if order is None else order}, indent=2) + "\n")
+          json.dumps({"groups": g, "order": group_order(root) if order is None else order,
+                      "supers": supers(root) if sup is None else sup,
+                      "superOrder": super_order(root) if sorder is None else sorder}, indent=2) + "\n")
 
 
 def log_entries(root, tid, archived=False):
@@ -336,7 +359,8 @@ def run(argv):
         todos = [summary(root, i, archived) for i in all_ids(root, archived)]
         # hand-set order first (0 = never ordered), then oldest first
         todos.sort(key=lambda t: (t["order"] or 10**9, t["created"] or ""))
-        return {"folder": root, "groups": groups(root), "groupOrder": group_order(root), "todos": todos}
+        return {"folder": root, "groups": groups(root), "groupOrder": group_order(root),
+                "supers": supers(root), "superOrder": super_order(root), "todos": todos}
     if cmd == "log-show":
         return {"title": load(root, rest[0], archived)["title"], "entries": log_entries(root, rest[0], archived)}
     if cmd in ("search", "find"):
@@ -398,6 +422,54 @@ def run(argv):
             g.pop(name, None)
             save_groups(root, g, [x for x in group_order(root) if x != name])
             return {"deleted": name, "ungrouped": n}
+        # ---- super groups (groups of groups) ----
+        if cmd == "super-set":
+            # put GROUP into SUPER ("" takes it out); the super is made if new
+            grp, sup = rest[0].strip(), " ".join(rest[1:]).strip()
+            g, sp = groups(root), supers(root)
+            if not grp:
+                raise Fail("super-set needs a group")
+            g.setdefault(grp, {"color": PALETTE[len(g) % len(PALETTE)]})
+            if sup:
+                if sup in g:
+                    raise Fail(f"'{sup}' is already a group's name")
+                sp.setdefault(sup, {"color": PALETTE[(len(sp) + 3) % len(PALETTE)]})
+                g[grp]["super"] = sup
+            else:
+                g[grp].pop("super", None)
+            so = super_order(root)
+            if sup and sup not in so:
+                so = so + [sup]
+            save_groups(root, g, sup=sp, sorder=so)
+            return {"group": grp, "super": sup}
+        if cmd == "super-rename":
+            old, new = rest[0].strip(), " ".join(rest[1:]).strip()
+            sp = supers(root)
+            if old not in sp or not new:
+                raise Fail(f"no super group '{old}'" if old not in sp else "super-rename needs a new name")
+            if new != old and (new in sp or new in groups(root)):
+                raise Fail(f"'{new}' is already taken")
+            sp[new] = sp.pop(old)
+            g = groups(root)
+            for v in g.values():
+                if v.get("super") == old:
+                    v["super"] = new
+            save_groups(root, g, sup=sp, sorder=[new if x == old else x for x in super_order(root)])
+            return {"renamed": old, "to": new}
+        if cmd == "super-delete":
+            # the super goes; its groups stay, just no longer inside it
+            name = " ".join(rest).strip()
+            sp, g = supers(root), groups(root)
+            sp.pop(name, None)
+            for v in g.values():
+                if v.get("super") == name:
+                    v.pop("super", None)
+            save_groups(root, g, sup=sp, sorder=[x for x in super_order(root) if x != name])
+            return {"deleted": name}
+        if cmd == "super-order":
+            names = [n for n in rest if n]
+            save_groups(root, groups(root), sorder=names + [n for n in super_order(root) if n not in names])
+            return {"superOrder": super_order(root)}
         if cmd == "group-rename":
             old, new = rest[0].strip(), " ".join(rest[1:]).strip()
             if not old or not new:
