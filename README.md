@@ -94,7 +94,8 @@ falls off with it, or turns up trapped in a panel's ooze.
   or portrait screens. Keyboard driven too: arrows move a highlight between controls,
   Enter presses, ←/→ turn sliders, 1–6 or Ctrl+Tab switch tabs, **t** folds
   the tab sidebar down to icons (or the arrow at its corner), **?** shows
-  the keys (Settings → Command centre to turn it off).
+  the keys (Settings → Command centre to turn it off). Its text size has its
+  own slider (80–140%).
 - **Widgets** — launcher, workspaces, agents (its robot gets worried as your
   session usage climbs), media, clock & weather, indicators, tray, treasure
   chest (widget picker), bluetooth, network, audio, display, power, keyboard
@@ -112,15 +113,28 @@ falls off with it, or turns up trapped in a panel's ooze.
 - **Launcher** — fuzzy search over apps, every Omarchy menu command (`>` for
   commands only) and your files (`/` for files only); drips from the bar when
   clicked, floats centred when summoned by keybind.
+- **Dock** (SlimeS-Dock) — apps, folders and files in a lump of the bar's
+  own slime on any edge the bar isn't on, dripping like the bar. Centred or
+  at either end (where it melts into the corner slime), optionally hidden
+  until hovered — hidden, it draws nothing at all. **+** oozes out a panel to
+  search and add apps; drag folders and files onto it; right-click an icon
+  for a slime menu to launch, move or remove it:
+
+  ![The dock](docs/images/dock.png)
 - **Notifications** — toasts drip out of the bar (top bar).
 - **Slime-Tasks** — a todo, task-log and progress suite in the command
   centre's Tasks tab, or as a pop-out over everything (`omarchy-shell
   slime-shell tasks`). The slime has swallowed a whole tavern: signs on a
   beam, mead barrels, a bar, broken boards, and bards, knights, rogues and
-  orcs adrift in the goo. Todos with sub-todos, coloured groups and super groups; a live
-  task log that you and your agents (`slime-tasks`) write to while sub-todos
-  shift across *to do / in progress / done*; progress by group with an
-  archive. Fully keyboard driven, drag to reorder, plain markdown in
+  orcs adrift in the goo. Todos with sub-todos, coloured groups and super
+  groups (groups of groups); pictures pinned to sub-todos (a drip-panel file
+  picker, or drop them on); a live task log that you and your agents
+  (`slime-tasks`) write to while sub-todos shift across *to do / in progress
+  / done*, tagged super group › group › todo › sub-todo and viewable per todo
+  or across everything by todo, group or super group (**L** jumps from any
+  of them to its part of the log); progress by group with an archive that
+  takes and gives back whole groups and super groups. Fully keyboard driven,
+  drag to reorder, plain markdown in
   `~/Documents/Slime-Notes` so Envy or any notes app can open it:
   [docs/tasks.md](docs/tasks.md).
 
@@ -176,6 +190,7 @@ o.bind("SUPER + R",                "Slime launcher",             "omarchy-shell 
 o.bind("SUPER + ALT + S",          "Slime settings",             "omarchy-shell slime-shell toggleTab settings")
 o.bind("SUPER + ALT + M",          "Slime system monitor",       "omarchy-shell slime-shell toggleTab system")
 o.bind("SUPER + ALT + X",          "Slime tasks",                "omarchy-shell slime-shell toggleTab tasks")
+o.bind("SUPER + ALT + W",          "Slime wallpapers",           "omarchy-shell slime-shell toggleTab wallpapers")
 o.bind("SUPER + CTRL + SHIFT + Z", "Slime above/behind windows", "omarchy-shell slime-shell toggleLayer")
 o.bind("SUPER + CTRL + SHIFT + RETURN", "Slime-Tasks pop-out",      "omarchy-shell slime-shell tasks")
 ```
@@ -228,7 +243,9 @@ Command centre → **Settings** (sections fold open and closed):
   anime, manga, print, cel, sketch)
 - **Font & clock** — system font or a display face (blobby, drippy, bubble,
   runic; styro, nippo, array when installed), date/time order
-- **Motion** — frame rate, drip style, drip amount
+- **Motion** — frame rate, drip style, drip amount; with the cava style,
+  its bar count, bass → treble or mirrored, sensitivity, reach, thickness
+  and smoothing
 - **Updates** — check GitHub, update & restart
 - **Widgets** — each Slime widget's settings, and a button for every bar
   widget (yours and third-party) that drips its panel open
@@ -249,7 +266,7 @@ git -C ~/Work/slime-shell pull && omarchy restart shell
 
 | Path | What |
 |---|---|
-| `plugins/slime.bar/` | the bar; `shaders/slime.frag` (the skin), `commandcenter/`, `ui/` (shared panels, monsters, gear, debris), `fonts/` |
+| `plugins/slime.bar/` | the bar; `shaders/slime.frag` (the skin), `commandcenter/`, `dock/` (the dock's icons, menu and apps panel), `ui/` (shared panels, monsters, gear, debris), `fonts/` |
 | `plugins/slime.*` | widgets, mostly cloned from Omarchy's and restyled |
 | `plugins/slime.notifications/` | notification service |
 | `layouts/default.json` | the bar layout `slime-shell use` installs |
@@ -265,7 +282,8 @@ exactly the bar — so widget panels, including third-party ones, size and
 place themselves as they would on Omarchy's own bar — and a second,
 fixed-size, click-through window just past it carries the drips and the
 command centre. Both run the same shader with the same inputs, so the goo is
-seamless across them.
+seamless across them. The corner patches and the dock are more small windows
+running that shader with their own shapes.
 
 After editing the shader, recompile it:
 
