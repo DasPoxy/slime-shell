@@ -41,9 +41,9 @@ heading), and **Enter / Space / →** on a heading to unfold it. On the
 Progress tab **→ / ←** first open and close a todo's sub-todos. Each tab
 remembers its own folds across restarts.
 - Task Log: todos are grouped and ordered like on the Todo tab · **L** (here
-  or on the Todo tab) jumps straight to the selected todo's log — and on a
-  highlighted super group, group or sub-todo (in the lanes), to that section
-  of the log · **↑↓** pick ·
+  or on the Todo tab) jumps straight to the highlighted thing's section of
+  the log — a super group, group, todo or sub-todo (in the Todo tab's
+  sub-todo list, or the Task Log's lanes) · **↑↓** pick ·
   **→/Enter** into the lanes, then **→/Space** move a sub-todo on and **←**
   back · **↓** past the last lane item goes on into the log, where **↑↓** pick
   an entry · **s** / **S** cycle how the log is shown: this todo's newest

@@ -105,6 +105,15 @@ Item {
   // todo's or sub-todo's section of the log (switching the log's view to one
   // that has that section, and unfolding the way there)
   property var logJumpTo: null                // {what, name} of the heading to land on
+  // L on the Todo tab: over to the Task Log with the same thing highlighted
+  // there (super group, group, todo or sub-todo), then on to its section
+  function jumpLogFromTodo(what, name) {
+    tab = "log"
+    if (what === "super" || what === "group") { logPane = "list"; logCursor = (what === "super" ? "s:" : "g:") + name }
+    else if (what === "sub") { logPane = "lanes"; logCursor = ""; logSub = name }
+    else { logPane = "list"; logCursor = "" }
+    jumpLogHere()
+  }
   function jumpLogHere() {
     var what = "", name = "", mode = logMode, vals = []
     if (logPane === "list" && logCursor.indexOf("s:") === 0) {
@@ -938,7 +947,8 @@ Item {
       var t = selected
       if (pane === "list" && cursor.indexOf("s:") === 0) {
         // resting on a super group's heading
-        if (!superKeys(cursor.slice(2), "", k, txt, up, down, event.modifiers & Qt.ShiftModifier, moveCursor)) return
+        if (txt === "L") jumpLogFromTodo("super", cursor.slice(2))
+        else if (!superKeys(cursor.slice(2), "", k, txt, up, down, event.modifiers & Qt.ShiftModifier, moveCursor)) return
       } else if (pane === "list" && cursor !== "") {
         // resting on a group heading
         var gname = cursor.slice(2)
@@ -951,6 +961,7 @@ Item {
         else if (txt === "e" || k === Qt.Key_F2) startRenameGroup(gname)
         else if (txt === "d" || k === Qt.Key_Delete) deleteGroupKey(gname)
         else if (txt === "A") archiveGroup(gname)
+        else if (txt === "L") jumpLogFromTodo("group", gname)
         else if (txt === "n") newInput.forceActiveFocus()
         else if (txt === "f") showDone = !showDone
         else return
@@ -968,7 +979,7 @@ Item {
         else if (txt === "a" && t) subInput.forceActiveFocus()
         else if ((txt === "e" || k === Qt.Key_F2) && t) { renameInput.text = t.title; renameInput.forceActiveFocus() }
         else if (txt === "g" && t) openMenu(t, tasks.width * 0.2, 120)
-        else if (txt === "L" && t) jumpLog()
+        else if (txt === "L" && t) jumpLogFromTodo("todo", t.id)
         else if (txt === "A" && t) act(["archive", t.id])
         else if ((txt === "d" || k === Qt.Key_Delete) && t) remove(t.id)
         else if (txt === "f") showDone = !showDone
@@ -987,6 +998,7 @@ Item {
         else if (k === Qt.Key_Space && t && n) cycle(t, subIndex)
         else if ((k === Qt.Key_Return || k === Qt.Key_Enter) && t && n) openSub(t, subIndex, false)
         else if (txt === "a" && t) subInput.forceActiveFocus()
+        else if (txt === "L" && t && n) jumpLogFromTodo("sub", subIndex)
         else if ((txt === "e" || k === Qt.Key_F2) && t && n) { subEdit.index = subIndex; subEdit.text = t.subs[subIndex].text; subEdit.forceActiveFocus() }
         else if ((txt === "d" || k === Qt.Key_Delete) && t && n) { act(["sub-delete", t.id, String(subIndex)]); subIndex = Math.max(0, subIndex - 1) }
         else if (txt === "K" && t && subIndex > 0) { act(["sub-move", t.id, String(subIndex), String(subIndex - 1)]); subIndex-- }
@@ -3044,7 +3056,7 @@ Item {
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space", "to do → in progress → done"], ["Enter", "open it over the panel (c copy · e edit)"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
           ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
-          ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["L  on a super group, group, todo or sub-todo", "jump to its section of the log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Enter on a sub-todo", "open it over the panel"],
+          ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["L  on a super group, group, todo or sub-todo (here or on the Todo tab)", "jump to its section of the log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Enter on a sub-todo", "open it over the panel"],
                         ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
           ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
                         ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list (you stay in the archive)"], ["r  on an archive heading", "restore the whole group / super group"], ["g  /  right-click", "group, restore or delete an archived list"], ["←  z  /  Enter  →  on a heading", "fold / unfold an archive group"], ["↑ at the top  Esc", "back up"]]]
