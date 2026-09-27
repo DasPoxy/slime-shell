@@ -362,6 +362,9 @@ Item {
   onCcTabChanged: skinSaveTimer.restart()
   onCcSectionsChanged: skinSaveTimer.restart()
   property bool commandCenterOpen: false
+  // Slime-Tasks as a pop-out in the middle of the screen, over everything
+  // (omarchy-shell slime-shell tasks)
+  property bool tasksPopOpen: false
   // The window a hovered media widget has borrowed the keyboard for (space
   // to play/pause, m to mute: SlimeMediaKeys), or null.
   property var hoverKeysWindow: null
@@ -401,6 +404,7 @@ Item {
 
   // ...and the command centre opening closes whichever widget panel is open.
   onCommandCenterOpenChanged: {
+    if (commandCenterOpen) tasksPopOpen = false
     if (!commandCenterOpen || !activePopout) return
     if ("closeForPopoutSwitch" in activePopout) activePopout.closeForPopoutSwitch()
     else if ("close" in activePopout) activePopout.close()
@@ -427,6 +431,8 @@ Item {
     // Open the command centre on a tab: home, system, wallpapers, tasks, startup, settings.
     function tab(name: string): void { root.ccTab = name; root.commandCenterOpen = root.slimeSkin }
     // Keybind-friendly: open on that tab, or close if it's already showing it.
+    // Slime-Tasks pop-out, centred on the focused screen
+    function tasks(): void { root.tasksPopOpen = !root.tasksPopOpen }
     function toggleTab(name: string): void {
       if (root.commandCenterOpen && root.ccTab === name) { root.commandCenterOpen = false; return }
       root.ccTab = name
@@ -2397,6 +2403,41 @@ Item {
       }
     }
 
+
+    // ---- Slime-Tasks pop-out: the Tasks tab in a floating drip panel ----
+    QtObject {
+      id: tasksLook                     // what the Tasks tab reads off the command centre
+      readonly property var bar: root
+      readonly property color ink: root.slimeInk
+      readonly property color slime: root.slimeColor
+      readonly property color paper: root.paperColor
+      readonly property string font: root.fontFamily
+      readonly property string displayFont: root.displayFontFamily
+      readonly property int displayWeight: root.displayWeight
+      readonly property color wash: Qt.rgba(1, 1, 1, 0.45)
+    }
+    QtObject { id: tasksPopOwner; function close() { root.tasksPopOpen = false } }
+    SlimeKeyboardPanel {
+      id: tasksPop
+      anchorItem: barStrip
+      bar: root
+      owner: tasksPopOwner
+      floating: true
+      open: root.tasksPopOpen && root.slimeSkin && !!barWindow.screen && !!Hyprland.focusedMonitor
+        && Hyprland.focusedMonitor.name === barWindow.screen.name
+      contentWidth: Math.min(1040, barWindow.screen ? barWindow.screen.width - 120 : 1040)
+      contentHeight: Math.min(700, barWindow.screen ? barWindow.screen.height - 160 : 700)
+      Loader {
+        anchors.fill: parent
+        active: tasksPop.open || tasksPop.visible
+        sourceComponent: TasksTab {
+          cc: tasksLook
+          closeRequest: function() { root.tasksPopOpen = false }
+          Component.onCompleted: { tasksPop.focusTarget = this; forceActiveFocus() }
+        }
+        onLoaded: { item.width = Qt.binding(function() { return width }); item.height = Qt.binding(function() { return height }) }
+      }
+    }
 
     PopupWindow {
       id: tooltipWindow

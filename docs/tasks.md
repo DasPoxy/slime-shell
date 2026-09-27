@@ -6,20 +6,28 @@ tavern the slime has swallowed whole. Three signs hang from the beam:
 | Tab | What it's for |
 |---|---|
 | **Todo** | Top-level todos, grouped and colour-coded. Each opens into its own list of sub-todos, which move *to do → in progress → done*. |
-| **Task Log** | What's being worked on: each todo's sub-todos in *to do / in progress / done* lanes, and its log of progress notes and output (newest first). Agents fill this in as they work. |
+| **Task Log** | What's being worked on: each todo's sub-todos in *to do / in progress / done* lanes, and its log of progress notes and output (newest first). Agents fill this in as they work, and so can you: click a sub-todo to move it a lane on (right-click: back), and write your own log entries. |
 | **Progress** | How far along every group and todo is, in collapsible sections. Archive finished lists; search the archive and restore them. |
+
+**Pop-out:** `omarchy-shell slime-shell tasks` (suggested key: **Super+Ctrl+Shift+Return**)
+opens the whole suite in a floating panel in the middle of the screen, over
+everything. **Esc** closes it.
 
 Everything is keyboard driven — press **?** in the tab for the full list:
 
 - **Tab / 1 2 3** switch tabs · **Esc** backs out (or closes the command centre)
 - Todo: **↑↓** pick · **→/Enter** open sub-todos · **n** new · **a** add sub-todo ·
   **Space** finish / cycle a sub-todo · **e** rename/edit · **g** group menu ·
-  **A** archive · **d d** delete · **f** show/hide finished · **J/K** reorder sub-todos
-- Task Log: **↑↓** pick · **PgUp/PgDn** scroll the log
+  **A** archive · **d d** delete · **f** show/hide finished ·
+  **J/K** or **Shift+↑↓** move the todo / sub-todo
+- Task Log: **↑↓** pick · **→/Enter** into the lanes, then **→/Space** move a
+  sub-todo on and **←** back · **w** write in the log · **PgUp/PgDn** scroll
 - Progress: **↑↓** pick · **Enter/Space** expand · **A** archive · **/** search the archive
 
 Right-click a todo for the same group menu (existing groups, a new one, no
-group, rename, archive, delete). Each group gets its own colour.
+group, rename, archive, delete). Each group gets its own colour. Drag todos
+and sub-todos to reorder them; drop a todo in another group (or on its
+heading) to move it there.
 
 ## Where it's stored
 
@@ -79,6 +87,7 @@ slime-tasks start <id> <n> "picking this up" --by claude     # -> in progress, l
 slime-tasks log <id> "progress, output, findings…" --by claude
 slime-tasks finish <id> <n> "done: 12 tests pass" --by claude  # -> done, logged
 slime-tasks sub-set <id> <n> todo|doing|done [--expect TEXT]
+slime-tasks order <id> <id> …                   # put todos in this order
 slime-tasks archive <id>   /   unarchive <id>
 slime-tasks --help                              # everything else
 ```

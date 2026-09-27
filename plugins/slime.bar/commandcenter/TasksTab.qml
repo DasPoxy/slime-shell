@@ -19,6 +19,8 @@ Item {
 
   property var cc: null
   readonly property var bar: cc ? cc.bar : null
+  // set when shown somewhere other than the command centre (the pop-out)
+  property var closeRequest: null
   readonly property string script: Qt.resolvedUrl("slime_tasks.py").toString().replace("file://", "")
 
   // ---- data -------------------------------------------------------------------
@@ -41,6 +43,8 @@ Item {
   property int progressIndex: 0
   property string archiveQuery: ""
   property bool showNotes: false
+  property string logPane: "list"             // log tab: list | lanes
+  property int logSub: 0                      // which sub-todo, in the lanes
 
   implicitHeight: 620
   focus: true
@@ -183,7 +187,7 @@ Item {
     if (tab === "progress" && !archiveLister.running) archiveLister.running = true
   }
   onTabChanged: refresh()
-  onSelectedIdChanged: { logEntries = []; subIndex = 0; if (tab === "log") refresh() }
+  onSelectedIdChanged: { logEntries = []; subIndex = 0; logSub = 0; if (tab === "log") refresh() }
   onArchiveQueryChanged: refresh()
   // agents edit the files while you watch: keep polling while the tab is up
   Timer { interval: 2000; repeat: true; running: tasks.visible; triggeredOnStart: true; onTriggered: tasks.refresh() }
@@ -193,6 +197,45 @@ Item {
     if (order.length === 0) return
     var i = order.indexOf(selectedId)
     selectedId = order[Math.max(0, Math.min(order.length - 1, (i < 0 ? 0 : i + delta)))]
+  }
+  // ---- reordering -------------------------------------------------------------
+  // every active todo's id, in stored order (what `order` rewrites)
+  readonly property var storedOrder: todos.map(function(t) { return t.id })
+  // put `id` before (after=false) or after `targetId`, joining targetId's group
+  function placeTodo(id, targetId, after, group) {
+    if (id === targetId) return
+    var ids = storedOrder.filter(function(x) { return x !== id })
+    var at = ids.indexOf(targetId)
+    if (at < 0) return
+    ids.splice(after ? at + 1 : at, 0, id)
+    var moving = null
+    for (var i = 0; i < todos.length; i++) if (todos[i].id === id) moving = todos[i]
+    if (moving && group !== undefined && (moving.group || "") !== group) act(["group", id, group])
+    act(["order"].concat(ids))
+  }
+  // keyboard: swap with the neighbour in the same group (shown order)
+  function nudgeTodo(dir) {
+    var t = selected
+    if (!t) return
+    var same = todoOrder.filter(function(id) {
+      for (var i = 0; i < todos.length; i++) if (todos[i].id === id) return (todos[i].group || "") === (t.group || "")
+      return false
+    })
+    var i = same.indexOf(t.id), j = i + dir
+    if (i < 0 || j < 0 || j >= same.length) return
+    placeTodo(t.id, same[j], dir > 0, t.group || "")
+  }
+  // drag state (todos: list rows; subs: sub rows)
+  property string dragTodo: ""
+  property int dragSub: -1
+  property real dropY: -1                      // marker, in the list's coordinates
+
+  // move a sub-todo one lane on (+1) or back (-1)
+  function shift(t, i, dir) {
+    var order = ["todo", "doing", "done"]
+    var s = t.subs[i]
+    var n = order[Math.max(0, Math.min(2, order.indexOf(s.state) + dir))]
+    if (n !== s.state) act(["sub-set", t.id, String(i), n, "--expect", s.text])
   }
   function cycle(t, i) {
     var s = t.subs[i]
@@ -226,15 +269,17 @@ Item {
     if (txt === "1" || txt === "2" || txt === "3") { tab = ["todo", "log", "progress"][Number(txt) - 1]; event.accepted = true; return }
     var up = k === Qt.Key_Up || txt === "k", down = k === Qt.Key_Down || txt === "j"
     // Esc with nothing to back out of closes the command centre
-    if (k === Qt.Key_Escape && !(tab === "todo" && pane === "subs") && !showHelp) {
-      if (bar) bar.commandCenterOpen = false
+    if (k === Qt.Key_Escape && !(tab === "todo" && pane === "subs") && !(tab === "log" && logPane === "lanes") && !showHelp) {
+      if (closeRequest) closeRequest()
+      else if (bar) bar.commandCenterOpen = false
       event.accepted = true; return
     }
     if (k === Qt.Key_Escape && showHelp) { showHelp = false; event.accepted = true; return }
     if (tab === "todo") {
       var t = selected
       if (pane === "list") {
-        if (up || down) select(up ? -1 : 1, todoOrder)
+        if ((up || down) && (event.modifiers & Qt.ShiftModifier)) nudgeTodo(up ? -1 : 1)
+        else if (up || down) select(up ? -1 : 1, todoOrder)
         else if (k === Qt.Key_Right || k === Qt.Key_Return || k === Qt.Key_Enter || txt === "l") {
           if (t && t.subs.length) { pane = "subs"; subIndex = Math.min(subIndex, t.subs.length - 1) } else if (t) subInput.forceActiveFocus()
         }
@@ -246,10 +291,16 @@ Item {
         else if (txt === "A" && t) act(["archive", t.id])
         else if ((txt === "d" || k === Qt.Key_Delete) && t) remove(t.id)
         else if (txt === "f") showDone = !showDone
+        else if (txt === "J" || (k === Qt.Key_Down && (event.modifiers & Qt.ShiftModifier))) nudgeTodo(1)
+        else if (txt === "K" || (k === Qt.Key_Up && (event.modifiers & Qt.ShiftModifier))) nudgeTodo(-1)
         else return
       } else {
         var n = t ? t.subs.length : 0
-        if (up) subIndex = Math.max(0, subIndex - 1)
+        if ((up || down) && (event.modifiers & Qt.ShiftModifier) && t) {
+          var to = subIndex + (up ? -1 : 1)
+          if (to >= 0 && to < n) { act(["sub-move", t.id, String(subIndex), String(to)]); subIndex = to }
+        }
+        else if (up) subIndex = Math.max(0, subIndex - 1)
         else if (down) subIndex = Math.min(n - 1, subIndex + 1)
         else if (k === Qt.Key_Left || k === Qt.Key_Escape || txt === "h") pane = "list"
         else if ((k === Qt.Key_Space || k === Qt.Key_Return || k === Qt.Key_Enter) && t && n) cycle(t, subIndex)
@@ -261,10 +312,25 @@ Item {
         else return
       }
     } else if (tab === "log") {
-      if (up || down) select(up ? -1 : 1, logOrder.map(function(x) { return x.id }))
+      var lt = selected, ln = lt ? lt.subs.length : 0
+      if (txt === "w" && lt) logInput.forceActiveFocus()
       else if (k === Qt.Key_PageDown) logList.flick(0, -1600)
       else if (k === Qt.Key_PageUp) logList.flick(0, 1600)
-      else return
+      else if (logPane === "list") {
+        if (up || down) select(up ? -1 : 1, logOrder.map(function(x) { return x.id }))
+        else if ((k === Qt.Key_Right || k === Qt.Key_Return || k === Qt.Key_Enter || txt === "l") && ln) { logPane = "lanes"; logSub = Math.min(logSub, ln - 1) }
+        else return
+      } else {
+        if (up) logSub = Math.max(0, logSub - 1)
+        else if (down) logSub = Math.min(ln - 1, logSub + 1)
+        else if ((k === Qt.Key_Right || txt === "l" || k === Qt.Key_Space) && ln) shift(lt, logSub, 1)
+        else if ((k === Qt.Key_Left || txt === "h") && ln) {
+          if (lt.subs[logSub].state === "todo") logPane = "list"
+          else shift(lt, logSub, -1)
+        }
+        else if (k === Qt.Key_Escape) logPane = "list"
+        else return
+      }
     } else {
       var rows = progressRows.filter(function(r) { return r.kind !== "sub" })
       var r = rows[Math.min(progressIndex, rows.length - 1)]
@@ -582,6 +648,13 @@ Item {
         }
         highlightFollowsCurrentItem: false
         onCurrentIndexChanged: if (currentIndex >= 0) positionViewAtIndex(currentIndex, ListView.Contain)
+        Rectangle {
+          z: 10
+          visible: tasks.dragTodo !== "" && tasks.dropY >= 0
+          y: tasks.dropY - 1.5
+          width: parent.width; height: 3; radius: 1.5
+          color: tasks.cc.ink
+        }
         delegate: Item {
           id: row
           required property var modelData
@@ -594,7 +667,7 @@ Item {
             spacing: 6
             anchors.verticalCenter: parent.verticalCenter
             Rectangle { width: 12; height: 12; radius: 6; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(row.modelData.name); border.color: tasks.cc.ink; border.width: 1.2; visible: row.modelData.name !== "" }
-            CcHeading { cc: tasks.cc; text: row.modelData.name === "" ? "NO GROUP" : row.modelData.name.toUpperCase() }
+            CcHeading { cc: tasks.cc; text: !row.modelData.name ? "NO GROUP" : row.modelData.name.toUpperCase() }
           }
           // a todo
           Rectangle {
@@ -602,6 +675,7 @@ Item {
             anchors.fill: parent
             readonly property var t: row.modelData.t
             readonly property bool sel: t && t.id === tasks.selectedId
+            opacity: t && tasks.dragTodo === t.id ? 0.45 : 1
             radius: 12
             color: tasks.armedDelete !== "" && t && tasks.armedDelete === t.id ? Qt.rgba(1, 0.4, 0.4, 0.6) : sel ? Qt.rgba(1, 1, 1, 0.72) : tasks.cc.wash
             border.color: tasks.cc.ink
@@ -637,10 +711,44 @@ Item {
               font.family: tasks.cc.font; font.pixelSize: 11
             }
             MouseArea {
+              id: todoMouse
               anchors.fill: parent
               anchors.leftMargin: 34
               acceptedButtons: Qt.LeftButton | Qt.RightButton
-              cursorShape: Qt.PointingHandCursor
+              cursorShape: tasks.dragTodo !== "" ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+              preventStealing: true
+              property real pressY: 0
+              property bool dragging: false
+              onPressed: mouse => { pressY = mouse.y; dragging = false }
+              onPositionChanged: mouse => {
+                if (!(mouse.buttons & Qt.LeftButton)) return
+                if (!dragging && Math.abs(mouse.y - pressY) > 6) { dragging = true; tasks.dragTodo = parent.t.id; tasks.selectedId = parent.t.id }
+                if (dragging) {
+                  var p = mapToItem(todoList.contentItem, mouse.x, mouse.y)
+                  var i = todoList.indexAt(20, p.y)
+                  var it = i >= 0 ? todoList.itemAtIndex(i) : null
+                  tasks.dropY = it ? (tasks.todoRows[i].kind === "group" || p.y < it.y + it.height / 2 ? it.y - 3 : it.y + it.height + 2) - todoList.contentY : -1
+                }
+              }
+              onReleased: mouse => {
+                if (!dragging) return
+                dragging = false
+                var p = mapToItem(todoList.contentItem, mouse.x, mouse.y)
+                var i = todoList.indexAt(20, p.y)
+                var rows = tasks.todoRows
+                if (i >= 0) {
+                  var r = rows[i], it = todoList.itemAtIndex(i)
+                  if (r.kind === "group") {
+                    // on a group's heading: to the top of that group
+                    var first = rows[i + 1]
+                    if (first && first.kind === "todo") tasks.placeTodo(tasks.dragTodo, first.t.id, false, r.name)
+                  } else {
+                    tasks.placeTodo(tasks.dragTodo, r.t.id, p.y > it.y + it.height / 2, r.t.group || "")
+                  }
+                }
+                tasks.dragTodo = ""
+                tasks.dropY = -1
+              }
               onClicked: mouse => {
                 tasks.selectedId = parent.t.id
                 tasks.pane = "list"
@@ -746,6 +854,13 @@ Item {
         model: tasks.selected ? tasks.selected.subs : []
         currentIndex: tasks.subIndex
         onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+        Rectangle {
+          z: 10
+          visible: tasks.dragSub >= 0 && tasks.dropY >= 0
+          y: tasks.dropY - 1.5
+          width: parent.width; height: 3; radius: 1.5
+          color: tasks.cc.ink
+        }
         delegate: Rectangle {
           id: subRow
           required property var modelData
@@ -778,8 +893,40 @@ Item {
             font.family: tasks.cc.font
             font.pixelSize: 12
           }
+          opacity: tasks.dragSub === index ? 0.45 : 1
           MouseArea {
             anchors.fill: parent; anchors.leftMargin: 28
+            preventStealing: true
+            cursorShape: tasks.dragSub >= 0 ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+            property real pressY: 0
+            property bool dragging: false
+            function target(mouse) {
+              var p = mapToItem(subList.contentItem, mouse.x, mouse.y)
+              var i = subList.indexAt(20, p.y)
+              if (i < 0) i = p.y < 0 ? 0 : subList.count - 1
+              return i
+            }
+            onPressed: mouse => { pressY = mouse.y; dragging = false }
+            onPositionChanged: mouse => {
+              if (!(mouse.buttons & Qt.LeftButton)) return
+              if (!dragging && Math.abs(mouse.y - pressY) > 6) { dragging = true; tasks.dragSub = subRow.index; tasks.pane = "subs" }
+              if (dragging) {
+                var it = subList.itemAtIndex(target(mouse))
+                var down = target(mouse) > subRow.index
+                tasks.dropY = it ? (down ? it.y + it.height + 2 : it.y - 3) - subList.contentY : -1
+              }
+            }
+            onReleased: mouse => {
+              if (!dragging) return
+              dragging = false
+              var to = target(mouse)
+              if (to !== subRow.index && tasks.selected) {
+                tasks.act(["sub-move", tasks.selected.id, String(subRow.index), String(to)])
+                tasks.subIndex = to
+              }
+              tasks.dragSub = -1
+              tasks.dropY = -1
+            }
             onClicked: { tasks.pane = "subs"; tasks.subIndex = subRow.index; tasks.forceActiveFocus() }
             onDoubleClicked: { subEdit.index = subRow.index; subEdit.text = subRow.modelData.text; subEdit.forceActiveFocus() }
           }
@@ -812,6 +959,7 @@ Item {
     }
   }
   property var subInput: null
+  property var logInput: null
   property alias newInput: newField.input
 
   // ===================================================================== TASK LOG
@@ -883,27 +1031,61 @@ Item {
               clip: true
               spacing: 3
               model: tasks.selected ? tasks.selected.subs.filter(function(s) { return s.state === parent.modelData[0] }) : []
-              delegate: Text {
+              // click moves it a lane on, right-click a lane back
+              delegate: Rectangle {
+                id: laneItem
                 required property var modelData
+                readonly property bool sel: tasks.logPane === "lanes" && tasks.logSub === modelData.i
                 width: ListView.view.width
-                text: "• " + modelData.text
-                wrapMode: Text.Wrap
-                maximumLineCount: 2
-                elide: Text.ElideRight
-                textFormat: Text.PlainText
-                color: tasks.cc.ink
-                font.family: tasks.cc.font
-                font.pixelSize: 11
+                height: laneText.implicitHeight + 6
+                radius: 6
+                color: sel ? Qt.rgba(1, 1, 1, 0.8) : laneMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.45) : "transparent"
+                border.color: tasks.cc.ink
+                border.width: sel ? 1.6 : 0
+                Text {
+                  id: laneText
+                  x: 4; y: 3
+                  width: parent.width - 8
+                  text: "• " + laneItem.modelData.text
+                  wrapMode: Text.Wrap
+                  maximumLineCount: 2
+                  elide: Text.ElideRight
+                  textFormat: Text.PlainText
+                  color: tasks.cc.ink
+                  font.family: tasks.cc.font
+                  font.pixelSize: 11
+                }
+                MouseArea {
+                  id: laneMouse
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  acceptedButtons: Qt.LeftButton | Qt.RightButton
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: mouse => {
+                    tasks.logPane = "lanes"
+                    tasks.logSub = laneItem.modelData.i
+                    tasks.shift(tasks.selected, laneItem.modelData.i, mouse.button === Qt.RightButton ? -1 : 1)
+                    tasks.forceActiveFocus()
+                  }
+                }
               }
             }
           }
         }
       }
 
-      CcHeading { y: lanes.height + 10; cc: tasks.cc; text: "  LOG" + (tasks.logEntries.length ? " — " + tasks.logEntries.length + " ENTRIES, NEWEST FIRST" : "") }
+      Field {
+        id: logField
+        y: lanes.height + 10
+        width: parent.width
+        placeholder: "write in the log…  (w)"
+        onAccepted: t => { if (tasks.selected) tasks.act(["log", tasks.selected.id, t, "--by", "you"]) }
+        Component.onCompleted: logInput = logField.input
+      }
+      CcHeading { y: lanes.height + 50; cc: tasks.cc; text: "  LOG" + (tasks.logEntries.length ? " — " + tasks.logEntries.length + " ENTRIES, NEWEST FIRST" : "") }
       ListView {
         id: logList
-        y: lanes.height + 30
+        y: lanes.height + 70
         width: parent.width
         height: parent.height - y
         clip: true
@@ -988,8 +1170,8 @@ Item {
           spacing: 8
           Text { text: tasks.expanded["g:" + prow.modelData.name] === false ? "" : ""; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
           Rectangle { width: 12; height: 12; radius: 6; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(prow.modelData.name); border.color: tasks.cc.ink; border.width: 1.2; visible: prow.modelData.name !== "" }
-          Text { text: prow.modelData.name === "" ? "No group" : prow.modelData.name; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: 15; anchors.verticalCenter: parent.verticalCenter }
-          Text { text: prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+          Text { text: !prow.modelData.name ? "No group" : prow.modelData.name; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: 15; anchors.verticalCenter: parent.verticalCenter }
+          Text { text: prow.modelData.kind !== "group" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
         }
         // todo
         Row {
@@ -1214,10 +1396,12 @@ Item {
         model: [
           ["", [["Tab / 1 2 3", "switch tabs"], ["?", "this help"], ["Esc", "back out, or close the command centre"]]],
           ["TODO · LIST", [["↑ ↓  j k", "pick a todo"], ["→  Enter", "open its sub-todos"], ["n", "new todo"], ["a", "add a sub-todo"],
-                           ["Space", "mark finished"], ["e  F2", "rename"], ["g", "group menu"], ["A", "archive"], ["d d", "delete"], ["f", "show / hide finished"]]],
+                           ["Space", "mark finished"], ["e  F2", "rename"], ["g", "group menu"], ["A", "archive"], ["d d", "delete"], ["f", "show / hide finished"],
+                           ["J K  Shift ↑↓", "move a todo"], ["drag", "move (into another group, too)"]]],
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space  Enter", "to do → in progress → done"], ["a", "add"], ["e", "edit"],
-                                ["d", "delete"], ["J  K", "move down / up"], ["←  Esc", "back to the list"]]],
-          ["TASK LOG", [["↑ ↓", "pick a todo"], ["PgUp PgDn", "scroll its log"]]],
+                                ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
+          ["TASK LOG", [["↑ ↓", "pick a todo"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"],
+                        ["w", "write in the log"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
           ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["A", "archive"], ["/", "search the archive"]]]
         ]
         Column {

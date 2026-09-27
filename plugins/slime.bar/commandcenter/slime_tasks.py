@@ -37,7 +37,8 @@ Commands (all print JSON; errors go to stderr with exit status 1):
   sub-edit ID N TEXT
   sub-set ID N todo|doing|done [--expect TEXT]
   sub-delete ID N
-  sub-move ID N TO                  reorder
+  sub-move ID N TO                  reorder sub-todos
+  order ID [ID ...]                 put todos in this order (others keep theirs, after)
   start ID N [NOTE] [--by WHO]      sub-todo -> doing, and log it
   finish ID N [NOTE] [--by WHO]     sub-todo -> done, and log it
   group ID GROUP                    "" ungroups
@@ -238,6 +239,7 @@ def summary(root, tid, archived=False):
         "group": t["meta"].get("group", ""),
         "done": t["meta"].get("done", "false") == "true",
         "created": t["meta"].get("created", ""),
+        "order": int(t["meta"].get("order", "0") or 0),
         "archived": archived,
         "mtime": os.path.getmtime(t["path"]),
         "subs": subs,
@@ -289,7 +291,8 @@ def run(argv):
 
     if cmd == "list":
         todos = [summary(root, i, archived) for i in all_ids(root, archived)]
-        todos.sort(key=lambda t: t["created"] or "")
+        # hand-set order first (0 = never ordered), then oldest first
+        todos.sort(key=lambda t: (t["order"] or 10**9, t["created"] or ""))
         return {"folder": root, "groups": groups(root), "todos": todos}
     if cmd == "log-show":
         return {"entries": log_entries(root, rest[0], archived)}
@@ -328,6 +331,15 @@ def run(argv):
             t["meta"]["done"] = "false"
             save(t)
             return {"id": tid}
+        if cmd == "order":
+            ids = [i for i in rest if i in set(all_ids(root))]
+            rest_ids = [i for i in all_ids(root) if i not in ids]
+            for n, i in enumerate(ids + rest_ids, 1):
+                t = load(root, i)
+                if t["meta"].get("order") != str(n):
+                    t["meta"]["order"] = str(n)
+                    save(t)
+            return {"order": ids + rest_ids}
         if cmd == "group-color":
             g = groups(root)
             g.setdefault(rest[0], {})["color"] = rest[1]

@@ -160,6 +160,7 @@ o.bind("SUPER + ALT + S",          "Slime settings",             "omarchy-shell 
 o.bind("SUPER + ALT + M",          "Slime system monitor",       "omarchy-shell slime-shell toggleTab system")
 o.bind("SUPER + ALT + X",          "Slime tasks",                "omarchy-shell slime-shell toggleTab tasks")
 o.bind("SUPER + CTRL + SHIFT + Z", "Slime above/behind windows", "omarchy-shell slime-shell toggleLayer")
+o.bind("SUPER + CTRL + SHIFT + RETURN", "Slime-Tasks pop-out",      "omarchy-shell slime-shell tasks")
 ```
 
 Other IPC for binds or scripts:
