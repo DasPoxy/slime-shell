@@ -199,6 +199,8 @@ omarchy-shell shell toggle <widget id>           # any bar widget's panel, e.g. 
 
 Command centre → **Settings** (sections fold open and closed):
 
+- **Desktop styling** — rounded screen corners (off / small / medium / large)
+  and slime patches in the corners across from the bar, mirroring its look
 - **Slime** — colour, gradient partner, material, bar position, bar shape,
   draw above/behind windows, bar debris, slime icon colours, shading
 - **Font & clock** — system font or a display face (blobby, drippy, bubble,

@@ -101,6 +101,24 @@ Item {
 
     CcSection {
       cc: settings.cc
+      title: "Desktop styling"
+      kind: "mirror"
+      ChoiceRow {
+        title: "ROUNDED SCREEN CORNERS"
+        options: [["off", 0], ["small", 12], ["medium", 20], ["large", 32]]
+        current: settings.bar.desktopCorners
+        onPicked: value => settings.bar.desktopCorners = value
+      }
+      ChoiceRow {
+        title: "SLIME IN THE FAR CORNERS (MIRRORS THE BAR)"
+        options: [["off", false], ["on", true]]
+        current: settings.bar.cornerSlime
+        onPicked: value => settings.bar.cornerSlime = value
+      }
+    }
+
+    CcSection {
+      cc: settings.cc
       title: "Slime"
       kind: "painting"
       defaultOpen: true

@@ -3,6 +3,8 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
+import QtQml
+import QtQuick.Shapes
 import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
@@ -210,6 +212,9 @@ Item {
   //   theme     the theme's own colours; workspace slimes each take a different hue
   //   gradient  shaded top to bottom like the bar: slime colour into its partner
   property string monsterColor: "paper"
+  // ---- Desktop styling ----
+  property int desktopCorners: 0            // rounded screen corners: radius in px, 0 = off
+  property bool cornerSlime: false          // slime patches in the corners across from the bar
   readonly property var monsterHues: ["bright_green", "bright_cyan", "bright_magenta", "bright_yellow", "bright_blue", "bright_red",
     "green", "cyan", "magenta", "yellow"]
   function monsterBodyFor(i) {
@@ -313,7 +318,8 @@ Item {
   // Saved to ~/.config/omarchy/slime-shell/skin.json, loaded on start and
   // written (debounced) whenever one of these changes.
   readonly property var skinKeys: ["slimeRole", "gradientRole", "shadingStyle", "slimeFps", "dripAmount",
-    "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material", "dripStyle", "monsterColor"]
+    "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material", "dripStyle", "monsterColor",
+    "desktopCorners", "cornerSlime"]
   property bool skinLoaded: false
   // A layer change made while the bar surface is still being set up is lost,
   // so "behind" only takes effect once the bar has been mapped for a moment.
@@ -357,6 +363,10 @@ Item {
   onBarDebrisChanged: skinSaveTimer.restart()
   onBarShapeChanged: { skinSaveTimer.restart(); bulbsDirty() }
   onMonsterColorChanged: skinSaveTimer.restart()
+  onDesktopCornersChanged: skinSaveTimer.restart()
+  onCornerSlimeChanged: skinSaveTimer.restart()
+  // the edge across from the bar (for the corner patches)
+  readonly property string oppositeEdge: ({ top: "bottom", bottom: "top", left: "right", right: "left" })[position] || "bottom"
   onMaterialChanged: skinSaveTimer.restart()
   onDripStyleChanged: skinSaveTimer.restart()
   onCcTabChanged: skinSaveTimer.restart()
@@ -2212,6 +2222,109 @@ Item {
     // ---- Skin: drips, the command centre, the egg — in their own window just
     // past the bar, one fixed size (resizing a surface on screen makes it
     // jump for a frame), click-through except where the command centre is.
+    // ---- Desktop styling: rounded screen corners ----
+    // Four small click-through overlays, one per corner, each a black
+    // quarter-circle cut-out (like a rounded bezel). Over everything.
+    Instantiator {
+      model: root.desktopCorners > 0 ? 4 : 0
+      delegate: PanelWindow {
+        id: cornerWin
+        required property int index
+        readonly property bool atTop: index < 2
+        readonly property bool atLeft: index % 2 === 0
+        readonly property int r: root.desktopCorners
+        screen: barWindow.screen
+        color: "transparent"
+        surfaceFormat.opaque: false
+        exclusionMode: ExclusionMode.Ignore
+        WlrLayershell.namespace: "slime-desktop-corner"
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+        mask: Region {}
+        implicitWidth: r
+        implicitHeight: r
+        anchors { top: atTop; bottom: !atTop; left: atLeft; right: !atLeft }
+        Shape {
+          anchors.fill: parent
+          preferredRendererType: Shape.CurveRenderer
+          ShapePath {
+            fillColor: "black"
+            strokeColor: "transparent"
+            // the square minus a quarter circle centred on the inner corner
+            startX: cornerWin.atLeft ? 0 : cornerWin.r
+            startY: cornerWin.atTop ? 0 : cornerWin.r
+            PathLine { x: cornerWin.atLeft ? cornerWin.r : 0; y: cornerWin.atTop ? 0 : cornerWin.r }
+            PathArc {
+              x: cornerWin.atLeft ? 0 : cornerWin.r; y: cornerWin.atTop ? cornerWin.r : 0
+              radiusX: cornerWin.r; radiusY: cornerWin.r
+              direction: (cornerWin.atLeft === cornerWin.atTop) ? PathArc.Counterclockwise : PathArc.Clockwise
+            }
+            PathLine { x: cornerWin.atLeft ? 0 : cornerWin.r; y: cornerWin.atTop ? 0 : cornerWin.r }
+          }
+        }
+      }
+    }
+
+    // ---- Desktop styling: slime patches in the far corners ----
+    // The bar's own scene (the notch shape's corner pieces) drawn on the edge
+    // across from the bar, in two small click-through windows, so they follow
+    // the bar's material, colour, shading, drips and animation.
+    QtObject {
+      id: patchWin                   // what SlimeScene reads off a bar window
+      readonly property var screen: barWindow.screen
+      readonly property real ccProgress: 0
+      readonly property real ccPanelX: 0
+      readonly property real ccAlong: 0
+      readonly property real ccAway: 0
+      readonly property real dripRoom: Math.min(barWindow.dripRoom, 170)
+      readonly property vector4d noBulb: Qt.vector4d(0, 0, 0, 0)
+      readonly property var bulbRects: []
+      readonly property bool vert: root.oppositeEdge === "left" || root.oppositeEdge === "right"
+      readonly property real len: screen ? (vert ? screen.height : screen.width) : 1920
+      readonly property var groupRects: [Qt.vector4d(10, 6, 110, 28), noBulb, Qt.vector4d(len - 120, 6, 110, 28)]
+    }
+    Instantiator {
+      model: root.cornerSlime && root.slimeSkin ? 2 : 0
+      delegate: PanelWindow {
+        id: patch
+        required property int index
+        readonly property string edge: root.oppositeEdge
+        readonly property bool vert: patchWin.vert
+        readonly property bool farEnd: index === 1          // right / bottom end of the edge
+        readonly property real along: 200
+        readonly property real away: root.barSize + patchWin.dripRoom
+        screen: barWindow.screen
+        visible: barWindow.visible
+        color: "transparent"
+        surfaceFormat.opaque: false
+        exclusionMode: ExclusionMode.Ignore
+        WlrLayershell.namespace: "slime-corner-patch"
+        WlrLayershell.layer: root.slimeLayer === "behind" ? WlrLayer.Bottom : WlrLayer.Top
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+        mask: Region {}
+        implicitWidth: vert ? away : along
+        implicitHeight: vert ? along : away
+        anchors {
+          top: edge === "top" || (vert && !farEnd)
+          bottom: edge === "bottom" || (vert && farEnd)
+          left: edge === "left" || (!vert && !farEnd)
+          right: edge === "right" || (!vert && farEnd)
+        }
+        readonly property real sw: screen ? screen.width : 0
+        readonly property real sh: screen ? screen.height : 0
+        SlimeScene {
+          anchors.fill: parent
+          win: patchWin
+          orient: ({ top: 0, bottom: 1, left: 2, right: 3 })[patch.edge]
+          barShape: 3
+          eggDrip: Qt.vector4d(0, 0, 0, 0)
+          origin: Qt.vector2d(
+            patch.edge === "right" ? patch.sw - patch.width : (!patch.vert && patch.farEnd) ? patch.sw - patch.width : 0,
+            patch.edge === "bottom" ? patch.sh - patch.height : (patch.vert && patch.farEnd) ? patch.sh - patch.height : 0)
+        }
+      }
+    }
+
     // ---- Drips: a window exactly as deep as the drips hang, just past the
     // bar. It only changes size when the drip settings change (so no jump),
     // and being small it's cheap to redraw every frame — a full-screen
