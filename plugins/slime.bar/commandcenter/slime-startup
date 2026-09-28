@@ -18,11 +18,12 @@ end="-- <<< slime-shell startup <<<"
 
 case "${1:-run}" in
   status)
-    grep -qF "$begin" "$autostart" 2>/dev/null && echo yes || echo no
+    grep -qF -e "$begin" "$autostart" 2>/dev/null && echo yes || echo no
     exit 0
     ;;
   install)
-    grep -qF "$begin" "$autostart" 2>/dev/null && exit 0
+    # (-e: the marker starts with "--", which grep would read as an option)
+    grep -qF -e "$begin" "$autostart" 2>/dev/null && exit 0
     cp "$autostart" "$autostart.bak.$(date +%s)" 2>/dev/null
     {
       echo ""
@@ -38,19 +39,36 @@ esac
 
 [[ -f $config ]] || exit 0
 
+# one run at a time (a second one would launch everything twice)
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/slime-startup.lock"
+flock -n 9 || exit 0
+
 addresses() { hyprctl clients -j 2>/dev/null | jq -r '.[].address' | sort; }
+# the window class an app's windows get: its StartupWMClass, else its id
+wmclass() {
+  local f
+  for f in "$HOME/.local/share/applications/$1.desktop" /usr/share/applications/"$1".desktop \
+           /var/lib/flatpak/exports/share/applications/"$1".desktop; do
+    [[ -f $f ]] && { sed -n 's/^StartupWMClass=//p' "$f" | head -1; break; }
+  done
+}
 
 jq -c '.[] | select(.enabled != false)' "$config" | while read -r app; do
   id=$(jq -r '.id' <<<"$app")
   ws=$(jq -r '.workspace // 0' <<<"$app")
   [[ -n $id && $id != null ]] || continue
+  class=$(wmclass "$id"); class=${class:-$id}
   before=$(addresses)
   uwsm-app -- gtk-launch "$id.desktop" >/dev/null 2>&1 &
   (( ws > 0 )) || continue
   # wait (up to 25 s) for the app's first new window, then move it quietly
   for _ in $(seq 100); do
     sleep 0.25
-    new=$(comm -13 <(echo "$before") <(addresses) | head -1)
+    # a new window of this app (not whatever else opened at login meanwhile)
+    new=$(comm -13 <(echo "$before") <(addresses) | while read -r a; do
+      hyprctl clients -j | jq -r --arg a "$a" --arg c "$class" \
+        '.[] | select(.address == $a and ((.class | ascii_downcase) == ($c | ascii_downcase) or (.initialClass | ascii_downcase) == ($c | ascii_downcase))) | .address'
+    done | head -1)
     if [[ -n $new ]]; then
       hyprctl dispatch "hl.dsp.window.move({ workspace = \"$ws\", follow = false, window = \"address:$new\" })" >/dev/null
       break
