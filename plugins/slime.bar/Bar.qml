@@ -6,7 +6,6 @@ import QtQuick
 import QtQml
 import QtQuick.Shapes
 import QtQuick.Layouts
-import QtMultimedia
 import qs.Commons
 import qs.Ui
 import "BarModel.js" as BarModel
@@ -2408,51 +2407,14 @@ Item {
     // ---- Skin: drips, the command centre, the egg — in their own window just
     // past the bar, one fixed size (resizing a surface on screen makes it
     // jump for a frame), click-through except where the command centre is.
-    // ---- Motion wallpaper: the picked video / gif, over Omarchy's background ----
-    PanelWindow {
-      id: motionWindow
-      screen: barWindow.screen
-      visible: root.motionWall !== ""
-      color: "transparent"
-      exclusionMode: ExclusionMode.Ignore
-      WlrLayershell.namespace: "slime-wallpaper"
-      WlrLayershell.layer: WlrLayer.Background
-      WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-      anchors { top: true; bottom: true; left: true; right: true }
-      mask: Region {}
-      AnimatedImage {
-        anchors.fill: parent
-        visible: root.motionIsGif
-        source: root.motionIsGif ? "file://" + root.motionWall : ""
-        fillMode: Image.PreserveAspectCrop
-        playing: !root.motionPaused
-        cache: false
-        asynchronous: true
-      }
-      MediaPlayer {
-        id: motionPlayer
-        source: !root.motionIsGif && root.motionWall !== "" ? "file://" + root.motionWall : ""
-        loops: MediaPlayer.Infinite
-        videoOutput: motionVideo
-        // no audio output at all: wallpapers are silent
-        onSourceChanged: if (source != "" && !root.motionPaused) play()
-        onMediaStatusChanged: if (mediaStatus === MediaPlayer.LoadedMedia && !root.motionPaused) play()
-      }
-      Connections {
-        target: root
-        function onMotionPausedChanged() {
-          if (root.motionIsGif || root.motionWall === "") return
-          if (root.motionPaused) motionPlayer.pause(); else motionPlayer.play()
-        }
-      }
-      VideoOutput {
-        id: motionVideo
-        anchors.fill: parent
-        visible: !root.motionIsGif
-        fillMode: VideoOutput.PreserveAspectCrop
-        // the poster underneath shows until the first frame is up
-        opacity: motionPlayer.playbackState !== MediaPlayer.StoppedState && motionPlayer.mediaStatus >= MediaPlayer.BufferedMedia ? 1 : 0
-      }
+    // ---- Motion wallpaper: the picked video / gif, over Omarchy's background
+    // (its own file, loaded on demand: without QtMultimedia only this is lost)
+    Loader {
+      id: motionLoader
+      active: root.motionWall !== ""
+      function load() { if (active) setSource("ui/SlimeMotionWallpaper.qml", { bar: root, panel: barWindow }) }
+      onActiveChanged: load()
+      Component.onCompleted: load()
     }
 
     // ---- Desktop styling: rounded screen corners ----

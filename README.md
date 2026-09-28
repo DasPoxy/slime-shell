@@ -91,8 +91,9 @@ falls off with it, or turns up trapped in a panel's ooze.
   marching on a dungeon), Wallpapers (the theme's, plus any you drop in
   `~/Pictures/SlimeS-Wallpapers` — stills, or videos and gifs that play as
   motion wallpapers, muted and looping, paused while a window is fullscreen
-  or you're idle), Tasks, Start-Up (apps to launch at
-  login, and on which workspace) and Settings tabs. It fits any screen:
+  or you're idle; each section folds away), Tasks, Start-Up (apps to launch
+  at login, and on which workspace — it adds one hook line to
+  `~/.config/hypr/autostart.lua`) and Settings tabs. It fits any screen:
   capped to the space there is (tall tabs scroll) and scaled down on narrow
   or portrait screens. Keyboard driven too: arrows move a highlight between controls,
   Enter presses, ←/→ turn sliders, 1–6 or Ctrl+Tab switch tabs, **t** folds
@@ -161,8 +162,9 @@ falls off with it, or turns up trapped in a panel's ooze.
 ## Install
 
 Needs an up-to-date Omarchy (the Quickshell-based shell) plus `git`, `jq` and
-`python3`. Optional: `cava` for the visualizers, `qt6-shadertools` if you edit
-the shader.
+`python3`. Optional: `cava` for the visualizers and the cava drip style;
+`qt6-multimedia` (plus `ffmpeg` and `imagemagick` for their thumbnails) for
+video and gif wallpapers; `qt6-shadertools` if you edit the shader.
 
 ```sh
 git clone https://github.com/DasPoxy/slime-shell.git ~/Work/slime-shell
@@ -171,7 +173,8 @@ git clone https://github.com/DasPoxy/slime-shell.git ~/Work/slime-shell
 
 `use` links the plugins into `~/.config/omarchy/plugins/`, backs up your
 current bar layout, switches the bar to Slime, swaps in Slime's notification
-server and restarts the shell. To go back:
+server and restarts the shell. It also links `slime-tasks` into
+`~/.local/bin` and makes `~/Pictures/SlimeS-Wallpapers`. To go back:
 
 ```sh
 ~/Work/slime-shell/bin/slime-shell restore     # your previous bar, exactly
@@ -255,7 +258,8 @@ Command centre → **Settings** (sections fold open and closed):
 - **Widgets** — each Slime widget's settings, and a button for every bar
   widget (yours and third-party) that drips its panel open
 
-Skin settings are saved in `~/.config/omarchy/slime-shell/skin.json`;
+Skin settings are saved in `~/.config/omarchy/slime-shell/skin.json` (dock
+pins in `dock.json`, start-up apps in `startup.json`, beside it);
 per-widget settings in the widget's entry in `~/.config/omarchy/shell.json`.
 
 ## Updating
@@ -271,7 +275,7 @@ git -C ~/Work/slime-shell pull && omarchy restart shell
 
 | Path | What |
 |---|---|
-| `plugins/slime.bar/` | the bar; `shaders/slime.frag` (the skin), `commandcenter/`, `dock/` (the dock's icons, menu and apps panel), `ui/` (shared panels, monsters, gear, debris), `fonts/` |
+| `plugins/slime.bar/` | the bar; `shaders/slime.frag` (the skin), `commandcenter/` (tabs, `slime_tasks.py`, `slime-startup`), `dock/` (the dock's icons, menu and apps panel), `ui/` (shared panels, monsters, gear, debris, the motion-wallpaper player), `fonts/` |
 | `plugins/slime.*` | widgets, mostly cloned from Omarchy's and restyled |
 | `plugins/slime.notifications/` | notification service |
 | `layouts/default.json` | the bar layout `slime-shell use` installs |
