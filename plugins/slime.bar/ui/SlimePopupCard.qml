@@ -28,6 +28,8 @@ PopupWindow {
   // "click" — uses HyprlandFocusGrab so clicking outside dismisses the popup.
   // "hover" — passive overlay; the owning widget controls open via hover.
   property string triggerMode: "click"
+  // nothing on it takes the pointer (a caption dripping over windows)
+  property bool clickThrough: false
 
   readonly property var coordinatorKey: owner || root
 
@@ -97,7 +99,8 @@ PopupWindow {
 
   // Only the card (and the neck above it) takes input; the drip room is
   // click-through.
-  mask: slime ? slimeMask : null
+  mask: clickThrough ? noInput : slime ? slimeMask : null
+  property Region noInput: Region {}
   property Region slimeMask: Region {
     x: root.edge === "left" ? 0 : root.cardX
     y: root.edge === "top" ? 0 : root.cardY

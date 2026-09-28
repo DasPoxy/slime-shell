@@ -105,8 +105,12 @@ falls off with it, or turns up trapped in a panel's ooze.
   chest (widget picker), bluetooth, network, audio, display, power, keyboard
   layout, system update, spacers. See **[docs/widgets.md](docs/widgets.md)**
   for what every click does.
-- **Media** — a lich, wizard or priest (right-click to choose) casting the
-  visualizer. Hover for a drip card with the album art, track, progress and
+- **Karaoke** (SlimeS-Karaoke, the media widget) — a lich, wizard, priest,
+  dryad, witch, wand-stuffed slime or wisp (right-click to choose) casting
+  the visualizer. Left-click it and it sings: the song's lyrics drip out of
+  the bar a line at a time, each bursting as the next drips down (lyrics from
+  [LRCLIB](https://lrclib.net), cached); right-click for the whole song's
+  lyrics. Hover for a drip card with the album art, track, progress and
   which player to follow (whatever's playing, or stick to one). While
   hovering it — or the media slime in the command centre — **Space**
   plays/pauses and **M** mutes; a middle click plays/pauses too:
@@ -221,6 +225,8 @@ omarchy-shell slime-shell fps <n>                # 0 pauses the animation
 omarchy-shell slime-shell egg                    # (shh) summon a trapped adventurer
 omarchy-shell slime-launcher apps | icons
 omarchy-shell slime-media toggle | next | previous
+omarchy-shell slime-media karaoke | lyrics        # karaoke on/off, the whole song's lyrics
+omarchy-shell slime-media follow <player>         # "" follows whatever's playing
 omarchy-shell slime-plugins toggle
 omarchy-shell slime-workspaces menu
 omarchy-shell slime-clock settings

@@ -33,6 +33,9 @@ import QtQuick.Shapes
 //        "sword" · "axe" · "hat" (wizard) · "frog" (lit = croaking) — floating bits
 //        "lich"       crowned lich with a staff    lit = casting: arm raised,
 //                     eyes and hand blazing (the media widget's spellcaster)
+//        "wizard" · "priest" · "dryad" · "witch" · "slimecaster" (a slime full of
+//                     wands and staffs) · "wisp" (a flame in a flowing energy
+//                     field) — the other casters, lit the same way
 Item {
   id: root
 
@@ -736,6 +739,208 @@ Item {
           width: 3.8 + root.pulse * 1.8; height: width; radius: width / 2
           color: priest.spell; opacity: 0.6 * root.pulse
         }
+      }
+    }
+
+    // ================================================ dryad (a caster, like the lich)
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "dryad"
+      sourceComponent: Item {
+        id: dryad
+        anchors.fill: parent
+        readonly property color leaf: root.pal.green || "#3fb950"
+        readonly property color leafLight: root.pal.bright_green || Qt.lighter(dryad.leaf, 1.4)
+        readonly property color bark: Qt.darker(root.leather, 1.1)
+        readonly property color skin: Qt.tint("#d9c7a0", Qt.rgba(dryad.leaf.r, dryad.leaf.g, dryad.leaf.b, 0.35))
+        readonly property color spell: root.pal.bright_green || "#7dff6a"
+        readonly property real lift: root.lit ? 2.6 + Math.sin(root.time * 5) * 0.8 : 0
+
+        // a flowering branch for a staff
+        GearPath { d: "M5 5.4 Q3.8 9 4.4 13 Q3.4 17 3.6 22.6"; stroke: dryad.bark; line: 1.8 }
+        GearPath { d: "M4.6 9 Q2.4 8 1.6 6.2 M4.4 13.4 Q6.4 12.8 7 11.2"; stroke: dryad.bark; line: 0.9 }
+        Rectangle { x: 3.4; y: 2.8; width: 3.2; height: 3.2; radius: 1.6; color: root.pal.bright_magenta || "#ff9ad5"; border.color: root.ink; border.width: 0.6; opacity: root.lit ? root.pulse : 0.9 }
+        Rectangle { x: 0.6; y: 5.2; width: 2; height: 2; radius: 1; color: dryad.leafLight; border.color: root.ink; border.width: 0.5 }
+        // a body of bark, a skirt of leaves
+        GearPath { d: "M12 6.2 Q16 6.6 16.6 10.6 L18.4 16.4 L5.6 16.4 L7.4 10.6 Q8 6.6 12 6.2 Z"; fill: dryad.bark }
+        GearPath { d: "M9.6 9.6 Q10.2 12 9.4 15 M14.2 9.8 Q13.6 12.4 14.6 15"; stroke: Qt.lighter(dryad.bark, 1.5); line: 0.6 }
+        GearPath { d: "M4.2 21.6 L5.8 15.6 L8 20.2 L9.6 15.8 L12 21.2 L14.4 15.8 L16 20.2 L18.2 15.6 L19.8 21.6 Q12 23.2 4.2 21.6 Z"; fill: dryad.leaf; line: 0.9 }
+        // face, and hair of leaves
+        GearPath { d: "M9.6 5.6 Q12 4.4 14.4 5.6 L14.2 8.8 Q12 10 9.8 8.8 Z"; fill: dryad.skin; line: 0.8 }
+        Rectangle { x: 10.4; y: 6.4; width: 1.1; height: 1.1; radius: 0.55; color: root.ink }
+        Rectangle { x: 12.5; y: 6.4; width: 1.1; height: 1.1; radius: 0.55; color: root.ink }
+        GearPath { d: "M11.2 8.4 Q12 8.9 12.8 8.4"; line: 0.5 }
+        GearPath { d: "M8.2 7 Q7.4 2.6 10 2.4 Q11 0.6 12.8 1.8 Q15.6 0.8 15.8 3.6 Q17.4 5 15.8 7.4 Q15 4.4 12 4.2 Q9 4.4 8.2 7 Z"; fill: dryad.leaf; line: 0.9 }
+        GearPath { d: "M9.4 3.4 L10.4 4.6 M12 2.2 L12.2 3.8 M14.6 2.8 L13.8 4.4"; stroke: dryad.leafLight; line: 0.6 }
+        // casting arm, a twig of a hand
+        GearPath {
+          d: "M15.6 10 Q18.4 " + (11 - dryad.lift) + " 20.4 " + (9.8 - dryad.lift) + " L20.8 " + (11.6 - dryad.lift) + " Q18.4 " + (13.2 - dryad.lift) + " 16.2 13.2 Z"
+          fill: dryad.bark; line: 1
+        }
+        GearPath {
+          d: "M20.6 " + (10.4 - dryad.lift) + " L22.6 " + (9.2 - dryad.lift) + " M20.8 " + (11 - dryad.lift) + " L23 " + (11 - dryad.lift)
+          stroke: dryad.bark; line: 0.9
+        }
+        // sparks of green growth
+        Repeater {
+          model: root.lit ? 3 : 0
+          Rectangle {
+            required property int index
+            readonly property real a: root.time * 2.4 + index * 2.1
+            x: 22.4 + Math.cos(a) * 1.8 - width / 2; y: 10.4 - dryad.lift + Math.sin(a) * 1.8 - height / 2
+            width: 1.6; height: 1.6; radius: 0.8
+            color: dryad.spell; opacity: root.pulse
+          }
+        }
+      }
+    }
+
+    // ================================================ witch (a caster, like the lich)
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "witch"
+      sourceComponent: Item {
+        id: witch
+        anchors.fill: parent
+        readonly property color robe: Qt.darker(root.pal.magenta || "#8a4dff", 2.4)
+        readonly property color robeLight: Qt.darker(root.pal.magenta || "#8a4dff", 1.6)
+        readonly property color skin: Qt.tint("#cfe8b0", Qt.rgba(0.3, 0.8, 0.3, 0.2))
+        readonly property color spell: root.pal.bright_green || "#7dff6a"
+        readonly property real lift: root.lit ? 2.6 + Math.sin(root.time * 5) * 0.8 : 0
+
+        // a broom behind her
+        GearPath { d: "M6.6 6 L3.4 20.6"; stroke: root.leather; line: 1.5 }
+        GearPath { d: "M3.4 19.4 Q1 21.6 1.4 23.4 Q3.6 22.6 4.6 23.6 Q5.2 21.6 4.2 19.8 Z"; fill: root.gold; line: 0.8 }
+        // robe with a ragged hem
+        GearPath { d: "M12 7.4 Q16.6 7.8 17.4 11.4 L19.8 20.4 L18 21.8 L16.4 20.6 L14.6 22.2 L12.6 20.8 L10.6 22.2 L8.8 20.6 L7 21.8 L4.4 20.4 L6.6 11.4 Q7.4 7.8 12 7.4 Z"; fill: witch.robe }
+        GearPath { d: "M9 13 L8.2 19.6 M15 13 L15.8 19.6"; stroke: witch.robeLight; line: 0.7 }
+        // green face, crooked nose, a wicked grin
+        GearPath { d: "M9.6 8.4 Q12 7.4 14.4 8.4 L14.2 11.4 Q12 12.6 9.8 11.4 Z"; fill: witch.skin; line: 0.8 }
+        Rectangle { x: 10.3; y: 9; width: 1.1; height: 1.1; radius: 0.55; color: root.lit ? witch.spell : root.ink }
+        Rectangle { x: 12.6; y: 9; width: 1.1; height: 1.1; radius: 0.55; color: root.lit ? witch.spell : root.ink }
+        GearPath { d: "M12 9.6 L12.2 10.8 L11.5 10.9"; line: 0.6 }
+        GearPath { d: "M10.8 11.2 Q12 11.9 13.2 11.1"; line: 0.5 }
+        // hair spilling out, the pointed hat with a buckle, its tip flopping over
+        GearPath { d: "M9.6 8.6 Q8.4 10.6 8.8 12.8 M14.4 8.6 Q15.6 10.6 15.2 12.8"; stroke: root.ink; line: 1 }
+        GearPath { d: "M5.6 8.4 Q12 6 18.4 8.4 Q12 9.8 5.6 8.4 Z"; fill: witch.robe; line: 0.9 }
+        GearPath { d: "M8.8 7.8 Q10.4 4.6 11.8 1.4 Q13.6 1.2 15.8 2.6 Q13.8 2.4 13.2 3.4 Q14 5.4 15.2 7.8 Z"; fill: witch.robe; line: 0.9 }
+        GearPath { d: "M9.4 6.6 Q12 6 14.8 6.6 L14.9 7.6 Q12 7 9.2 7.6 Z"; fill: witch.robeLight; line: 0.5 }
+        GearPath { d: "M11.2 6.3 L12.8 6.3 L12.8 7.4 L11.2 7.4 Z"; fill: root.gold; line: 0.5 }
+        // casting arm, a bony green hand
+        GearPath {
+          d: "M15.4 12.4 Q18.4 " + (11.8 - witch.lift) + " 20.4 " + (10.4 - witch.lift) + " L21 " + (12.4 - witch.lift) + " Q18.6 " + (14.2 - witch.lift) + " 16 15.2 Z"
+          fill: witch.robeLight; line: 1
+        }
+        GearPath {
+          d: "M20.8 " + (10.8 - witch.lift) + " L22.6 " + (9.6 - witch.lift) + " M21 " + (11.4 - witch.lift) + " L23.2 " + (11.2 - witch.lift) + " M20.8 " + (12 - witch.lift) + " L22.4 " + (12.8 - witch.lift)
+          stroke: witch.skin; line: 0.9
+        }
+        // a bubbling hex
+        Rectangle {
+          visible: root.lit
+          x: 22.6 - width / 2; y: 10.8 - witch.lift - height / 2
+          width: 3.4 + root.pulse * 1.6; height: width; radius: width / 2
+          color: witch.spell; opacity: 0.55 * root.pulse
+        }
+        Rectangle {
+          visible: root.lit
+          x: 22 + Math.sin(root.time * 3) * 0.8; y: 7.4 - witch.lift - ((root.time * 3) % 3)
+          width: 1.2; height: 1.2; radius: 0.6; color: witch.spell; opacity: 0.7
+        }
+      }
+    }
+
+    // ============================== slime (a caster: wands and staffs jutting out)
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "slimecaster"
+      sourceComponent: Item {
+        id: goo
+        anchors.fill: parent
+        readonly property color body: root.bar ? root.bar.slimeColor : (root.pal.green || "#5fd35f")
+        readonly property color spell: root.pal.bright_cyan || root.pal.cyan || "#10ffd9"
+        readonly property real squish: Math.sin(root.time * (root.lit ? 5 : 1.6)) * (root.lit ? 0.7 : 0.35)
+        readonly property real glint: root.lit ? root.pulse : 0.35
+
+        // wands and staffs swallowed at all angles, poking out
+        GearPath { d: "M5.4 14 L1.4 4.2"; stroke: root.leather; line: 1.6 }
+        Rectangle { x: 0.1; y: 2.6; width: 2.8; height: 2.8; radius: 1.4; color: root.crystal; border.color: root.ink; border.width: 0.6; opacity: 0.4 + 0.6 * goo.glint }
+        GearPath { d: "M16.4 12 L21.8 3.6"; stroke: root.ink; line: 1.1 }
+        GearPath { d: "M21.4 4.2 l0.4 -1.2 l0.4 1.2 l1.2 0.3 l-1.1 0.6 l0.1 1.2 l-0.8 -0.9 l-1.1 0.4 l0.5 -1.1 l-0.8 -0.9 Z"; fill: root.gold; line: 0.4 }
+        GearPath { d: "M11.2 9.6 L10.4 1.6"; stroke: root.gold; line: 1.2 }
+        Rectangle { x: 9.2; y: 0.4; width: 2.4; height: 2.4; radius: 1.2; color: root.flame; border.color: root.ink; border.width: 0.5; opacity: 0.4 + 0.6 * goo.glint }
+        GearPath { d: "M19.2 17.6 L23.4 15.8"; stroke: root.leather; line: 1 }
+        // the slime: a wobbling dome
+        GearPath {
+          d: "M2.6 21.8 Q2 14 6.4 10.6 Q12 " + (7.4 - goo.squish) + " 17.6 10.6 Q22 14 21.4 21.8 Q12 23.6 2.6 21.8 Z"
+          fill: goo.body; line: 1.2
+        }
+        GearPath { d: "M6.4 13.4 Q8 11.4 10.4 11"; stroke: Qt.rgba(1, 1, 1, 0.75); line: 1 }   // sheen
+        // eyes and a little mouth
+        Rectangle { x: 8.2; y: 14.2; width: 2.4; height: 3; radius: 1.2; color: root.ink }
+        Rectangle { x: 13.4; y: 14.2; width: 2.4; height: 3; radius: 1.2; color: root.ink }
+        Rectangle { x: 8.8; y: 14.6; width: 0.9; height: 0.9; radius: 0.45; color: "white" }
+        Rectangle { x: 14; y: 14.6; width: 0.9; height: 0.9; radius: 0.45; color: "white" }
+        GearPath { d: root.lit ? "M10.6 18.6 Q12 20.4 13.4 18.6 Z" : "M10.8 18.8 Q12 19.6 13.2 18.8"; fill: root.lit ? root.ink : "transparent"; line: 0.6 }
+        // sparks off the wand tips
+        Rectangle {
+          visible: root.lit
+          x: 22 - width / 2; y: 3.6 - height / 2
+          width: 3 + root.pulse * 1.4; height: width; radius: width / 2
+          color: goo.spell; opacity: 0.55 * root.pulse
+        }
+      }
+    }
+
+    // ============================== wisp (a floating flame in a flowing energy field)
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "wisp"
+      sourceComponent: Item {
+        id: wisp
+        anchors.fill: parent
+        readonly property color core: root.pal.bright_cyan || root.pal.cyan || "#10ffd9"
+        readonly property color field: root.pal.bright_blue || root.pal.blue || "#6695ff"
+        readonly property real bob: Math.sin(root.time * 2) * 0.8
+        readonly property real spin: root.time * (root.lit ? 2.6 : 0.8)
+        readonly property real flick: Math.sin(root.time * 9) * 0.6
+
+        // the energy field: two tilted rings flowing round it
+        Repeater {
+          model: 2
+          Item {
+            required property int index
+            x: 12; y: 12.6 + wisp.bob
+            rotation: (index ? -28 : 32) + Math.sin(root.time * 0.7 + index) * 8
+            Repeater {
+              model: 10
+              Rectangle {
+                required property int index
+                readonly property real a: wisp.spin * (parent.index ? -1 : 1) + index * Math.PI / 5
+                x: Math.cos(a) * 10 - width / 2
+                y: Math.sin(a) * 3.4 - height / 2
+                width: 1.4; height: 1.4; radius: 0.7
+                color: parent.index ? wisp.core : wisp.field
+                opacity: (0.45 + 0.4 * Math.sin(a)) * (root.lit ? 1 : 0.6)
+              }
+            }
+          }
+        }
+        // the wisp: a teardrop of flame with a wavering tail
+        GearPath {
+          d: "M12 " + (4.6 + wisp.bob) + " Q" + (15.6 + wisp.flick) + " " + (10 + wisp.bob) + " 15.4 " + (14 + wisp.bob)
+             + " Q15 " + (18.4 + wisp.bob) + " 12 " + (18.6 + wisp.bob) + " Q9 " + (18.4 + wisp.bob) + " 8.6 " + (14 + wisp.bob)
+             + " Q" + (8.4 - wisp.flick) + " " + (10 + wisp.bob) + " 12 " + (4.6 + wisp.bob) + " Z"
+          fill: Qt.rgba(wisp.core.r, wisp.core.g, wisp.core.b, 0.55)
+          line: 1
+        }
+        GearPath {
+          d: "M12 " + (8.6 + wisp.bob) + " Q14 " + (12 + wisp.bob) + " 13.6 " + (14.6 + wisp.bob) + " Q12 " + (16.6 + wisp.bob) + " 10.4 " + (14.6 + wisp.bob) + " Q10 " + (12 + wisp.bob) + " 12 " + (8.6 + wisp.bob) + " Z"
+          fill: "white"; stroke: "transparent"; line: 0
+          opacity: root.lit ? root.pulse : 0.7
+        }
+        Rectangle { x: 10.6; y: 12.6 + wisp.bob; width: 1; height: 1.4; radius: 0.5; color: root.ink }
+        Rectangle { x: 12.4; y: 12.6 + wisp.bob; width: 1; height: 1.4; radius: 0.5; color: root.ink }
       }
     }
 

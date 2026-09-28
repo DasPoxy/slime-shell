@@ -59,15 +59,23 @@ past 90%. Preview a level with `omarchy-shell omarchy.agents previewUsage 0.8`
 | Right click | launch the agent |
 | Middle click | next subscription |
 
-### Media — `slime.media`
-A lich (or wizard, or priest) casting the music visualizer, then previous / play / next bubbles.
-Hidden when nothing is playing.
+### Karaoke (media) — `slime.media`
+SlimeS-Karaoke: a caster (lich, wizard, priest, dryad, witch, a slime full of
+wands, or a wisp) casting the music visualizer, then previous / play / next
+bubbles. That's its idle form; left-click it and it sings: each line of the
+song's lyrics drips out of the bar under the widget, hangs while it's sung,
+then bursts as the next line drips down (a ♪ bubble on the caster shows
+karaoke is on). Hidden when nothing is playing.
+
+Lyrics come from [LRCLIB](https://lrclib.net) (free, no account): only the
+artist, title, album and length are sent, and each song's answer is cached in
+`~/.cache/slime-shell/lyrics/`.
 
 | | |
 |---|---|
 | Hover the caster | a drip card: album art, title, artist, album, progress, and which player to follow (auto, or stick to one) |
-| Left click the caster | command centre (Home, with the full player) |
-| Right click the caster | settings: who casts the spell (lich, wizard, priest), visualizer on/off |
+| Left click the caster or visualizer | karaoke on / off |
+| Right click the caster | settings: who casts the spell, visualizer on/off, karaoke on/off, *the whole song* (every line, the current one lit — click a line to jump there), refresh lyrics, which player to follow |
 | Scroll over the caster | previous / next track |
 | Middle click | play / pause |
 | Hover, then **Space** / **M** | play / pause, mute / unmute the output |
