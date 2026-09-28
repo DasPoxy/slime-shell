@@ -65,8 +65,10 @@ wands, or a wisp) casting the music visualizer, then previous / play / next
 bubbles. That's its idle form; left-click it and it sings: each line of the
 song's lyrics drips out of the bar under the widget as a round bead of goo on
 a neck, sinking lower as the line is sung; when the line ends the neck snaps
-and the bead falls and bursts, words and all, as the next line drips down (a ♪ bubble on the caster shows
-karaoke is on). Hidden when nothing is playing.
+and the bead drops and bursts into droplets, words and any debris in it
+scattering, as the next line drips down (a ♪ bubble on the caster shows
+karaoke is on). The beads wear the bar's material, colours, shading and
+debris, and clicks go straight through them. Hidden when nothing is playing.
 
 Lyrics come from [LRCLIB](https://lrclib.net) (free, no account): only the
 artist, title, album and length are sent, and each song's answer is cached in

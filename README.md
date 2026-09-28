@@ -76,10 +76,14 @@ workspaces' right-click menu):
 
 With **bar debris** on, eyeballs, bones, teeth, bubbles, frogs, hats, swords
 and tankards drift through the bar and behind the command centre, the
-launcher and every widget panel (matched to the material: teeth and eyes in
-sinew, bones and skulls in bone). Now and then a little adventurer — a gnome,
-goblin, skeleton, knight, wizard or priest — gets stuck in a fat drip and
-falls off with it, or turns up trapped in a panel's ooze.
+launcher, every widget panel and the karaoke's lyric drips (matched to the
+material: teeth and eyes in sinew, bones and skulls in bone). Every bit comes
+in its own size — some a good deal bigger — but never too big for the goo
+it's floating in. In a lyric drip they ride along inside the bead as it
+sinks, and burst out and scatter with the words when it pops. Now and then a
+little adventurer — a gnome, goblin, skeleton, knight, wizard or priest —
+gets stuck in a fat drip and falls off with it, or turns up trapped in a
+panel's ooze.
 
 ## What's in it
 
@@ -107,10 +111,17 @@ falls off with it, or turns up trapped in a panel's ooze.
   for what every click does.
 - **Karaoke** (SlimeS-Karaoke, the media widget) — a lich, wizard, priest,
   dryad, witch, wand-stuffed slime or wisp (right-click to choose) casting
-  the visualizer. Left-click it and it sings: the song's lyrics drip out of
-  the bar a line at a time, each bursting as the next drips down (lyrics from
-  [LRCLIB](https://lrclib.net), cached); right-click for the whole song's
-  lyrics. Hover for a drip card with the album art, track, progress and
+  the visualizer — that's its idle form. Left-click the caster (or the
+  visualizer) and it sings, a ♪ bubble on its shoulder: each line of the
+  song's lyrics hangs from the bar as a round bead of goo on a neck, sinking
+  lower as the line is sung; when the line ends the neck snaps and the bead
+  drops and bursts into droplets, words scattering, as the next line drips
+  down. The beads take the bar's material, colours, shading and debris, and
+  never block a click. Lyrics come from [LRCLIB](https://lrclib.net) (only the
+  artist, title, album and length are sent; cached per song). Right-click
+  for the caster, the visualizer, karaoke on/off, *the whole song* (every
+  line in a big drip panel, the current one lit; click a line to jump
+  there), refresh lyrics and which player to follow. Hover for a drip card with the album art, track, progress and
   which player to follow (whatever's playing, or stick to one). While
   hovering it — or the media slime in the command centre — **Space**
   plays/pauses and **M** mutes; a middle click plays/pauses too:
