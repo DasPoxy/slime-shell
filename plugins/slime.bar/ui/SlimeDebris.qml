@@ -17,6 +17,19 @@ Item {
   // shaped bar), so nothing floats in thin air
   property var within: []
   property real bitOpacity: 0.8
+  // size variety: each bit has a chance to come out bigger than its base
+  // size (never smaller), as much as the slime around it has room for
+  property real growChance: 0.4
+  property real maxGrow: 2.2
+  // the biggest a bit may get (defaults to the slime's thickness here)
+  property real room: Math.min(width, height) - 4
+  function sizeOf(b, i) {
+    // a fixed dice roll per bit (so it doesn't change size as it drifts)
+    var h1 = Math.abs(Math.sin((i + 1) * 78.233 + b.x * 311.7 + b.y * 97.1) * 43758.5453) % 1
+    var h2 = Math.abs(Math.sin((i + 1) * 12.989 + b.x * 43.7 + b.y * 191.3) * 24634.6345) % 1
+    var grow = h1 < growChance ? 1 + (maxGrow - 1) * h2 * h2 : 1
+    return Math.round(Math.max(b.s, Math.min(b.s * grow, room)))
+  }
   // 0..1: the bits fly apart, spin and fade (a lyric drip bursting)
   property real burst: 0
 
@@ -55,8 +68,9 @@ Item {
       readonly property real fling: index * 2.39 + modelData.x * 5.1
       readonly property real bx: (modelData.x - 0.5) * 60 * debris.burst + Math.cos(fling) * 26 * debris.burst
       readonly property real by: (modelData.y - 0.5) * 40 * debris.burst + (Math.sin(fling) * 16 + 30 * debris.burst) * debris.burst
-      width: modelData.s
-      height: modelData.s
+      readonly property real sz: debris.sizeOf(modelData, index)
+      width: sz
+      height: sz
       x: cx - width / 2 + bx
       y: cy - height / 2 + by
       rotation: Math.sin(drift * 0.6) * 40 + Math.sin(fling) * 240 * debris.burst

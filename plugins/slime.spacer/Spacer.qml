@@ -121,6 +121,7 @@ BarWidget {
     anchors.fill: parent
     bar: root.bar
     bitOpacity: 1
+    growChance: 0          // the bit you picked, at its size
     bits: [{ kind: root.deco, x: 0.5, y: 0.5,
              s: Math.min(root.own.indexOf(root.deco) === -1 ? 22 : 14, root.span - 2, root.barSize - 8), sp: 0.5 }]
   }

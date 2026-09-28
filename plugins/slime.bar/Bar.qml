@@ -2365,6 +2365,7 @@ Item {
       height: root.barSize
       bar: root
       bitOpacity: 0.7
+      room: root.barSize - 6
       avoid: barWindow.bulbRects
       within: root.barShape === "classic" ? [] : (root.barShape === "pills" ? barWindow.bulbRects : barWindow.groupRects)
       bits: {

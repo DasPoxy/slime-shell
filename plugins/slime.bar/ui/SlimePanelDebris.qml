@@ -52,6 +52,8 @@ Item {
     bits: root.bits
     bitOpacity: root.bitOpacity
     burst: root.burst
+    // big bits in a big panel; a small bead keeps them to its thickness
+    room: Math.min(Math.min(width, height) - 4, 44)
   }
 
   // a trapped adventurer, wandering slowly around the panel

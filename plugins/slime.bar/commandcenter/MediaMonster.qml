@@ -133,6 +133,7 @@ Item {
     SlimeDebris {
       anchors.fill: parent
       bar: monster.cc.bar
+      maxGrow: 1.5
       bits: [
         { kind: "eye", x: 0.9, y: 0.2, s: 18, sp: 0.5 },
         { kind: "bone", x: 0.78, y: 0.08, s: 24, sp: 0.35 },
