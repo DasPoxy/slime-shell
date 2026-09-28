@@ -576,9 +576,9 @@ BarWidget {
     // letting go: 0..1 — the neck snaps, it falls and bursts
     property real fall: 0
     property bool falling: false
-    readonly property real wordBurst: Math.max(0, Math.min(1, (fall - 0.4) / 0.6))
+    readonly property real wordBurst: Math.max(0, Math.min(1, (fall - 0.12) / 0.5))
     property NumberAnimation fallAnim: NumberAnimation {
-      target: drip; property: "fall"; from: 0; to: 1; duration: 560; easing.type: Easing.InQuad
+      target: drip; property: "fall"; from: 0; to: 1; duration: 750; easing.type: Easing.Linear
       onFinished: drip.falling = false
     }
     onShownChanged: {
@@ -601,10 +601,10 @@ BarWidget {
     readonly property real sinkPx: room * sink
     dropShape: Qt.vector4d(1, sinkPx, fall, beadH)
     contentWidth: drip.fittedContentWidth(beadW, 600)
-    contentHeight: beadH + room + 24
+    contentHeight: beadH + room + 110       // (room below for the drop and the burst)
     // where the bead is in this card (the shader hangs it from the bar's edge)
     readonly property bool fromBottom: root.bar && root.bar.position === "bottom"
-    readonly property real beadTop: 8 - drip.neck + sinkPx + fall * fall * 240
+    readonly property real beadTop: 8 - drip.neck + sinkPx + 70 * Math.min(1, fall / 0.35)
     Text {
       id: measure
       visible: false

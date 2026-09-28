@@ -763,33 +763,39 @@ float eggShape(vec2 p) {
 float lyricDrop(vec2 p, inout float hl) {
     float grow = smoothstep(0.0, 1.0, openProgress);
     float fall = dropShape.z;
-    float burst = smoothstep(0.45, 1.0, fall);
+    // a short drop, then it bursts while still in view
+    float drop = 70.0 * smoothstep(0.0, 0.35, fall);
+    float burst = smoothstep(0.12, 0.75, fall);
     float cx = panelRect.x + panelRect.z * 0.5;
-    vec2 hs = vec2(panelRect.z * 0.5, dropShape.w * 0.5) * mix(0.18, 1.0, grow) * (1.0 - burst);
-    float top = barHeight + 6.0 + dropShape.y + fall * fall * 240.0;
-    // a little squash as it lets go, stretched round while it hangs
-    hs *= vec2(1.0 + 0.12 * sin(fall * 3.14), 1.0 - 0.1 * sin(fall * 3.14));
-    vec2 c = vec2(cx + sin(time * 1.3) * 1.5, top + hs.y);
+    // the bead puffs up for a moment as it goes, then breaks apart
+    float body = (1.0 + 0.18 * sin(min(burst * 2.0, 1.0) * 3.14)) * (1.0 - smoothstep(0.15, 0.5, burst));
+    vec2 hs = vec2(panelRect.z * 0.5, dropShape.w * 0.5) * mix(0.18, 1.0, grow);
+    vec2 full = hs;
+    hs *= body;
+    // squashed a little as it lets go
+    hs *= vec2(1.0 + 0.1 * sin(min(fall * 4.0, 1.0) * 3.14), 1.0 - 0.08 * sin(min(fall * 4.0, 1.0) * 3.14));
+    float top = barHeight + 6.0 + dropShape.y + drop;
+    vec2 c = vec2(cx + sin(time * 1.3) * 1.5, top + full.y);
     float r = min(hs.x, hs.y);
-    float d = sdRoundBox(p, c, hs, r * 0.98) + 0.9 * sin(time * 2.6 + p.x * 0.07 + p.y * 0.05) * grow;
-    // a point on top where the neck pulls it up: a teardrop
-    d = smin(d, length(p - vec2(c.x, c.y - hs.y + 2.0)) - r * 0.35, 12.0);
+    float d = hs.x > 0.5 ? sdRoundBox(p, c, hs, r * 0.98) + 0.9 * sin(time * 2.6 + p.x * 0.07 + p.y * 0.05) * grow : 1e5;
+    if (hs.x > 0.5) d = smin(d, length(p - vec2(c.x, c.y - hs.y + 2.0)) - r * 0.35, 12.0);
     // the neck back up to the bar, thinner the further it has sunk; gone once it lets go
     if (fall < 0.02) {
         float nk = mix(7.5, 2.6, clamp(dropShape.y / 90.0, 0.0, 1.0)) * mix(0.6, 1.0, grow);
         d = smin(d, sdSegment(p, vec2(c.x, barHeight - 4.0), vec2(c.x, c.y - hs.y + 4.0), nk), 16.0);
     }
-    // the burst: droplets flung out from where it was
+    // the burst: droplets flung out all round, arcing down, shrinking only at the end
     if (burst > 0.0) {
-        for (int k = 0; k < 7; k++) {
-            float a = float(k) * 0.898 + 0.4;
-            vec2 dir = vec2(cos(a), sin(a) * 0.8 + 0.25);
-            vec2 dp = c + dir * (hs.x + 18.0) * (0.3 + 1.6 * burst) + vec2(0.0, burst * burst * 40.0);
-            float dr = (3.5 + 2.5 * hash(float(k) + 3.0)) * (1.0 - burst);
-            if (dr > 0.2) d = min(d, length(p - dp) - dr);
+        for (int k = 0; k < 10; k++) {
+            float a = float(k) * 0.628 + 0.3 + 0.4 * hash(float(k) + 9.0);
+            float sp = 0.7 + 0.6 * hash(float(k) + 5.0);
+            vec2 dir = vec2(cos(a) * full.x / max(full.y, 1.0), sin(a)) * sp;
+            vec2 dp = c + dir * full.y * (0.4 + 1.8 * burst) + vec2(0.0, burst * burst * 55.0);
+            float dr = (4.0 + 4.0 * hash(float(k) + 3.0)) * (1.0 - smoothstep(0.55, 1.0, burst)) * smoothstep(0.0, 0.15, burst);
+            if (dr > 0.2) d = smin(d, length(p - dp) - dr, 3.0);
         }
     }
-    if (r > 6.0 && burst < 0.5) hl = min(hl, length(p - (c + vec2(-0.45 * hs.x, -0.45 * hs.y))) - 0.16 * r);
+    if (r > 6.0 && burst < 0.3) hl = min(hl, length(p - (c + vec2(-0.45 * hs.x, -0.45 * hs.y))) - 0.16 * r);
     return d;
 }
 
