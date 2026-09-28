@@ -114,7 +114,8 @@ panel's ooze.
   the visualizer — that's its idle form. Left-click the caster (or the
   visualizer) and it sings, a ♪ bubble on its shoulder: each line of the
   song's lyrics hangs from the bar as a round bead of goo on a neck, sinking
-  lower as the line is sung; when the line ends the neck snaps and the bead
+  lower as the line is sung, the word being sung lit in a glossy bubble of
+  goo (the rest still to come fainter); when the line ends the neck snaps and the bead
   drops and bursts into droplets, words scattering, as the next line drips
   down. The beads take the bar's material, colours, shading and debris, and
   never block a click. Lyrics come from [LRCLIB](https://lrclib.net) (only the

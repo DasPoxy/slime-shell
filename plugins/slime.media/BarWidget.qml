@@ -117,10 +117,10 @@ BarWidget {
     for (var k = 0; k < ls.length; k++) { if (ls[k].t <= p) i = k; else break }
     return i
   }
-  onLineNowChanged: if (karaoke && lyrics.status === "synced") showLine(lineNow >= 0 ? lyrics.lines[lineNow].text : "")
+  onLineNowChanged: if (karaoke && lyrics.status === "synced") showLine(lineNow >= 0 ? lyrics.lines[lineNow] : null)
   onKaraokeChanged: {
-    if (karaoke) { if (lyrics.status === "synced") showLine(lineNow >= 0 ? lyrics.lines[lineNow].text : ""); hintShown = true; hintTimer.restart() }
-    else showLine("")
+    if (karaoke) { if (lyrics.status === "synced") showLine(lineNow >= 0 ? lyrics.lines[lineNow] : null); hintShown = true; hintTimer.restart() }
+    else showLine(null)
   }
   // a note when there's nothing to sing along to
   property bool hintShown: false
@@ -136,10 +136,10 @@ BarWidget {
   // two drips take turns: the new line drips down while the old one falls and bursts
   property int turn: 0
   property var currentDrip: null
-  function showLine(text) {
+  function showLine(l) {
     var old = turn === 0 ? dripA : dripB, next = turn === 0 ? dripB : dripA
     old.shown = false
-    if (text !== "") { next.line = text; next.shown = true; currentDrip = next }
+    if (l && l.text) { next.line = l.text; next.times = (l.words || []).map(function(w) { return w.t }); next.shown = true; currentDrip = next }
     else currentDrip = null
     turn = 1 - turn
   }
@@ -569,6 +569,28 @@ BarWidget {
   component LyricDrip: SlimePopupCard {
     id: drip
     property string line: ""
+    // the words, and (enhanced lyrics only) when each is sung
+    readonly property var words: line.split(/\s+/).filter(function(w) { return w !== "" })
+    property var times: []
+    // the word being sung: by its own time when there is one, else spread
+    // through the line by length. Once the line's over, everything's sung.
+    readonly property bool singing: root.currentDrip === drip && shown
+    readonly property int wordNow: {
+      if (!singing) return words.length
+      if (times.length === words.length && times.length > 0) {
+        var i = -1
+        for (var k = 0; k < times.length; k++) if (times[k] <= root.pos + 0.1) i = k
+        return Math.max(0, i)
+      }
+      var total = 0, done = 0
+      for (var j = 0; j < words.length; j++) total += words[j].length + 1
+      var at = root.lineProgress * total
+      for (var n = 0; n < words.length; n++) {
+        done += words[n].length + 1
+        if (done > at) return n
+      }
+      return words.length - 1
+    }
     property bool shown: false
     // how far through its line (0..1): the bead sinks as it's sung
     property real sink: 0
@@ -617,33 +639,51 @@ BarWidget {
       font.family: root.bar ? root.bar.displayFontFamily : look.font
       font.weight: root.bar ? root.bar.displayWeight : Font.Bold
       font.pixelSize: 17
-      font.wordSpacing: 2
+      font.wordSpacing: 6
     }
     Flow {
       id: lineWords
       width: drip.textW
       x: (drip.contentWidth - width) / 2
+      spacing: 10
       y: drip.fromBottom ? drip.contentHeight - drip.beadTop - drip.beadH + (drip.beadH - height) / 2
                          : drip.beadTop + (drip.beadH - height) / 2
-      spacing: 6
       Repeater {
-        model: drip.line.split(/\s+/).filter(function(w) { return w !== "" })
+        id: wordItems
+        model: drip.words
         Text {
           id: word
           required property string modelData
           required property int index
           readonly property real a: index * 2.4 + drip.line.length
+          readonly property bool now: drip.singing && index === drip.wordNow
+          readonly property bool ahead: drip.singing && index > drip.wordNow
           text: modelData
           color: look.ink
           font.family: root.bar ? root.bar.displayFontFamily : look.font
           font.weight: root.bar ? root.bar.displayWeight : Font.Bold
           font.pixelSize: 17
-          opacity: 1 - drip.wordBurst
+          opacity: (ahead ? 0.45 : 1) * (1 - drip.wordBurst)
+          Behavior on opacity { enabled: drip.wordBurst === 0; NumberAnimation { duration: 160 } }
           transform: [
             Rotation { angle: Math.sin(word.a) * 70 * drip.wordBurst; origin.x: word.width / 2; origin.y: word.height / 2 },
             Translate { x: Math.cos(word.a) * 40 * drip.wordBurst; y: (Math.sin(word.a) * 22 + 10) * drip.wordBurst }
           ]
-          scale: 1 + 0.4 * drip.wordBurst
+          scale: (now ? 1.07 + 0.02 * Math.sin(root.t * 9) : 1) + 0.4 * drip.wordBurst
+          // the word being sung sits in a glossy, lighter bubble of goo
+          Rectangle {
+            z: -1
+            anchors.centerIn: parent
+            width: parent.width + 12; height: parent.height + 4
+            radius: height / 2
+            opacity: word.now && drip.wordBurst === 0 ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: 150 } }
+            color: Qt.rgba(1, 1, 1, 0.38)
+            border.color: Qt.rgba(look.ink.r, look.ink.g, look.ink.b, 0.35)
+            border.width: 1
+            Rectangle { x: parent.height * 0.35; y: 2.5; width: Math.max(4, parent.width * 0.3); height: 3; radius: 1.5; color: Qt.rgba(1, 1, 1, 0.7) }
+          }
+          Behavior on scale { enabled: drip.wordBurst === 0; NumberAnimation { duration: 140; easing.type: Easing.OutBack } }
         }
       }
     }

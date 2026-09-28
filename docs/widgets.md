@@ -64,7 +64,9 @@ SlimeS-Karaoke: a caster (lich, wizard, priest, dryad, witch, a slime full of
 wands, or a wisp) casting the music visualizer, then previous / play / next
 bubbles. That's its idle form; left-click it and it sings: each line of the
 song's lyrics drips out of the bar under the widget as a round bead of goo on
-a neck, sinking lower as the line is sung; when the line ends the neck snaps
+a neck, sinking lower as the line is sung — the word being sung sits in a
+glossy bubble, the words still to come fainter (timed per word when the
+lyrics carry word times, otherwise spread through the line); when the line ends the neck snaps
 and the bead drops and bursts into droplets, words and any debris in it
 scattering, as the next line drips down (a ♪ bubble on the caster shows
 karaoke is on). The beads wear the bar's material, colours, shading and

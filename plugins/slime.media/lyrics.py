@@ -36,13 +36,30 @@ def fetch(path, params):
         raise
 
 
+WORD = re.compile(r"<(\d+):(\d+(?:\.\d+)?)>")
+
+
 def parse_lrc(lrc):
+    """Lines as {t, text}; with enhanced LRC (<mm:ss.xx> before words) also
+    "words": [{t, text}] for word-by-word timing."""
     lines = []
     for raw in (lrc or "").splitlines():
         stamps = STAMP.findall(raw)
-        text = STAMP.sub("", raw).strip()
-        for m, s in stamps:
-            lines.append({"t": int(m) * 60 + float(s), "text": text})
+        body = STAMP.sub("", raw)
+        words = []
+        if WORD.search(body):
+            parts = WORD.split(body)      # text, m, s, text, m, s, text…
+            for i in range(1, len(parts) - 2, 3):
+                w = parts[i + 2].strip()
+                if w:
+                    words.append({"t": int(parts[i]) * 60 + float(parts[i + 1]), "text": w})
+        text = WORD.sub("", body).strip()
+        text = re.sub(r"\s+", " ", text)
+        for m, sec in stamps:
+            line = {"t": int(m) * 60 + float(sec), "text": text}
+            if words:
+                line["words"] = words
+            lines.append(line)
     lines.sort(key=lambda l: l["t"])
     return lines
 
