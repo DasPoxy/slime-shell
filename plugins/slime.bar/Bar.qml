@@ -2816,7 +2816,13 @@ Item {
       }
 
       // the command centre's goo, past the drip band (dripWindow draws that)
-      readonly property real dripDepth: Math.min(barWindow.dripRoom, depth)
+      // A fullscreen window covers the Top layer, drip window included: then
+      // this (Overlay) window draws the whole panel, from the bar's edge down
+      readonly property bool dripsCovered: {
+        var m = Hyprland.monitorFor(screen)
+        return !!(m && m.activeWorkspace && m.activeWorkspace.hasFullscreen)
+      }
+      readonly property real dripDepth: dripsCovered ? 0 : Math.min(barWindow.dripRoom, depth)
       SlimeScene {
         id: ccScene
         win: barWindow
