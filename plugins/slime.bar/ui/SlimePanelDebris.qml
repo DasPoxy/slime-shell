@@ -13,6 +13,7 @@ Item {
   property bool active: true
   property real bitOpacity: 0.45
   property real captiveChance: 0.16
+  property real burst: 0          // 0..1: everything flies apart and fades
 
   readonly property bool enabled_: !!bar && bar.slimeSkin === true && bar.barDebris === true && bar.material !== "plain"
   visible: enabled_ && active
@@ -50,6 +51,7 @@ Item {
     bar: root.bar
     bits: root.bits
     bitOpacity: root.bitOpacity
+    burst: root.burst
   }
 
   // a trapped adventurer, wandering slowly around the panel
@@ -57,9 +59,10 @@ Item {
     visible: root.captiveKind !== ""
     readonly property real t: root.bar ? root.bar.animTime * 0.07 + root.seed : 0
     size: 26
-    x: (root.width - width) * (0.5 + 0.42 * Math.sin(t * 1.3))
-    y: (root.height - height) * (0.5 + 0.4 * Math.sin(t * 0.9 + 1.7))
-    opacity: 0.6
+    x: (root.width - width) * (0.5 + 0.42 * Math.sin(t * 1.3)) + 30 * root.burst
+    y: (root.height - height) * (0.5 + 0.4 * Math.sin(t * 0.9 + 1.7)) + 40 * root.burst * root.burst
+    rotation: 200 * root.burst
+    opacity: 0.6 * (1 - root.burst)
     kind: root.captiveKind || "gnome"
     time: root.bar ? root.bar.animTime : 0
     ink: root.bar ? root.bar.slimeInk : "black"

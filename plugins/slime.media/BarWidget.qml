@@ -605,6 +605,11 @@ BarWidget {
     // where the bead is in this card (the shader hangs it from the bar's edge)
     readonly property bool fromBottom: root.bar && root.bar.position === "bottom"
     readonly property real beadTop: 8 - drip.neck + sinkPx + 70 * Math.min(1, fall / 0.35)
+    // the bead's inside, for the bits of debris adrift in it (they ride along
+    // as it sinks and falls, and burst with it)
+    readonly property real beadY: fromBottom ? contentHeight - beadTop - beadH : beadTop
+    debrisRect: Qt.rect((contentWidth - beadW) / 2 + beadH * 0.35, beadY + 5, Math.max(10, beadW - beadH * 0.7), Math.max(10, beadH - 10))
+    debrisBurst: drip.wordBurst
     Text {
       id: measure
       visible: false

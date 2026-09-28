@@ -33,6 +33,10 @@ PopupWindow {
   // a lyric drip instead of the card shape (see the shader's lyricDrop):
   // x on, y sunk (px), z falling / bursting 0..1, w the bead's height
   property vector4d dropShape: Qt.vector4d(0, 0, 0, 0)
+  // where the debris floats (card coordinates; empty = the whole card), and
+  // how far it has burst apart (a lyric drip letting go)
+  property rect debrisRect: Qt.rect(0, 0, 0, 0)
+  property real debrisBurst: 0
 
   readonly property var coordinatorKey: owner || root
 
@@ -325,9 +329,16 @@ PopupWindow {
 
     // bits adrift in the ooze behind the content (the "bar debris" setting)
     SlimePanelDebris {
-      anchors.fill: parent
+      readonly property bool own: root.debrisRect.width > 0
+      x: own ? root.debrisRect.x : 0
+      y: own ? root.debrisRect.y : 0
+      width: own ? root.debrisRect.width : parent.width
+      height: own ? root.debrisRect.height : parent.height
       bar: root.bar
       active: root.open && root.slime
+      burst: root.debrisBurst
+      // a small bead holds a couple of bits, not a panel's worth
+      bitOpacity: own ? 0.55 : 0.45
     }
 
     Item {

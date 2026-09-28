@@ -17,6 +17,8 @@ Item {
   // shaped bar), so nothing floats in thin air
   property var within: []
   property real bitOpacity: 0.8
+  // 0..1: the bits fly apart, spin and fade (a lyric drip bursting)
+  property real burst: 0
 
   readonly property real t: bar ? bar.animTime : 0
   readonly property color ink: bar ? bar.slimeInk : "black"
@@ -49,13 +51,19 @@ Item {
       readonly property real drift: debris.t * modelData.sp + index * 1.9
       readonly property real cx: modelData.x * debris.width + Math.sin(drift) * 5
       readonly property real cy: modelData.y * debris.height + Math.cos(drift * 0.8) * 3
+      // bursting: flung out from the middle (each its own way), falling a bit
+      readonly property real fling: index * 2.39 + modelData.x * 5.1
+      readonly property real bx: (modelData.x - 0.5) * 60 * debris.burst + Math.cos(fling) * 26 * debris.burst
+      readonly property real by: (modelData.y - 0.5) * 40 * debris.burst + (Math.sin(fling) * 16 + 30 * debris.burst) * debris.burst
       width: modelData.s
       height: modelData.s
-      x: cx - width / 2
-      y: cy - height / 2
-      rotation: Math.sin(drift * 0.6) * 40
-      opacity: debris.clearOf(cx, cy, width / 2) && debris.inside(cx, cy) ? debris.bitOpacity : 0
-      Behavior on opacity { NumberAnimation { duration: 400 } }
+      x: cx - width / 2 + bx
+      y: cy - height / 2 + by
+      rotation: Math.sin(drift * 0.6) * 40 + Math.sin(fling) * 240 * debris.burst
+      scale: 1 + 0.35 * debris.burst
+      property real shown: debris.clearOf(cx, cy, width / 2) && debris.inside(cx, cy) ? debris.bitOpacity : 0
+      Behavior on shown { NumberAnimation { duration: 400 } }
+      opacity: shown * (1 - debris.burst)
 
       Rectangle {   // spare eyeball, looking somewhere else
         visible: bit.modelData.kind === "eye"
