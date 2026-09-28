@@ -17,13 +17,15 @@ import "../slime.bar/commandcenter"
 // Settings (shell.json):
 //   visualizer  true/false (default true)
 //   caster      "lich" (default), "wizard" or "priest"
-//   source      "" follows whatever's playing, or a player's name to stick to it
+//   follow      "" follows whatever's playing, or a player's name to stick to it
 BarWidget {
   id: root
   moduleName: "slime.media"
 
   readonly property bool slime: !!bar && bar.slimeSkin === true
-  readonly property string source: setting("source", "")
+  // the player to follow ("" = whatever's playing). Not "source": in
+  // shell.json that key tells the bar to load the widget from a file.
+  readonly property string source: setting("follow", "")
   readonly property var players: Mpris.players.values
   readonly property var player: {
     var ps = players
@@ -79,7 +81,8 @@ BarWidget {
   }
   function saveSetting(key, value) {
     var entry = { id: root.moduleName }
-    for (var k in root.settings) if (k !== "id") entry[k] = root.settings[k]
+    // (never "source": the bar would try to load the widget from it)
+    for (var k in root.settings) if (k !== "id" && k !== "source") entry[k] = root.settings[k]
     entry[key] = value
     root.settings = entry
     if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
@@ -391,7 +394,7 @@ BarWidget {
           cc: look
           text: "auto"
           on: root.source === ""
-          onClicked: root.saveSetting("source", "")
+          onClicked: root.saveSetting("follow", "")
         }
         Repeater {
           model: root.players
@@ -400,7 +403,7 @@ BarWidget {
             cc: look
             text: modelData.identity || modelData.dbusName
             on: root.source !== "" && root.source === modelData.identity
-            onClicked: root.saveSetting("source", modelData.identity)
+            onClicked: root.saveSetting("follow", modelData.identity)
           }
         }
       }
