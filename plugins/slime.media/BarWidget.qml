@@ -133,13 +133,24 @@ BarWidget {
     : lyrics.status === "plain" ? "♪ no timed lyrics — right-click → the whole song"
     : ""
 
-  // two drips take turns: the new line drips down while the old one bursts
+  // two drips take turns: the new line drips down while the old one falls and bursts
   property int turn: 0
+  property var currentDrip: null
   function showLine(text) {
-    if (turn === 0) { dripA.line = dripA.line; dripA.shown = false; dripB.line = text; dripB.shown = text !== "" }
-    else { dripB.shown = false; dripA.line = text; dripA.shown = text !== "" }
+    var old = turn === 0 ? dripA : dripB, next = turn === 0 ? dripB : dripA
+    old.shown = false
+    if (text !== "") { next.line = text; next.shown = true; currentDrip = next }
+    else currentDrip = null
     turn = 1 - turn
   }
+  // how far through the current line (to its next line, or a few seconds)
+  readonly property real lineProgress: {
+    var ls = lyrics.lines || [], i = lineNow
+    if (i < 0 || i >= ls.length) return 0
+    var t0 = ls[i].t, t1 = i + 1 < ls.length ? ls[i + 1].t : t0 + 5
+    return Math.max(0, Math.min(1, (pos - t0) / Math.max(0.5, t1 - t0)))
+  }
+  onLineProgressChanged: if (currentDrip && currentDrip.shown) currentDrip.sink = lineProgress
   onPlayingChanged: if (!playing && karaoke) { dripA.shown = false; dripB.shown = false }
   onHasMediaChanged: if (!hasMedia) { dripA.shown = false; dripB.shown = false }
   onSettingsOpenChanged: if (settingsOpen) hoverOpen = false
@@ -559,24 +570,41 @@ BarWidget {
     id: drip
     property string line: ""
     property bool shown: false
-    // the words fly apart as the drip lets go
-    property real burst: 0
+    // how far through its line (0..1): the bead sinks as it's sung
+    property real sink: 0
+    Behavior on sink { enabled: drip.shown; NumberAnimation { duration: 220 } }
+    // letting go: 0..1 — the neck snaps, it falls and bursts
+    property real fall: 0
+    property bool falling: false
+    readonly property real wordBurst: Math.max(0, Math.min(1, (fall - 0.4) / 0.6))
+    property NumberAnimation fallAnim: NumberAnimation {
+      target: drip; property: "fall"; from: 0; to: 1; duration: 560; easing.type: Easing.InQuad
+      onFinished: drip.falling = false
+    }
+    onShownChanged: {
+      if (shown) { fallAnim.stop(); falling = false; fall = 0; sink = 0 }
+      else if (open) { falling = true; fallAnim.restart() }
+    }
     anchorItem: root
     owner: hoverOwner
     bar: root.bar
     triggerMode: "hover"
     clickThrough: true
-    open: shown && root.karaoke && root.hasMedia
-    onOpenChanged: {
-      burstAnim.stop()
-      if (open) burst = 0
-      else burstAnim.start()
-    }
-    property NumberAnimation burstAnim: NumberAnimation { target: drip; property: "burst"; from: 0; to: 1; duration: 220; easing.type: Easing.OutCubic }
-    // the line on one row, measured once (the Flow can't size itself from its own width)
-    readonly property real lineWidth: Math.min(measure.implicitWidth + 2, 560)
-    contentWidth: drip.fittedContentWidth(Math.max(80, lineWidth + 2 * drip.padding + 8), 580)
-    contentHeight: drip.fittedContentHeight(lineWords.implicitHeight + 4)
+    padding: 0
+    open: (shown || falling) && root.karaoke && root.hasMedia
+    // the bead: the line with room round it; below it, room to sink into
+    readonly property real textW: Math.min(measure.implicitWidth + 2, 520)
+    readonly property real textH: lineWords.implicitHeight
+    readonly property real beadW: textW + 46
+    readonly property real beadH: textH + 30
+    readonly property real room: 84
+    readonly property real sinkPx: room * sink
+    dropShape: Qt.vector4d(1, sinkPx, fall, beadH)
+    contentWidth: drip.fittedContentWidth(beadW, 600)
+    contentHeight: beadH + room + 24
+    // where the bead is in this card (the shader hangs it from the bar's edge)
+    readonly property bool fromBottom: root.bar && root.bar.position === "bottom"
+    readonly property real beadTop: 8 - drip.neck + sinkPx + fall * fall * 240
     Text {
       id: measure
       visible: false
@@ -588,8 +616,10 @@ BarWidget {
     }
     Flow {
       id: lineWords
-      width: drip.lineWidth
-      anchors.centerIn: parent
+      width: drip.textW
+      x: (drip.contentWidth - width) / 2
+      y: drip.fromBottom ? drip.contentHeight - drip.beadTop - drip.beadH + (drip.beadH - height) / 2
+                         : drip.beadTop + (drip.beadH - height) / 2
       spacing: 6
       Repeater {
         model: drip.line.split(/\s+/).filter(function(w) { return w !== "" })
@@ -603,12 +633,12 @@ BarWidget {
           font.family: root.bar ? root.bar.displayFontFamily : look.font
           font.weight: root.bar ? root.bar.displayWeight : Font.Bold
           font.pixelSize: 17
-          opacity: 1 - drip.burst
+          opacity: 1 - drip.wordBurst
           transform: [
-            Rotation { angle: Math.sin(word.a) * 70 * drip.burst; origin.x: word.width / 2; origin.y: word.height / 2 },
-            Translate { x: Math.cos(word.a) * 34 * drip.burst; y: (Math.sin(word.a) * 20 + 14) * drip.burst }
+            Rotation { angle: Math.sin(word.a) * 70 * drip.wordBurst; origin.x: word.width / 2; origin.y: word.height / 2 },
+            Translate { x: Math.cos(word.a) * 40 * drip.wordBurst; y: (Math.sin(word.a) * 22 + 10) * drip.wordBurst }
           ]
-          scale: 1 + 0.4 * drip.burst
+          scale: 1 + 0.4 * drip.wordBurst
         }
       }
     }

@@ -2134,6 +2134,7 @@ Item {
     property vector4d cava3: root.cava3
     property vector4d cavaOpts: root.cavaOpts
     property vector4d dockBracket: barShape < 3.5 ? root.dockBracketVec : Qt.vector4d(0, 0, 0, 0)
+    property vector4d dropShape: Qt.vector4d(0, 0, 0, 0)
     }
 
   component BarPanel: PanelWindow {

@@ -63,8 +63,9 @@ past 90%. Preview a level with `omarchy-shell omarchy.agents previewUsage 0.8`
 SlimeS-Karaoke: a caster (lich, wizard, priest, dryad, witch, a slime full of
 wands, or a wisp) casting the music visualizer, then previous / play / next
 bubbles. That's its idle form; left-click it and it sings: each line of the
-song's lyrics drips out of the bar under the widget, hangs while it's sung,
-then bursts as the next line drips down (a ♪ bubble on the caster shows
+song's lyrics drips out of the bar under the widget as a round bead of goo on
+a neck, sinking lower as the line is sung; when the line ends the neck snaps
+and the bead falls and bursts, words and all, as the next line drips down (a ♪ bubble on the caster shows
 karaoke is on). Hidden when nothing is playing.
 
 Lyrics come from [LRCLIB](https://lrclib.net) (free, no account): only the

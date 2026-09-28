@@ -77,6 +77,8 @@ layout(std140, binding = 0) uniform buf {
     vec4 cava2;
     vec4 cava3;
     vec4 cavaOpts;    // cava: x bars across the bar, y mirrored, z reach, w thickness (0s: defaults)
+    vec4 dropShape;   // a lyric drip instead of the panel: x on, y how far it has sunk (px),
+                      // z falling / bursting 0..1, w the bead's height (its width is panelRect.z)
     vec4 dockBracket; // the dock melting into the bar: no bar drips within x of its start / y of its end;
                       // on the dock itself, z shifts its gradient to match the bar's
 };
@@ -755,8 +757,45 @@ float eggShape(vec2 p) {
     return d;
 }
 
+// A lyric drip: a round bead of goo hanging from the bar on a neck, sinking
+// as its line is sung (dropShape.y); then the neck snaps, it falls and bursts
+// into droplets (dropShape.z). It swells in from a bead as it opens.
+float lyricDrop(vec2 p, inout float hl) {
+    float grow = smoothstep(0.0, 1.0, openProgress);
+    float fall = dropShape.z;
+    float burst = smoothstep(0.45, 1.0, fall);
+    float cx = panelRect.x + panelRect.z * 0.5;
+    vec2 hs = vec2(panelRect.z * 0.5, dropShape.w * 0.5) * mix(0.18, 1.0, grow) * (1.0 - burst);
+    float top = barHeight + 6.0 + dropShape.y + fall * fall * 240.0;
+    // a little squash as it lets go, stretched round while it hangs
+    hs *= vec2(1.0 + 0.12 * sin(fall * 3.14), 1.0 - 0.1 * sin(fall * 3.14));
+    vec2 c = vec2(cx + sin(time * 1.3) * 1.5, top + hs.y);
+    float r = min(hs.x, hs.y);
+    float d = sdRoundBox(p, c, hs, r * 0.98) + 0.9 * sin(time * 2.6 + p.x * 0.07 + p.y * 0.05) * grow;
+    // a point on top where the neck pulls it up: a teardrop
+    d = smin(d, length(p - vec2(c.x, c.y - hs.y + 2.0)) - r * 0.35, 12.0);
+    // the neck back up to the bar, thinner the further it has sunk; gone once it lets go
+    if (fall < 0.02) {
+        float nk = mix(7.5, 2.6, clamp(dropShape.y / 90.0, 0.0, 1.0)) * mix(0.6, 1.0, grow);
+        d = smin(d, sdSegment(p, vec2(c.x, barHeight - 4.0), vec2(c.x, c.y - hs.y + 4.0), nk), 16.0);
+    }
+    // the burst: droplets flung out from where it was
+    if (burst > 0.0) {
+        for (int k = 0; k < 7; k++) {
+            float a = float(k) * 0.898 + 0.4;
+            vec2 dir = vec2(cos(a), sin(a) * 0.8 + 0.25);
+            vec2 dp = c + dir * (hs.x + 18.0) * (0.3 + 1.6 * burst) + vec2(0.0, burst * burst * 40.0);
+            float dr = (3.5 + 2.5 * hash(float(k) + 3.0)) * (1.0 - burst);
+            if (dr > 0.2) d = min(d, length(p - dp) - dr);
+        }
+    }
+    if (r > 6.0 && burst < 0.5) hl = min(hl, length(p - (c + vec2(-0.45 * hs.x, -0.45 * hs.y))) - 0.16 * r);
+    return d;
+}
+
 // The command centre / panel blob: a fat drip that falls, then spreads.
 float openPanel(vec2 p, float ci, inout float hl) {
+    if (dropShape.x > 0.5) return lyricDrop(p, hl);
     // Opens like a fat drip: a narrow bead falls first, then spreads
     // sideways into the panel body.
     float o = openProgress;

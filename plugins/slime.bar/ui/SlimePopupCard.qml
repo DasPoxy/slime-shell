@@ -30,6 +30,9 @@ PopupWindow {
   property string triggerMode: "click"
   // nothing on it takes the pointer (a caption dripping over windows)
   property bool clickThrough: false
+  // a lyric drip instead of the card shape (see the shader's lyricDrop):
+  // x on, y sunk (px), z falling / bursting 0..1, w the bead's height
+  property vector4d dropShape: Qt.vector4d(0, 0, 0, 0)
 
   readonly property var coordinatorKey: owner || root
 
@@ -271,6 +274,7 @@ PopupWindow {
     property vector4d cava3: root.bar ? root.bar.cava3 : Qt.vector4d(0, 0, 0, 0)
     property vector4d cavaOpts: root.bar ? root.bar.cavaOpts : Qt.vector4d(0, 0, 0, 0)
     property vector4d dockBracket: root.bar ? root.bar.dockBracketVec : Qt.vector4d(0, 0, 0, 0)
+    property vector4d dropShape: root.dropShape
     property vector4d eggDrip: Qt.vector4d(0, 0, 0, 0)
     property vector4d group0: root.slime && root.bar.sharedGroupRects[0] ? root.bar.sharedGroupRects[0] : noBulb
     property vector4d group1: root.slime && root.bar.sharedGroupRects[1] ? root.bar.sharedGroupRects[1] : noBulb
