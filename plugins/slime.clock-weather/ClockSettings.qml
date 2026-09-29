@@ -176,7 +176,7 @@ SlimeKeyboardPanel {
       width: parent.width
       bar: panel.bar
       minimum: 11
-      maximum: 24
+      maximum: 32
       step: 1
       integer: true
       value: panel.widget.fontSize
