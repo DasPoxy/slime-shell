@@ -229,8 +229,10 @@ SlimeKeyboardPanel {
       }
       Text {
         x: headMonster.width + 10
+        width: (bubbleToggle.visible ? bubbleToggle.x : menuButton.x) - x - 8
+        elide: Text.ElideRight
         anchors.verticalCenter: parent.verticalCenter
-        text: drawer.query === "" ? drawer.allApps.length + " apps  ·  > commands  ·  / files"
+        text: drawer.query === "" ? drawer.allApps.length + " apps · >cmds · /files"
           : drawer.filesOnly ? drawer.files.length + " files"
           : drawer.apps.length + " apps · " + drawer.cmds.length + " commands" + (drawer.files.length ? " · " + drawer.files.length + " files" : "")
         color: drawer.ink
@@ -372,15 +374,23 @@ SlimeKeyboardPanel {
               width: drawer.cell
               height: drawer.cell * 1.15
               // newly scrolled into view: it bubbles up out of the goo
-              readonly property bool inView: scroller.bubble(tile, scroller.contentY) > 0.5
+              readonly property real vis: scroller.bubble(tile, scroller.contentY)
+              property bool seen: true
               property real pop: 1
-              onInViewChanged: if (inView && drawer.open) { pop = 0; popAnim.restart() }
+              // bubbles up once as it rises in from the bottom (scrolling up it just
+              // slides in); counts again only once it's fully out of view
+              onVisChanged: {
+                if (vis <= 0) { seen = false; return }
+                if (seen || !drawer.open) return
+                seen = true
+                if (tile.mapToItem(scroller, 0, 0).y > scroller.height / 2) { pop = 0; popAnim.restart() }
+              }
               SequentialAnimation {
                 id: popAnim
                 PauseAnimation { duration: (tile.index % drawer.columns) * 35 }
-                NumberAnimation { target: tile; property: "pop"; to: 1; duration: 380; easing.type: Easing.OutBack }
+                NumberAnimation { target: tile; property: "pop"; to: 1; duration: 460; easing.type: Easing.OutCubic }
               }
-              opacity: Math.min(1, pop * 1.4)
+              opacity: 0.25 + 0.75 * pop
               scale: 0.35 + 0.65 * pop
               transform: Translate { x: drawer.bobX(tile.index); y: (1 - tile.pop) * 30 + drawer.bobY(tile.index) }
               ResultBubble { z: -1 }
@@ -442,11 +452,17 @@ SlimeKeyboardPanel {
             readonly property bool current: drawer.apps.length + index === drawer.selected
             width: results.width
             height: 28
-            readonly property bool inView: scroller.bubble(row, scroller.contentY) > 0.5
+            readonly property real vis: scroller.bubble(row, scroller.contentY)
+            property bool seen: true
             property real pop: 1
-            onInViewChanged: if (inView && drawer.open) { pop = 0; rowPop.restart() }
-            NumberAnimation { id: rowPop; target: row; property: "pop"; to: 1; duration: 340; easing.type: Easing.OutBack }
-            opacity: Math.min(1, pop * 1.4)
+            onVisChanged: {
+              if (vis <= 0) { seen = false; return }
+              if (seen || !drawer.open) return
+              seen = true
+              if (row.mapToItem(scroller, 0, 0).y > scroller.height / 2) { pop = 0; rowPop.restart() }
+            }
+            NumberAnimation { id: rowPop; target: row; property: "pop"; to: 1; duration: 420; easing.type: Easing.OutCubic }
+            opacity: 0.25 + 0.75 * pop
             scale: 0.5 + 0.5 * pop
             transform: Translate { x: drawer.bobX(row.index + 200) * 0.6; y: (1 - row.pop) * 22 + drawer.bobY(row.index + 200) * 0.5 }
             radius: drawer.bubbles ? height / 2 : 12
@@ -508,11 +524,17 @@ SlimeKeyboardPanel {
             readonly property bool current: drawer.apps.length + drawer.cmds.length + index === drawer.selected
             width: results.width
             height: 34
-            readonly property bool inView: scroller.bubble(fileRow, scroller.contentY) > 0.5
+            readonly property real vis: scroller.bubble(fileRow, scroller.contentY)
+            property bool seen: true
             property real pop: 1
-            onInViewChanged: if (inView && drawer.open) { pop = 0; fileRowPop.restart() }
-            NumberAnimation { id: fileRowPop; target: fileRow; property: "pop"; to: 1; duration: 340; easing.type: Easing.OutBack }
-            opacity: Math.min(1, pop * 1.4)
+            onVisChanged: {
+              if (vis <= 0) { seen = false; return }
+              if (seen || !drawer.open) return
+              seen = true
+              if (fileRow.mapToItem(scroller, 0, 0).y > scroller.height / 2) { pop = 0; fileRowPop.restart() }
+            }
+            NumberAnimation { id: fileRowPop; target: fileRow; property: "pop"; to: 1; duration: 420; easing.type: Easing.OutCubic }
+            opacity: 0.25 + 0.75 * pop
             scale: 0.5 + 0.5 * pop
             transform: Translate { x: drawer.bobX(fileRow.index + 400) * 0.6; y: (1 - fileRow.pop) * 22 + drawer.bobY(fileRow.index + 400) * 0.5 }
             radius: drawer.bubbles ? height / 2 : 12
