@@ -36,12 +36,14 @@ Item {
   property color tint: "transparent"
   property real tintAmount: 0
   readonly property color baseSkin: material === "sinew" ? Qt.tint(body, Qt.rgba(0.86, 0.3, 0.36, 0.5))
-    : material === "bone" ? Qt.tint(eye, Qt.rgba(0.6, 0.48, 0.3, 0.22))
+    // bone: ivory, stained with the monster's own colour (so the colour
+    // options still tell apart)
+    : material === "bone" ? Qt.tint(Qt.tint(eye, Qt.rgba(0.6, 0.48, 0.3, 0.22)), Qt.rgba(body.r, body.g, body.b, 0.42))
     : body
   readonly property color skin: tintAmount > 0 ? Qt.tint(baseSkin, Qt.rgba(tint.r, tint.g, tint.b, tintAmount)) : baseSkin
   readonly property bool shaded: !Qt.colorEqual(body2, body)
   readonly property color baseSkin2: material === "sinew" ? Qt.tint(body2, Qt.rgba(0.86, 0.3, 0.36, 0.5))
-    : material === "bone" ? baseSkin
+    : material === "bone" ? Qt.tint(Qt.tint(eye, Qt.rgba(0.6, 0.48, 0.3, 0.22)), Qt.rgba(body2.r, body2.g, body2.b, 0.42))
     : body2
   readonly property color skin2: tintAmount > 0 ? Qt.tint(baseSkin2, Qt.rgba(tint.r, tint.g, tint.b, tintAmount)) : baseSkin2
   LinearGradient {
