@@ -252,7 +252,7 @@ Item {
       }
       ChoiceRow {
         title: "BAR SHAPE"
-        options: [["classic", "classic"], ["pills", "pills"], ["islands", "islands"], ["notch", "notch"]]
+        options: [["classic", "classic"], ["pills", "pills"], ["islands", "islands"], ["notch", "notch"], ["blob", "blob"]]
         current: settings.bar.barShape
         onPicked: value => settings.bar.barShape = value
       }

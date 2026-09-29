@@ -35,7 +35,7 @@ layout(std140, binding = 0) uniform buf {
     float poolDepth;
     vec2 origin;      // this window's top-left on the screen
     float blobMode;   // 1 = no bar: just a free-standing blob in panelRect
-    float barShape;   // 0 classic strip, 1 pills, 2 islands, 3 notch, 4 corners, 5 dock
+    float barShape;   // 0 classic strip, 1 pills, 2 islands, 3 notch, 4 corners, 5 dock, 6 blob
     vec4 dripStyle;   // speed x, thickness x, frozen (1 = hang still), density x
     vec4 dripExtra;   // x: shape 0 drip / 1 stringy / 2 mitosis; y: variable amount 0/1;
                       // z: how far falling goo may reach from the bar (0 = no limit)
@@ -491,7 +491,27 @@ float dockEdge(float x) {
     return e;
 }
 
+// Blob (6): the three sections pushed together in the middle of the edge as
+// one floating slime: each still a pod of its own, joined to its neighbour
+// by a thick neck of goo, pinched enough that the sections still read apart.
+float blobNeck(vec2 p, vec4 a, vec4 b) {
+    if (a.z <= 0.0 || b.z <= 0.0) return 1e5;
+    float x0 = a.x + a.z, x1 = b.x;
+    vec2 c = vec2((x0 + x1) * 0.5, a.y + a.w * 0.5);
+    float h = min(a.w, b.w) * 0.5 + PAD * 0.55;
+    // thinner in the middle: a pinch between the two pods
+    float t = clamp(abs(p.x - c.x) / max(1.0, (x1 - x0) * 0.5 + 10.0), 0.0, 1.0);
+    float hh = h * mix(0.62, 1.0, t * t) + 0.8 * sin(time * 1.1 + c.x * 0.01);
+    return sdRoundBox(p, c, vec2((x1 - x0) * 0.5 + 14.0, hh), hh * 0.9);
+}
+float blob(vec2 p) {
+    float d = islands(p);
+    d = smin(d, blobNeck(p, group0, group1), 10.0);
+    d = smin(d, blobNeck(p, group1, group2), 10.0);
+    return d;
+}
 float baseShape(vec2 p) {
+    if (barShape > 5.5) return blob(p);
     if (barShape > 4.5) return dockShape(p);
     if (barShape > 3.5) return corners(p);
     if (barShape < 0.5) return p.y - barEdge(p.x);
@@ -511,7 +531,24 @@ float podBottom(vec4 b, float x, float extra) {
     if (b.z <= 0.0 || x < b.x + inset || x > b.x + b.z - inset) return -1.0;
     return b.y + b.w + PAD * 0.55 + extra;
 }
+float blobEdge(float x) {
+    float e = max(max(podBottom(group0, x, 0.0), podBottom(group1, x, 0.0)), podBottom(group2, x, 0.0));
+    // under a neck: its (pinched) underside
+    for (int k = 0; k < 2; k++) {
+        vec4 a = k == 0 ? group0 : group1, b = k == 0 ? group1 : group2;
+        if (a.z <= 0.0 || b.z <= 0.0) continue;
+        float x0 = a.x + a.z, x1 = b.x;
+        if (x > x0 && x < x1) {
+            float h = min(a.w, b.w) * 0.5 + PAD * 0.55;
+            float t = clamp(abs(x - (x0 + x1) * 0.5) / max(1.0, (x1 - x0) * 0.5 + 10.0), 0.0, 1.0);
+            e = max(e, a.y + a.w * 0.5 + h * mix(0.62, 1.0, t * t) - 1.0);
+        }
+    }
+    return e;
+}
+
 float dripEdge(float x) {
+    if (barShape > 5.5) return blobEdge(x);
     if (barShape > 4.5) return dockEdge(x);
     if (barShape > 3.5) return cornerEdge(x);
     if (barShape < 0.5) return barEdge(x);

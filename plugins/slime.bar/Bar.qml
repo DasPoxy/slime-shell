@@ -395,7 +395,8 @@ Item {
   // Detritus drifting in the bar (off for a cleaner look).
   property bool barDebris: true
   // Physical shape of the bar: "classic" strip, "pills" (one per widget),
-  // "islands" (one per section) or "notch" (centre hangs from the edge).
+  // "islands" (one per section), "notch" (centre hangs from the edge) or
+  // "blob" (the three sections huddled together in the middle, one slime).
   property string barShape: "classic"
   // What the bar is made of: "slime", "sinew", "bone" or "plain". Bone and
   // plain don't drip; plain also drops the floating debris.
@@ -489,7 +490,7 @@ Item {
       root.cava3 = Qt.vector4d(n(12), n(13), n(14), n(15))
     }
   }
-  readonly property real barShapeId: ["classic", "pills", "islands", "notch"].indexOf(barShape)
+  readonly property real barShapeId: barShape === "blob" ? 6 : ["classic", "pills", "islands", "notch"].indexOf(barShape)
   // Latest left/centre/right section extents, for overlays (see sharedBulbRects).
   property var sharedGroupRects: []
 
@@ -3003,19 +3004,24 @@ Item {
       id: horizontalBar
 
       Item {
+        id: hBar
         anchors.fill: parent
+        // blob: the side sections huddle up against the centre, a gap apart
+        readonly property bool huddle: root.barShape === "blob"
+        readonly property vector4d mid: barWindow.groupRects[1] || Qt.vector4d(0, 0, 0, 0)
+        readonly property real midStart: mid.z > 0 ? mid.x : width / 2
+        readonly property real midEnd: mid.z > 0 ? mid.x + mid.z : width / 2
+        readonly property real gap: 30
 
         CenterModules { anchors.fill: parent }
 
         LeftModules {
-          anchors.left: parent.left
-          anchors.leftMargin: Style.space(8)
+          x: hBar.huddle ? Math.max(Style.space(8), hBar.midStart - hBar.gap - width) : Style.space(8)
           anchors.verticalCenter: parent.verticalCenter
         }
 
         RightModules {
-          anchors.right: parent.right
-          anchors.rightMargin: Style.space(8)
+          x: hBar.huddle ? Math.min(parent.width - width - Style.space(8), hBar.midEnd + hBar.gap) : parent.width - width - Style.space(8)
           anchors.verticalCenter: parent.verticalCenter
         }
       }
@@ -3025,19 +3031,23 @@ Item {
       id: verticalBar
 
       Item {
+        id: vBar
         anchors.fill: parent
+        readonly property bool huddle: root.barShape === "blob"
+        readonly property vector4d mid: barWindow.groupRects[1] || Qt.vector4d(0, 0, 0, 0)
+        readonly property real midStart: mid.z > 0 ? mid.x : height / 2
+        readonly property real midEnd: mid.z > 0 ? mid.x + mid.z : height / 2
+        readonly property real gap: 30
 
         CenterModules { anchors.fill: parent }
 
         LeftModules {
-          anchors.top: parent.top
-          anchors.topMargin: Style.space(8)
+          y: vBar.huddle ? Math.max(Style.space(8), vBar.midStart - vBar.gap - height) : Style.space(8)
           anchors.horizontalCenter: parent.horizontalCenter
         }
 
         RightModules {
-          anchors.bottom: parent.bottom
-          anchors.bottomMargin: Style.space(8)
+          y: vBar.huddle ? Math.min(parent.height - height - Style.space(8), vBar.midEnd + vBar.gap) : parent.height - height - Style.space(8)
           anchors.horizontalCenter: parent.horizontalCenter
         }
       }

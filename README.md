@@ -16,7 +16,8 @@ any screen edge and any screen size.
 ## Looks
 
 Mix a **material** (slime, sinew, bone, plain) with a **shape** (classic,
-pills, islands, notch) and a **shading** style (soft, anime, manga, print,
+pills, islands, notch, blob — the three sections huddled together in the
+middle of the edge as one slime) and a **shading** style (soft, anime, manga, print,
 cel, sketch):
 
 ![Sinew pills](docs/images/bar-sinew-pills.png)
@@ -224,7 +225,7 @@ Other IPC for binds or scripts:
 omarchy-shell slime-shell toggle | open | close | tab <name> | toggleTab <name>
 omarchy-shell slime-shell tasks                  # Slime-Tasks pop-out
 omarchy-shell slime-shell material slime|sinew|bone|plain
-omarchy-shell slime-shell shape classic|pills|islands|notch
+omarchy-shell slime-shell shape classic|pills|islands|notch|blob
 omarchy-shell slime-shell shading 0|1|2|3|4|5    # soft, anime, manga, print, cel, sketch
 omarchy-shell slime-shell drip drip|honey|rain|tar|frozen|stringy|lava|gelatinous|cava
 omarchy-shell slime-shell dock toggle|on|off|apps|top|bottom|left|right|start|center|end|autohide|pinned
@@ -266,7 +267,8 @@ Command centre → **Settings** (sections fold open and closed):
   right-click an icon for a little drip of a menu to launch, move or remove
   it (↑↓ Enter, Esc or a click elsewhere closes it). Pins live in
   `~/.config/omarchy/slime-shell/dock.json`.
-- **Slime** — colour, gradient partner, material, bar position, bar shape,
+- **Slime** — colour, gradient partner, material, bar position, bar shape
+  (classic, pills, islands, notch, blob),
   draw above/behind windows, bar debris, slime icon colours, shading (soft,
   anime, manga, print, cel, sketch)
 - **Font & clock** — system font or a display face (blobby, drippy, bubble,
