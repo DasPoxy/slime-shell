@@ -854,6 +854,12 @@ float openPanel(vec2 p, float ci, inout float hl) {
     float cx = panelRect.x + panelRect.z * 0.5;
     float r = min(min(w, h) * 0.5, 22.0);
     float pd = sdRoundBox(p, vec2(cx, barHeight + h * 0.5), vec2(w * 0.5, h * 0.5), r);
+    // the walls are alive: slow swells and quicker jiggles running round the
+    // edge (only near the edge, and calm while it's still opening)
+    float live = smoothstep(0.7, 1.0, o) * (1.0 - smoothstep(0.0, 26.0, -pd));
+    pd += live * (2.4 * sin(p.x * 0.045 + p.y * 0.03 + time * 2.1)
+                + 1.3 * sin(p.y * 0.11 - p.x * 0.02 - time * 4.3)
+                + 0.8 * sin((p.x + p.y) * 0.19 + time * 7.1));
     float d = pd;
 
     float bottom = barHeight + h;
