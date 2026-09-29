@@ -612,6 +612,7 @@ BarWidget {
     bar: root.bar
     triggerMode: "hover"
     clickThrough: true
+    keepMapped: root.karaoke && root.hasMedia && root.slime
     padding: 0
     open: (shown || falling) && root.karaoke && root.hasMedia
     // the bead: the line with room round it; below it, room to sink into

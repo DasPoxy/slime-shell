@@ -894,6 +894,13 @@ bool dockHides(float x) {
 
 vec2 mapSceneBody(vec2 p) {
     if (blobMode > 0.5) return mapBlob(p);
+    // a lyric drip draws only itself, melting into the bar's body: the bar's
+    // drips are the bar's to draw (two drips' copies of them would overlap)
+    if (dropShape.x > 0.5) {
+        float hl0 = 1e5;
+        float db = lyricDrop(p, hl0);
+        return vec2(smin(baseShape(p), db, 26.0), hl0);
+    }
     float d = baseShape(p);
     float hl = 1e5;
     float ci = floor(p.x / CELL);

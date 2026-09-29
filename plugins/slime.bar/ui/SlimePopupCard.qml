@@ -30,6 +30,10 @@ PopupWindow {
   property string triggerMode: "click"
   // nothing on it takes the pointer (a caption dripping over windows)
   property bool clickThrough: false
+  // stays mapped while closed (drawing nothing): the compositor restacks
+  // windows as a popup unmaps, flashing the bar's drips over its neighbours
+  property bool keepMapped: false
+  readonly property bool drawsNothing: keepMapped && !open && !(slime && dripProgress > 0)
   // a lyric drip instead of the card shape (see the shader's lyricDrop):
   // x on, y sunk (px), z falling / bursting 0..1, w the bead's height
   property vector4d dropShape: Qt.vector4d(0, 0, 0, 0)
@@ -99,7 +103,7 @@ PopupWindow {
 
   default property alias contentItem: contentHolder.children
 
-  visible: open || card.opacity > 0 || (slime && dripProgress > 0)
+  visible: keepMapped || open || card.opacity > 0 || (slime && dripProgress > 0)
   color: "transparent"
   implicitWidth: slime && sideBar ? contentWidth + neck + dripPad : contentWidth + sidePad * 2
   implicitHeight: slime && sideBar ? contentHeight + sidePad * 2 : contentHeight + neck + dripPad
@@ -235,7 +239,8 @@ PopupWindow {
     anchors.fill: parent
     fragmentShader: Qt.resolvedUrl("../shaders/slime.frag.qsb")
     // every shader uniform set explicitly: unset ones are not guaranteed to be 0
-    property vector4d cullRect: Qt.vector4d(0, 0, 0, 0)
+    // (every pixel culled while it's only being kept mapped)
+    property vector4d cullRect: root.drawsNothing ? Qt.vector4d(0, -1, -1, 1) : Qt.vector4d(0, 0, 0, 0)
     property real blobMode: 0
 
     readonly property var bulbs: root.anchorWindow && root.anchorWindow.bulbRects ? root.anchorWindow.bulbRects : []
