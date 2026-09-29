@@ -2,6 +2,7 @@ import Quickshell
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
+import Quickshell.Io
 import Quickshell.Services.SystemTray
 import qs.Commons
 import qs.Ui
@@ -181,11 +182,26 @@ BarWidget {
     return result
   }
 
-  function persistTrayState(pinned, hidden) {
+  function persistTrayState(pinned, hidden) { saveTraySettings({ pinned: pinned, hidden: hidden }) }
+  // (keeps the other settings: pins, hidden items, the icon)
+  function saveTraySettings(changes) {
     if (!root.bar || !root.bar.shell || typeof root.bar.shell.updateEntryInline !== "function") return
     var id = root.moduleName || "omarchy.tray"
-    root.bar.shell.updateEntryInline(id, { id: id, pinned: pinned, hidden: hidden })
+    var entry = { id: id }
+    for (var k in root.settings) if (k !== "id" && k !== "source") entry[k] = root.settings[k]
+    for (var c in changes) entry[c] = changes[c]
+    root.settings = entry
+    root.bar.shell.updateEntryInline(id, entry)
   }
+  IpcHandler {
+    target: "slime-tray"
+    function menu(): void { root.managePopupOpen = !root.managePopupOpen }
+    function icon(kind: string): void { root.saveTraySettings({ icon: kind }) }
+  }
+  // who carries the tray (right-click to choose); it "opens" as the tray reveals
+  readonly property var carriers: [["backpack", "backpack"], ["treasureslime", "treasure slime"], ["mule", "pack mule"],
+                                   ["goblinsack", "goblin & sack"], ["horseknight", "knight"], ["mimic", "mimic"], ["cauldron", "cauldron"]]
+  readonly property string carrier: carriers.some(function(c) { return c[0] === setting("icon", "backpack") }) ? setting("icon", "backpack") : "backpack"
 
   function togglePin(iid) {
     var p = pinnedIds.slice(), h = hiddenIds.slice()
@@ -408,7 +424,7 @@ BarWidget {
   Component {
     id: slimeIcon
     SlimeGear {
-      kind: "backpack"
+      kind: root.carrier
       bar: root.bar
       size: parent ? parent.width : 24
       open: root.expanded
@@ -427,6 +443,45 @@ BarWidget {
       id: manageColumn
       anchors.fill: parent
       spacing: Style.space(8)
+
+      Text {
+        text: "Who carries the tray"
+        color: root.foreground
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.body
+        font.bold: true
+      }
+      Flow {
+        width: parent.width
+        spacing: Style.space(6)
+        Repeater {
+          model: root.carriers
+          Rectangle {
+            id: carrierChip
+            required property var modelData
+            readonly property bool picked: root.carrier === modelData[0]
+            width: 64; height: 58; radius: 12
+            color: picked ? Qt.rgba(1, 1, 1, 0.6) : carrierHover.hovered ? Qt.rgba(1, 1, 1, 0.35) : Qt.rgba(1, 1, 1, 0.15)
+            border.color: root.foreground; border.width: picked ? 2 : 0
+            HoverHandler { id: carrierHover }
+            SlimeGear {
+              anchors.horizontalCenter: parent.horizontalCenter; y: 4
+              width: 34; height: 34; size: 34
+              bar: root.bar
+              kind: carrierChip.modelData[0]
+              // hover to see it open
+              open: carrierHover.hovered || carrierChip.picked && root.expanded
+            }
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter; y: 40
+              width: parent.width - 4; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight
+              text: carrierChip.modelData[1]
+              color: root.foreground; font.family: root.fontFamily; font.pixelSize: 9; font.bold: carrierChip.picked
+            }
+            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.saveTraySettings({ icon: carrierChip.modelData[0] }) }
+          }
+        }
+      }
 
       Text {
         text: "Tray icons"

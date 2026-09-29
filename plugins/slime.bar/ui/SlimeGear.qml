@@ -1139,6 +1139,195 @@ Item {
       }
     }
 
+    // ============== tray: a slime stuffed with treasure (open = mouth wide, loot spilling)
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "treasureslime"
+      sourceComponent: Item {
+        id: ts
+        anchors.fill: parent
+        property real o: root.open ? 1 : 0
+        Behavior on o { NumberAnimation { duration: 320; easing.type: Easing.OutBack } }
+        readonly property color body: root.bar ? root.bar.slimeColor : (root.pal.green || "#5fd35f")
+        // coins and a gem glinting inside the goo
+        GearPath { d: "M3.4 21.8 Q2.8 13.8 7 10.4 Q12 " + (7.6 - ts.o * 1.4) + " 17 10.4 Q21.2 13.8 20.6 21.8 Q12 23.4 3.4 21.8 Z"; fill: Qt.rgba(ts.body.r, ts.body.g, ts.body.b, 0.8); line: 1.2 }
+        Rectangle { x: 6; y: 17.6; width: 3.4; height: 1.6; radius: 0.8; color: root.gold; border.color: root.ink; border.width: 0.4 }
+        Rectangle { x: 14.6; y: 18.4; width: 3.4; height: 1.6; radius: 0.8; color: root.gold; border.color: root.ink; border.width: 0.4 }
+        GearPath { d: "M11 16.6 L12.6 15.2 L14.2 16.6 L12.6 18.8 Z"; fill: root.pal.bright_cyan || "#10ffd9"; line: 0.5 }
+        GearPath { d: "M6.8 13.2 Q8.2 11.4 10.4 11"; stroke: Qt.rgba(1, 1, 1, 0.75); line: 1 }
+        Rectangle { x: 8.4; y: 12.6; width: 1.8; height: 2.4; radius: 0.9; color: root.ink }
+        Rectangle { x: 13.8; y: 12.6; width: 1.8; height: 2.4; radius: 0.9; color: root.ink }
+        // mouth: a smile, or wide open with coins popping out
+        GearPath { d: ts.o > 0.3 ? "M10 16 Q12 " + (16 + ts.o * 3) + " 14 16 Z" : "M10.4 16.2 Q12 17.2 13.6 16.2"; fill: ts.o > 0.3 ? root.ink : "transparent"; line: 0.7 }
+        Repeater {
+          model: ts.o > 0.05 ? 3 : 0
+          Rectangle {
+            required property int index
+            x: 12 + (index - 1) * 3.2 * ts.o - 1.1; y: 14 - ts.o * (4 + index % 2 * 2.4)
+            width: 2.2; height: 2.2; radius: 1.1
+            color: root.gold; border.color: root.ink; border.width: 0.4
+            opacity: ts.o
+          }
+        }
+      }
+    }
+
+    // ============== tray: a pack mule with bags of loot (open = bags open, ears up)
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "mule"
+      sourceComponent: Item {
+        id: mule
+        anchors.fill: parent
+        property real o: root.open ? 1 : 0
+        Behavior on o { NumberAnimation { duration: 320; easing.type: Easing.OutBack } }
+        readonly property color coat: Qt.tint(root.leather, Qt.rgba(0.6, 0.6, 0.62, 0.45))
+        // legs, body, neck and head
+        GearPath { d: "M6 17 L5.6 22 M9 17 L9 22 M15 17 L15 22 M18 17 L18.4 22"; stroke: root.ink; line: 1.5 }
+        GearPath { d: "M4 12 Q4 9.4 7 9.4 L17 9.4 Q19.6 9.4 19.6 12.4 L19.6 16 Q19.6 17.6 18 17.6 L5.6 17.6 Q4 17.6 4 16 Z"; fill: mule.coat }
+        GearPath { d: "M17.6 10.4 L20.6 6 Q22.8 5.4 23.4 7.4 L22.6 10 Q21.6 11 20.4 11 Z"; fill: mule.coat; line: 1 }
+        Rectangle { x: 21.4; y: 7.2; width: 0.9; height: 0.9; radius: 0.45; color: root.ink }
+        // long ears: back, or pricked up
+        GearPath { d: "M20.6 6.2 L" + (20 - 1.6 * (1 - mule.o)) + " " + (1.6 + 1.6 * (1 - mule.o)) + " L21.4 5.6 Z"; fill: mule.coat; line: 0.8 }
+        GearPath { d: "M3.6 11 Q1.6 12 1.8 15"; stroke: root.ink; line: 0.9 }
+        // saddlebags, flaps lifting as it opens, loot peeking out
+        GearPath { d: "M6 9.6 L11 9.6 L11 15.4 Q8.5 16.4 6 15.4 Z"; fill: root.leather; line: 1 }
+        GearPath { d: "M12.4 9.6 L17.4 9.6 L17.4 15.4 Q14.9 16.4 12.4 15.4 Z"; fill: root.leather; line: 1 }
+        GearPath { d: "M6 9.6 L11 9.6 L11 " + (12 - mule.o * 3.4) + " Q8.5 " + (12.8 - mule.o * 3.4) + " 6 " + (12 - mule.o * 3.4) + " Z"; fill: root.leatherLight; line: 0.8 }
+        GearPath { d: "M12.4 9.6 L17.4 9.6 L17.4 " + (12 - mule.o * 3.4) + " Q14.9 " + (12.8 - mule.o * 3.4) + " 12.4 " + (12 - mule.o * 3.4) + " Z"; fill: root.leatherLight; line: 0.8 }
+        GearPath { visible: mule.o > 0.3; d: "M7 9.4 L8 7.2 L9.2 9.4 M13.4 9.4 L14.6 6.8 L15.8 9.4"; stroke: root.gold; line: 1.1 }
+      }
+    }
+
+    // ============== tray: a goblin hauling a huge sack of gold (open = sack opens, gold glints)
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "goblinsack"
+      sourceComponent: Item {
+        id: gob
+        anchors.fill: parent
+        property real o: root.open ? 1 : 0
+        Behavior on o { NumberAnimation { duration: 320; easing.type: Easing.OutBack } }
+        readonly property color skin: root.pal.green || "#5fb34f"
+        // the sack, bigger than him, over his shoulder
+        GearPath { d: "M8.6 3.8 Q15.8 1.4 20.8 6.2 Q23.6 12.4 19.6 16.4 Q13.6 18.6 10.4 14 Q7.4 9.4 8.6 3.8 Z"; fill: Qt.tint(root.leather, Qt.rgba(1, 0.9, 0.7, 0.35)) }
+        GearPath { d: "M9.4 5.2 Q" + (7 - gob.o * 2) + " " + (2.6 - gob.o * 1.4) + " 10.8 2.6"; stroke: root.ink; line: 1 }
+        GearPath { visible: gob.o > 0.2; d: "M9.6 3.6 Q12 1.4 14.4 2.6 Q12.4 4 9.6 3.6 Z"; fill: root.gold; line: 0.6 }
+        Rectangle { visible: gob.o > 0.2; x: 11.6; y: 0.6 - gob.o; width: 1.2; height: 1.2; radius: 0.6; color: "white"; opacity: root.pulse * gob.o }
+        GearPath { d: "M15.4 10 L16.6 9 L17.8 10.2 L16.6 11.4 Z"; fill: root.gold; line: 0.4 }
+        // the goblin, bent under it
+        GearPath { d: "M5.4 13.6 Q9 12.6 10.4 15.4 L10.8 20.4 L4.6 20.4 Z"; fill: root.leather; line: 1 }
+        GearPath { d: "M5.6 20.4 L4.8 23 M9.6 20.4 L10.6 23"; stroke: root.ink; line: 1.4 }
+        GearPath { d: "M3.2 10.2 Q5.8 8.2 8 10.4 L7.6 13.2 Q5.4 14.4 3.6 13 Z"; fill: gob.skin; line: 0.9 }
+        GearPath { d: "M3.4 10.6 L0.6 9.4 L3 11.8 M7.8 10.4 L9.6 8.6 L8.2 11.2"; fill: gob.skin; line: 0.7 }
+        Rectangle { x: 4.2; y: 10.8; width: 1; height: 1; radius: 0.5; color: root.flame }
+        Rectangle { x: 6.2; y: 10.8; width: 1; height: 1; radius: 0.5; color: root.flame }
+        GearPath { d: "M4.6 12.6 L5.2 13 L5.8 12.6 L6.4 13"; line: 0.5 }
+        GearPath { d: "M8 13 Q9.6 11.4 10.2 10"; stroke: gob.skin; line: 1.4 }
+      }
+    }
+
+    // ============== tray: a knight on horseback (open = rearing, lance raised)
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "horseknight"
+      sourceComponent: Item {
+        id: hk
+        anchors.fill: parent
+        property real o: root.open ? 1 : 0
+        Behavior on o { NumberAnimation { duration: 360; easing.type: Easing.OutBack } }
+        readonly property color horse: Qt.tint(root.paper, Qt.rgba(0.55, 0.4, 0.25, 0.55))
+        readonly property color steel: Qt.tint(root.paper, Qt.rgba(0.35, 0.4, 0.5, 0.5))
+        Item {
+          anchors.fill: parent
+          rotation: -12 * hk.o
+          transformOrigin: Item.BottomLeft
+          // horse: legs, body, neck and head, with a caparison
+          GearPath { d: "M6 17.4 L5.4 22 M9 17.4 L9.4 22 M15.6 17.4 L16 22 M18.4 17.4 L19 22"; stroke: root.ink; line: 1.4 }
+          GearPath { d: "M4.4 13.6 Q4.4 11.2 7 11.2 L17.4 11.2 Q20 11.2 20 13.8 L20 16.4 Q20 18 18.4 18 L6 18 Q4.4 18 4.4 16.4 Z"; fill: hk.horse }
+          GearPath { d: "M18 12 L20.4 7.2 Q22.8 6.2 23.6 8.4 L22.8 10.6 Q21.4 11.8 20.4 12 Z"; fill: hk.horse; line: 1 }
+          Rectangle { x: 21.6; y: 8.2; width: 0.9; height: 0.9; radius: 0.45; color: root.ink }
+          GearPath { d: "M6.4 11.4 L17.4 11.4 L16.6 16.6 L7.2 16.6 Z"; fill: root.pal.blue || "#3f74ff"; line: 0.8 }
+          GearPath { d: "M8.4 16.6 L9.4 15 L10.4 16.6 L11.4 15 L12.4 16.6 L13.4 15 L14.4 16.6"; stroke: root.gold; line: 0.7 }
+          // the knight: body, helm with a plume, shield
+          GearPath { d: "M9.6 11.4 L10 6.8 Q12 5.6 14 6.8 L14.2 11.4 Z"; fill: hk.steel; line: 0.9 }
+          GearPath { d: "M10.4 6.4 Q12 2.2 13.6 6.4 Z"; fill: hk.steel; line: 0.8 }
+          GearPath { d: "M10.8 4.8 L13.2 4.8"; line: 0.7 }
+          GearPath { d: "M12 2.8 Q14.6 0.4 16.4 1.6 Q13.8 1.8 12.4 3.4"; fill: root.pal.red || "#c0392b"; line: 0.5 }
+          GearPath { d: "M8.6 8 L11 8 L11 10.6 Q9.8 11.8 8.6 10.6 Z"; fill: root.pal.red || "#c0392b"; line: 0.7 }
+          // the lance: level, or raised with a pennant
+          GearPath { d: hk.o > 0.5 ? "M14 9.4 L20.6 0.6" : "M14 9.6 L23.6 7.8"; stroke: root.leather; line: 1.1 }
+          GearPath { visible: hk.o > 0.5; d: "M20.2 1.2 L22.8 1.6 L20.8 3 Z"; fill: root.gold; line: 0.5 }
+        }
+      }
+    }
+
+    // ============== tray: a mimic chest (open = the lid gapes, teeth and tongue)
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "mimic"
+      sourceComponent: Item {
+        id: mim
+        anchors.fill: parent
+        property real o: root.open ? 1 : 0
+        Behavior on o { NumberAnimation { duration: 300; easing.type: Easing.OutBack } }
+        // box
+        GearPath { d: "M3.4 12.6 L20.6 12.6 L20.6 20.6 Q20.6 21.8 19.4 21.8 L4.6 21.8 Q3.4 21.8 3.4 20.6 Z"; fill: root.leather }
+        GearPath { d: "M3.4 16.4 L20.6 16.4 M8 12.6 L8 21.8 M16 12.6 L16 21.8"; stroke: Qt.darker(root.leather, 1.4); line: 0.8 }
+        // mouth: dark inside, lower teeth, a lolling tongue
+        GearPath { visible: mim.o > 0.1; d: "M4 12.8 L20 12.8 L20 " + (12.8 - mim.o * 5) + " L4 " + (12.8 - mim.o * 5) + " Z"; fill: Qt.darker(root.blood, 2.2); line: 0 ; stroke: "transparent" }
+        GearPath { visible: mim.o > 0.3; d: "M5 12.6 L6 10.8 L7 12.6 L8 10.8 L9 12.6 L10 10.8 L11 12.6 L13 12.6 L14 10.8 L15 12.6 L16 10.8 L17 12.6 L18 10.8 L19 12.6"; fill: root.paper; line: 0.5 }
+        GearPath { visible: mim.o > 0.5; d: "M11 12.4 Q12.4 " + (14 + mim.o * 5) + " 15.6 " + (13.6 + mim.o * 4) + " Q14.6 12.6 13 12.4 Z"; fill: root.blood; line: 0.6 }
+        // lid, hinged at the back, with upper teeth and an eye
+        Item {
+          anchors.fill: parent
+          rotation: -32 * mim.o
+          transform: Translate { x: 0 }
+          transformOrigin: Item.Left
+          GearPath { d: "M3 12.6 Q3 7.4 12 7.4 Q21 7.4 21 12.6 Z"; fill: root.leatherLight }
+          GearPath { visible: mim.o > 0.3; d: "M5 12.6 L6 14.2 L7 12.6 L8 14.2 L9 12.6 L15 12.6 L16 14.2 L17 12.6 L18 14.2 L19 12.6"; fill: root.paper; line: 0.5 }
+          Rectangle { x: 10.4; y: 8.8; width: 3.2; height: 2.4; radius: 1.2; color: mim.o > 0.2 ? root.flame : root.gold; border.color: root.ink; border.width: 0.7 }
+          Rectangle { visible: mim.o > 0.2; x: 11.6; y: 9.3; width: 0.9; height: 1.4; radius: 0.45; color: root.ink }
+        }
+      }
+    }
+
+    // ============== tray: a bubbling cauldron (open = lid lifts, bubbles and steam)
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "cauldron"
+      sourceComponent: Item {
+        id: cau
+        anchors.fill: parent
+        property real o: root.open ? 1 : 0
+        Behavior on o { NumberAnimation { duration: 320; easing.type: Easing.OutBack } }
+        readonly property color brew: root.pal.bright_green || "#7dff6a"
+        GearPath { d: "M5 22 L6.4 20 M19 22 L17.6 20"; stroke: root.ink; line: 1.4 }
+        GearPath { d: "M3.6 12 L20.4 12 Q21.4 21 12 21.4 Q2.6 21 3.6 12 Z"; fill: Qt.darker(root.stone, 1.6) }
+        GearPath { d: "M3 11.4 L21 11.4 L21 12.8 L3 12.8 Z"; fill: Qt.darker(root.stone, 1.3); line: 1 }
+        // the brew, and bubbles rising once the lid's off
+        GearPath { d: "M4 12.2 Q12 " + (10.6 - cau.o) + " 20 12.2 Z"; fill: cau.brew; line: 0.6 }
+        Repeater {
+          model: cau.o > 0.2 ? 3 : 0
+          Rectangle {
+            required property int index
+            readonly property real ph: (root.time * 0.9 + index * 0.33) % 1
+            x: 8 + index * 3.6; y: 10 - ph * 8
+            width: 2 - ph; height: width; radius: width / 2
+            color: cau.brew; border.color: root.ink; border.width: 0.4
+            opacity: (1 - ph) * cau.o
+          }
+        }
+        // the lid, lifted and tipped
+        Item {
+          anchors.fill: parent
+          transform: [ Rotation { origin.x: 20; origin.y: 11; angle: 28 * cau.o }, Translate { y: -3 * cau.o } ]
+          GearPath { d: "M4.6 11.2 Q12 7.6 19.4 11.2 Z"; fill: Qt.darker(root.stone, 1.3); line: 1 }
+          Rectangle { x: 11; y: 7.6; width: 2; height: 1.6; radius: 0.8; color: Qt.darker(root.stone, 1.6); border.color: root.ink; border.width: 0.6 }
+        }
+      }
+    }
+
     // =================================================================== sword
     Loader {
       anchors.fill: parent

@@ -140,13 +140,17 @@ Omarchy's widget with Omarchy's own click behaviour, restyled for the bar.
 ## Right side
 
 ### Tray — `slime.tray`
-A backpack that opens as the tray expands (hover).
+A backpack that opens as the tray expands (hover) — or, picked from the
+right-click menu, a slime stuffed with treasure (spits out coins), a pack
+mule (its bags open), a goblin hauling a sack of gold (it glints), a knight
+on horseback (rears, lance raised), a mimic (gapes, teeth and tongue) or a
+bubbling cauldron (the lid lifts). IPC: `omarchy-shell slime-tray menu | icon <kind>`.
 
 | | |
 |---|---|
 | Left click an item | activate |
 | Right click an item | its menu |
-| Right click the backpack | choose hidden items |
+| Right click the backpack | who carries the tray, and pinned / hidden items |
 
 ### Treasure chest — `slime.plugins`
 ![Treasure chest](images/treasure-chest.png)
