@@ -15,11 +15,14 @@ BarIndicator {
 
   Component {
     id: slimeIcon
-    SlimeGear {
+    SlimeIndicatorIcon {
       kind: "eye"
       bar: root.bar
       size: parent ? parent.width : 22
       lit: root.effectiveActive
+      // plain objects, or slimes with the objects inside (right-click the indicators)
+      iconSet: root.indicatorHost && root.indicatorHost.iconSet ? root.indicatorHost.iconSet : "gear"
+      hue: 4
     }
   }
 
@@ -53,7 +56,9 @@ BarIndicator {
     }
   }
 
-  onPressed: function() {
+  onPressed: function(b) {
+    // right-click: the indicators' drip menu (plain objects or slimes)
+    if (b === Qt.RightButton && root.indicatorHost && root.indicatorHost.openIconMenu) { root.indicatorHost.openIconMenu(); return }
     if (root.bar) {
       root.bar.run(root.recording ? "omarchy-capture-screenrecording --stop-recording" : "omarchy-menu toggle trigger.capture.screenrecord")
     }

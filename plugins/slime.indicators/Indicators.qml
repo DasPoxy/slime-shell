@@ -3,6 +3,8 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
+import "../slime.bar/ui"
+import "../slime.bar/commandcenter"
 
 BarWidget {
   id: root
@@ -18,6 +20,87 @@ BarWidget {
   readonly property bool revealInactiveIndicators: alwaysShowIndicators || indicatorAreaHovered || indicatorItemHovered || (bar && bar.centerSectionRevealHeld === true && bar.centerHoverRevealSuppressed !== true)
 
   signal refreshRequested()
+
+  // ---- icon set: the plain objects, or slimes with the objects inside ----
+  readonly property string iconSet: setting("iconSet", "gear") === "slimes" ? "slimes" : "gear"
+  property bool iconMenuOpen: false
+  function openIconMenu() { iconMenuOpen = !iconMenuOpen }
+  function close() { iconMenuOpen = false }
+  function saveSetting(key, value) {
+    var entry = { id: "slime.indicators" }
+    for (var k in root.settings) if (k !== "id" && k !== "source") entry[k] = root.settings[k]
+    entry[key] = value
+    root.settings = entry
+    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
+      root.bar.shell.updateEntryInline("slime.indicators", entry)
+  }
+  QtObject {
+    id: look
+    readonly property var bar: root.bar
+    readonly property color ink: root.bar ? root.bar.slimeInk : Color.foreground
+    readonly property color slime: root.bar ? root.bar.slimeColor : Color.accent
+    readonly property string font: root.bar ? root.bar.fontFamily : Style.font.family
+  }
+  SlimePopupCard {
+    id: iconMenu
+    anchorItem: root
+    owner: root
+    bar: root.bar
+    open: root.iconMenuOpen
+    contentWidth: Style.space(250)
+    contentHeight: iconMenu.fittedContentHeight(iconCol.implicitHeight)
+    Column {
+      id: iconCol
+      anchors.fill: parent
+      spacing: 8
+      bottomPadding: 4
+      CcHeading { cc: look; text: "INDICATOR ICONS" }
+      Row {
+        spacing: 14
+        Repeater {
+          model: [["gear", "objects"], ["slimes", "slimes"]]
+          Column {
+            required property var modelData
+            spacing: 4
+            Row {
+              spacing: 2
+              Repeater {
+                model: ["candle", "bell", "mug"]
+                SlimeIndicatorIcon {
+                  required property string modelData
+                  required property int index
+                  size: 26
+                  bar: root.bar
+                  kind: modelData
+                  lit: index === 0
+                  iconSet: parent.parent.modelData[0]
+                  hue: index
+                }
+              }
+            }
+            CcButton {
+              cc: look
+              anchors.horizontalCenter: parent.horizontalCenter
+              text: parent.modelData[1]
+              on: root.iconSet === parent.modelData[0]
+              onClicked: root.saveSetting("iconSet", parent.modelData[0])
+            }
+          }
+        }
+      }
+      Text {
+        width: parent.width
+        wrapMode: Text.Wrap
+        text: "Left-click an indicator to switch it; hover the island to see the ones that are off."
+        color: look.ink; opacity: 0.7; font.family: look.font; font.pixelSize: 10
+      }
+    }
+  }
+  IpcHandler {
+    target: "slime-indicators"
+    function menu(): void { root.openIconMenu() }
+    function icons(set: string): void { root.saveSetting("iconSet", set === "slimes" ? "slimes" : "gear") }
+  }
 
   ListModel { id: activeIndicatorModel }
 

@@ -115,7 +115,10 @@ On side bars it stacks: weather, hours, minutes, date.
 ### Indicators — `slime.indicators`
 Candle (night light), strapped bell (do not disturb), tankard (stay awake),
 hourglass (reminders), eyeball (screen recording), ear trumpet (dictation).
-Click one to toggle it. Inactive ones show on hover.
+Click one to toggle it. Inactive ones show on hover. Right-click any of them for a
+drip menu choosing the icons: the plain objects, or little slimes (each its
+own theme colour) with the objects floating inside — dozing when off, awake
+and glowing when on. IPC: `omarchy-shell slime-indicators menu | icons gear|slimes`.
 
 ### System update — `slime.system-update`
 A little character in the bar (a town crier by default, trapped in a bubble
