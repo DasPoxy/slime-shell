@@ -166,7 +166,7 @@ SlimeKeyboardPanel {
         model: panel.datePatterns
         Choice {
           required property var modelData
-          label: modelData[1] === "" ? "Time only" : modelData[1] === "@initial" ? panel.widget.dateText(panel.now) : Qt.formatDate(panel.now, modelData[0])
+          label: modelData[1] === "" ? "Time only" : modelData[1] === "@initial" ? panel.widget.initialText(panel.now) : Qt.formatDate(panel.now, modelData[0])
           selected: panel.widget.datePattern === modelData[1]
           onPicked: panel.widget.saveSetting("datePattern", modelData[1])
         }

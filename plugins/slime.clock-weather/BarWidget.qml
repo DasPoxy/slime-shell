@@ -24,12 +24,9 @@ BarWidget {
   readonly property int fontWeight: setting("fontWeight", Font.Black)
   // the date: a Qt pattern, or "@initial" for the day's initial and the
   // date, "M-28" (ST / SN for Saturday / Sunday)
+  function initialText(d) { return (["SN", "M", "T", "W", "T", "F", "ST"][d.getDay()]) + "-" + d.getDate() }
   function dateText(d) {
-    if (datePattern === "@initial") {
-      var dow = d.getDay()
-      return (["SN", "M", "T", "W", "T", "F", "ST"][dow]) + "-" + d.getDate()
-    }
-    return Qt.formatDate(d, datePattern)
+    return datePattern === "@initial" ? initialText(d) : Qt.formatDate(d, datePattern)
   }
   readonly property string clockTime: Qt.formatTime(clock.date, hour24 ? "HH:mm" : "h:mm AP")
   readonly property string clockDate: datePattern === "" ? "" : dateText(clock.date)
