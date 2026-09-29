@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../ui"
 
 // Settings: the slime skin (colour, gradient, shading, animation, drips) and
 // shortcuts to the widget settings that live elsewhere.
@@ -115,9 +116,17 @@ Item {
         id: textSize
         width: parent ? parent.width : 0
         spacing: 2
-        CcHeading {
-          cc: settings.cc
-          text: "TEXT SIZE · " + Math.round(sizeSlider.liveValue * 100) + "%  (THE BAR'S CLOCK HAS ITS OWN, IN ITS MENU)"
+        Row {
+          spacing: 4
+          CcHeading { cc: settings.cc; text: "TEXT SIZE ·" }
+          CcHeading {
+            id: sizeReadout
+            cc: settings.cc
+            text: Math.round(sizeSlider.liveValue * 100) + "%"
+            // click it to type the size
+            SlimeValueEdit { target: sizeReadout; slider: sizeSlider; scale: 100 }
+          }
+          CcHeading { cc: settings.cc; text: " (THE BAR'S CLOCK HAS ITS OWN, IN ITS MENU)" }
         }
         Row {
           spacing: 8

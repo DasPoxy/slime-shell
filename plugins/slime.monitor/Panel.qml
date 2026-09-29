@@ -630,6 +630,7 @@ Panel {
                 anchors.rightMargin: Style.space(6)
                 anchors.verticalCenter: parent.verticalCenter
               }
+              SlimeValueEdit { target: brightnessPercent; slider: brightnessSlider }
             }
 
             CursorSurface {
@@ -704,6 +705,17 @@ Panel {
                 anchors.right: parent.right
                 anchors.rightMargin: Style.space(6)
                 anchors.verticalCenter: parent.verticalCenter
+              }
+              SlimeValueEdit {
+                target: textSizePx
+                slider: textSizeSlider
+                // typed in px: the nearest of the sizes it steps through
+                fromDisplay: function(px) {
+                  var best = 0
+                  for (var i = 0; i < root.textSizeStops.length; i++)
+                    if (Math.abs(root.textSizeStops[i] - px) < Math.abs(root.textSizeStops[best] - px)) best = i
+                  return best
+                }
               }
             }
 

@@ -171,8 +171,14 @@ SlimeKeyboardPanel {
       }
     }
 
-    Heading { text: "SIZE  ·  " + panel.widget.fontSize + "px" }
+    Heading {
+      id: sizeHeading
+      text: "SIZE  ·  " + panel.widget.fontSize + "px"
+      // click the size to type it
+      SlimeValueEdit { target: sizeHeading; slider: sizeSlider }
+    }
     SlimePanelSlider {
+      id: sizeSlider
       width: parent.width
       bar: panel.bar
       minimum: 11
@@ -182,6 +188,7 @@ SlimeKeyboardPanel {
       value: panel.widget.fontSize
       onReleased: value => panel.widget.saveSetting("fontSize", Math.round(value))
     }
+
   }
 
   // Held as a property: the panel's default children are its card content.

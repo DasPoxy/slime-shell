@@ -830,6 +830,7 @@ Panel {
                 anchors.verticalCenter: parent.verticalCenter
                 opacity: root.outputMuted ? 0.5 : 1.0
               }
+              SlimeValueEdit { target: outputPercent; slider: outputSlider; scale: 100 }
             }
 
             CursorSurface {
@@ -917,6 +918,7 @@ Panel {
                 anchors.verticalCenter: parent.verticalCenter
                 opacity: root.inputMuted ? 0.5 : 1.0
               }
+              SlimeValueEdit { target: microphonePercent; slider: inputSlider; scale: 100 }
             }
 
             CursorSurface {
@@ -1229,9 +1231,11 @@ Panel {
           anchors.verticalCenter: parent.verticalCenter
           opacity: streamRow.streamMuted ? 0.5 : 1.0
         }
+        SlimeValueEdit { target: streamPct; slider: streamSlider; scale: 100 }
       }
 
       SlimePanelSlider {
+        id: streamSlider
         bar: root.bar
         width: parent.width
         minimum: 0

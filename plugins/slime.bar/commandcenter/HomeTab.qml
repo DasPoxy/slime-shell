@@ -6,6 +6,7 @@ import Quickshell.Bluetooth
 import Quickshell.Services.Mpris
 import Quickshell.Services.Pipewire
 import qs.Ui
+import "../ui"
 import "../SlimeHub.js" as SlimeHub
 
 // Home: quick toggles across the top (the bar's gear icons), then clock,
@@ -402,6 +403,7 @@ Item {
           onClicked: if (soundRow.audio) soundRow.audio.muted = !soundRow.audio.muted
         }
         SlimeSlider {
+          id: volumeSlider
           anchors.verticalCenter: parent.verticalCenter
           width: home.colWidth - 28 - 50 - 20
           cc: home.cc
@@ -413,12 +415,14 @@ Item {
           width: 50
           anchors.verticalCenter: parent.verticalCenter
           horizontalAlignment: Text.AlignRight
+          id: volumeText
           text: soundRow.audio ? Math.round(soundRow.audio.volume * 100) + "%" : ""
           color: home.cc.ink
           font.family: home.cc.font
           font.pixelSize: Math.round(12 * home.fs)
           font.bold: true
         }
+        SlimeValueEdit { target: volumeText; slider: volumeSlider; scale: 100 }
       }
     }
 
