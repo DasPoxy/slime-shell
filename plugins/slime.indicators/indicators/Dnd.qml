@@ -9,8 +9,10 @@ BarIndicator {
   // Slime Shell: on the slime bar this indicator is a bell floating in the ooze.
   readonly property bool slime: !!bar && bar.slimeSkin === true
   iconComponent: slime ? slimeIcon : null
-  opticalSize: slime ? 22 : Style.bar.iconCanvas
-  fixedWidth: vertical ? -1 : (slime ? 28 : Style.bar.statusSlot)
+  // (the slime icon set is drawn bigger: a whole slime, not just an object)
+  readonly property bool slimeSet: !!indicatorHost && indicatorHost.iconSet === "slimes"
+  opticalSize: slime ? (slimeSet ? 30 : 22) : Style.bar.iconCanvas
+  fixedWidth: vertical ? -1 : (slime ? (slimeSet ? 34 : 28) : Style.bar.statusSlot)
 
   Component {
     id: slimeIcon

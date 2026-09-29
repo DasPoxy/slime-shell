@@ -53,21 +53,21 @@ Item {
           strokeWidth: 1.2
           joinStyle: ShapePath.RoundJoin
           PathSvg {
-            path: "M2.6 22 Q2 14.6 6.4 11 Q12 " + (7.2 + slimeBody.squish) + " 17.6 11 Q22 14.6 21.4 22 Q12 23.6 2.6 22 Z"
+            path: "M1.4 22.6 Q0.6 11.4 5.4 6.2 Q12 " + (0.8 + slimeBody.squish) + " 18.6 6.2 Q23.4 11.4 22.6 22.6 Q12 24.2 1.4 22.6 Z"
           }
         }
       }
       // a glow round the object when it's on
       Rectangle {
         visible: icon.lit
-        x: 12 - width / 2; y: 17.2 - height / 2
-        width: 12 + Math.sin(icon.t * 4) * 1.2; height: width; radius: width / 2
+        x: 12 - width / 2; y: 15.6 - height / 2
+        width: 14 + Math.sin(icon.t * 4) * 1.2; height: width; radius: width / 2
         color: Qt.rgba(1, 1, 1, 0.35)
       }
       // the object, suspended in the goo, bobbing and turning a little
       SlimeGear {
-        x: 12 - width / 2; y: 17.2 - height / 2 + Math.sin(icon.t * 1.6 + icon.hue) * 0.6
-        width: 10; height: 10; size: 10
+        x: 12 - width / 2; y: 15.6 - height / 2 + Math.sin(icon.t * 1.6 + icon.hue) * 0.6
+        width: 12.5; height: 12.5; size: 12.5
         rotation: Math.sin(icon.t * 1.1 + icon.hue * 2) * 10
         bar: icon.bar
         kind: icon.kind
@@ -75,10 +75,10 @@ Item {
         opacity: 0.9
       }
       // sheen
-      Rectangle { x: 5.6; y: 11.8; width: 4; height: 1.4; radius: 0.7; rotation: -30; color: Qt.rgba(1, 1, 1, 0.7) }
+      Rectangle { x: 4.4; y: 8.4; width: 4.6; height: 1.6; radius: 0.7; rotation: -30; color: Qt.rgba(1, 1, 1, 0.7) }
       // eyes on its brow: awake when on, sleepy lines when off
-      Rectangle { x: 8.2; y: icon.lit ? 10.6 : 11.4; width: 1.6; height: icon.lit ? 2 : 0.6; radius: 0.8; color: icon.ink }
-      Rectangle { x: 14.2; y: icon.lit ? 10.6 : 11.4; width: 1.6; height: icon.lit ? 2 : 0.6; radius: 0.8; color: icon.ink }
+      Rectangle { x: 7.6; y: icon.lit ? 4.8 : 6; width: 2; height: icon.lit ? 2.6 : 0.7; radius: 0.8; color: icon.ink }
+      Rectangle { x: 14.4; y: icon.lit ? 4.8 : 6; width: 2; height: icon.lit ? 2.6 : 0.7; radius: 0.8; color: icon.ink }
     }
   }
 }
