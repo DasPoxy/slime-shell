@@ -108,9 +108,10 @@ Each spacer keeps its own settings.
 |---|---|
 | Left click | command centre |
 | Right click | full weather panel |
-| Middle click | date & time settings: 12/24h, date pattern, weather as icon / temperature / both, order, weight, size |
+| Middle click | date & time settings: 12/24h, date pattern (including the short *M-28*: the day's initial — ST / SN at the weekend — and the date), weather as icon / temperature / both (the icon floating big and faint behind the temperature), a bubble round the weather, goblins hanging off the time, order, weight, size |
 
 On side bars it stacks: weather, hours, minutes, date.
+IPC: `omarchy-shell slime-clock settings | option bubble|goblins on|off | option weather icon|temp|both | option date <pattern|@initial>`.
 
 ### Indicators — `slime.indicators`
 Candle (night light), strapped bell (do not disturb), tankard (stay awake),

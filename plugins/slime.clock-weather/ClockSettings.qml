@@ -27,6 +27,7 @@ SlimeKeyboardPanel {
     ["dd/MM/yy", "dd/MM/yy"],
     ["MM/dd/yy", "MM/dd/yy"],
     ["yyyy-MM-dd", "yyyy-MM-dd"],
+    ["@initial", "@initial"],
     ["", ""]
   ]
   readonly property var weights: [["Bold", Font.Bold], ["Heavy", Font.ExtraBold], ["Black", Font.Black]]
@@ -115,13 +116,29 @@ SlimeKeyboardPanel {
       width: parent.width
       spacing: 6
       Repeater {
-        model: [["icon", "icon"], ["temperature", "temp"], ["icon + temperature", "both"]]
+        model: [["icon", "icon"], ["temperature", "temp"], ["icon + temperature (icon floats behind)", "both"]]
         Choice {
           required property var modelData
           label: modelData[0]
           selected: panel.widget.weatherShow === modelData[1]
           onPicked: panel.widget.saveSetting("weatherShow", modelData[1])
         }
+      }
+    }
+
+    Heading { text: "EXTRAS" }
+    Flow {
+      width: parent.width
+      spacing: 6
+      Choice {
+        label: "bubble round the weather"
+        selected: panel.widget.weatherBubble
+        onPicked: panel.widget.saveSetting("weatherBubble", !panel.widget.weatherBubble)
+      }
+      Choice {
+        label: "goblins on the time"
+        selected: panel.widget.goblins
+        onPicked: panel.widget.saveSetting("goblins", !panel.widget.goblins)
       }
     }
 
@@ -149,7 +166,7 @@ SlimeKeyboardPanel {
         model: panel.datePatterns
         Choice {
           required property var modelData
-          label: modelData[1] === "" ? "Time only" : Qt.formatDate(panel.now, modelData[0])
+          label: modelData[1] === "" ? "Time only" : modelData[1] === "@initial" ? panel.widget.dateText(panel.now) : Qt.formatDate(panel.now, modelData[0])
           selected: panel.widget.datePattern === modelData[1]
           onPicked: panel.widget.saveSetting("datePattern", modelData[1])
         }
