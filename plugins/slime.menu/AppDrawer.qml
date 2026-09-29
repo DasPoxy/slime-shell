@@ -180,6 +180,31 @@ SlimeKeyboardPanel {
     readonly property string font: drawer.bar ? drawer.bar.fontFamily : Style.font.family
   }
 
+  // the swallowed castle behind it all (slime bar only)
+  CastleScene {
+    anchors.fill: parent
+    anchors.margins: -drawer.padding * 0.5
+    visible: drawer.slime
+    bar: drawer.bar
+  }
+
+  // results bob gently in the ooze, each on its own rhythm
+  readonly property real t: slime ? bar.animTime : 0
+  readonly property bool bubbles: widget.resultBubbles === true && slime
+  function bobX(i) { return Math.sin(t * 0.9 + i * 1.7) * 1.6 }
+  function bobY(i) { return Math.sin(t * 1.3 + i * 2.3) * 2.2 }
+  // a glossy bubble round a result (when bubbles are on)
+  component ResultBubble: Rectangle {
+    anchors.fill: parent
+    anchors.margins: 3
+    visible: drawer.bubbles
+    radius: Math.min(width, height) / 2
+    color: Qt.rgba(1, 1, 1, 0.12)
+    border.color: Qt.rgba(1, 1, 1, 0.75); border.width: 1.2
+    Rectangle { x: parent.radius * 0.45; y: 4; width: Math.max(6, parent.width * 0.22); height: 3; radius: 1.5; color: Qt.rgba(1, 1, 1, 0.8) }
+    Rectangle { anchors.fill: parent; anchors.margins: -1.2; radius: parent.radius + 1.2; color: "transparent"; border.color: drawer.ink; border.width: 0.8; opacity: 0.35 }
+  }
+
   Item {
     anchors.fill: parent
 
@@ -214,6 +239,19 @@ SlimeKeyboardPanel {
         font.pixelSize: 16
       }
       CcButton {
+        id: bubbleToggle
+        visible: drawer.slime
+        anchors.right: menuButton.left; anchors.rightMargin: 6
+        anchors.verticalCenter: parent.verticalCenter
+        cc: look
+        icon: "\uf192"
+        text: "bubbles"
+        on: drawer.bubbles
+        fontSize: 11
+        onClicked: drawer.widget.setResultBubbles(!drawer.bubbles)
+      }
+      CcButton {
+        id: menuButton
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         cc: look
@@ -344,7 +382,8 @@ SlimeKeyboardPanel {
               }
               opacity: Math.min(1, pop * 1.4)
               scale: 0.35 + 0.65 * pop
-              transform: Translate { y: (1 - tile.pop) * 30 }
+              transform: Translate { x: drawer.bobX(tile.index); y: (1 - tile.pop) * 30 + drawer.bobY(tile.index) }
+              ResultBubble { z: -1 }
 
               Rectangle {
                 anchors.fill: parent
@@ -409,10 +448,11 @@ SlimeKeyboardPanel {
             NumberAnimation { id: rowPop; target: row; property: "pop"; to: 1; duration: 340; easing.type: Easing.OutBack }
             opacity: Math.min(1, pop * 1.4)
             scale: 0.5 + 0.5 * pop
-            transform: Translate { y: (1 - row.pop) * 22 }
-            radius: 12
-            color: row.current ? Qt.rgba(1, 1, 1, 0.7) : (rowHover.hovered ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(1, 1, 1, 0.18))
-            border.color: row.current ? drawer.ink : "transparent"
+            transform: Translate { x: drawer.bobX(row.index + 200) * 0.6; y: (1 - row.pop) * 22 + drawer.bobY(row.index + 200) * 0.5 }
+            radius: drawer.bubbles ? height / 2 : 12
+            color: row.current ? Qt.rgba(1, 1, 1, 0.7) : (rowHover.hovered ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(1, 1, 1, drawer.bubbles ? 0.14 : 0.18))
+            border.color: row.current ? drawer.ink : drawer.bubbles ? Qt.rgba(1, 1, 1, 0.75) : "transparent"
+            Rectangle { visible: drawer.bubbles; x: parent.height * 0.45; y: 3; width: 40; height: 3; radius: 1.5; color: Qt.rgba(1, 1, 1, 0.8) }
             border.width: 2
             HoverHandler { id: rowHover }
             Text {
@@ -474,10 +514,11 @@ SlimeKeyboardPanel {
             NumberAnimation { id: fileRowPop; target: fileRow; property: "pop"; to: 1; duration: 340; easing.type: Easing.OutBack }
             opacity: Math.min(1, pop * 1.4)
             scale: 0.5 + 0.5 * pop
-            transform: Translate { y: (1 - fileRow.pop) * 22 }
-            radius: 12
-            color: fileRow.current ? Qt.rgba(1, 1, 1, 0.7) : (fileHover.hovered ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(1, 1, 1, 0.18))
-            border.color: fileRow.current ? drawer.ink : "transparent"
+            transform: Translate { x: drawer.bobX(fileRow.index + 400) * 0.6; y: (1 - fileRow.pop) * 22 + drawer.bobY(fileRow.index + 400) * 0.5 }
+            radius: drawer.bubbles ? height / 2 : 12
+            color: fileRow.current ? Qt.rgba(1, 1, 1, 0.7) : (fileHover.hovered ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(1, 1, 1, drawer.bubbles ? 0.14 : 0.18))
+            border.color: fileRow.current ? drawer.ink : drawer.bubbles ? Qt.rgba(1, 1, 1, 0.75) : "transparent"
+            Rectangle { visible: drawer.bubbles; x: parent.height * 0.45; y: 3; width: 40; height: 3; radius: 1.5; color: Qt.rgba(1, 1, 1, 0.8) }
             border.width: 2
             HoverHandler { id: fileHover }
             Text {

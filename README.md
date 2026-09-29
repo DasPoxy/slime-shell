@@ -138,7 +138,12 @@ panel's ooze.
   or any floating bit; scroll to resize, right-click for options.
 - **Launcher** — fuzzy search over apps, every Omarchy menu command (`>` for
   commands only) and your files (`/` for files only); drips from the bar when
-  clicked, floats centred when summoned by keybind.
+  clicked, floats centred when summoned by keybind. Set in a castle the slime
+  has swallowed: towers and a broken wall sunk in the goo, blocks of its
+  shattered top drifting up, the king, queen, princess, knights, a jester and
+  a horse adrift with goblins, skeletons, slimes, a witch and a lich. Results
+  bob in the ooze, bubble up as you scroll, and can sit in bubbles
+  (the *bubbles* button, or `slime-launcher bubbles on|off`).
 - **Dock** (SlimeS-Dock) — apps, folders and files in a lump of the bar's
   own slime on any edge the bar isn't on, dripping like the bar. Centred or
   at either end (where it melts into the bar or the corner slime), optionally hidden
@@ -243,7 +248,7 @@ omarchy-shell slime-shell color <theme role>     # accent, green, cyan, …
 omarchy-shell slime-shell gradient <theme role>  # the gradient partner, auto or none
 omarchy-shell slime-shell fps <n>                # 0 pauses the animation
 omarchy-shell slime-shell egg                    # (shh) summon a trapped adventurer
-omarchy-shell slime-launcher apps | icons
+omarchy-shell slime-launcher apps | icons | bubbles on|off
 omarchy-shell slime-media toggle | next | previous
 omarchy-shell slime-media karaoke | lyrics        # karaoke on/off, the whole song's lyrics
 omarchy-shell slime-media follow <player>         # "" follows whatever's playing

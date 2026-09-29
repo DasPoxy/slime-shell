@@ -47,6 +47,8 @@ BarWidget {
   onPickerOpenChanged: if (pickerOpen) appsOpen = false
   IpcHandler {
     target: "slime-launcher"
+    // results in bubbles: on | off
+    function bubbles(v: string): void { root.setResultBubbles(v === "on") }
     function icons(): void { root.pickerOpen = root.slime && !root.pickerOpen }
     // the app launcher (bind to e.g. Super+Space)
     function apps(): void {
@@ -57,6 +59,16 @@ BarWidget {
   }
   function close() { pickerOpen = false; appsOpen = false }
 
+  // results in the launcher drawn inside bubbles of goo (toggle in its header)
+  readonly property bool resultBubbles: setting("bubbles", false) === true
+  function setResultBubbles(on) {
+    var entry = { id: root.moduleName }
+    for (var key in root.settings) if (key !== "id" && key !== "source") entry[key] = root.settings[key]
+    entry.bubbles = on
+    root.settings = entry
+    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
+      root.bar.shell.updateEntryInline(root.moduleName, entry)
+  }
   function pickIcon(id) {
     var entry = { id: root.moduleName }
     for (var key in root.settings) if (key !== "id") entry[key] = root.settings[key]

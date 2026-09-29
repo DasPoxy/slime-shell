@@ -8,7 +8,7 @@ import QtQuick.Shapes
 Item {
   id: root
 
-  property string kind: "gnome"      // gnome, goblin, skeleton, knight, wizard, priest, bard, rogue, orc
+  property string kind: "gnome"      // gnome, goblin, skeleton, knight, wizard, priest, bard, rogue, orc, king, queen, princess
   property real size: 24
   property real time: 0
   property color ink: "black"
@@ -27,7 +27,8 @@ Item {
     : kind === "skeleton" ? paper : kind === "knight" ? steel : "#f2c2a0"
   readonly property color cyan: pal.cyan || "#1fb5c9"
   readonly property var bodyFill: ({ gnome: "#3f74ff", goblin: "#7a5230", skeleton: paper, knight: steel, wizard: purple, priest: paper,
-                                     bard: cyan, rogue: "#3b3b46", orc: "#6b4a2a" })
+                                     bard: cyan, rogue: "#3b3b46", orc: "#6b4a2a",
+                                     king: red, queen: purple, princess: pal.bright_magenta || "#ff8ad0" })
   // hand positions (the arms flail)
   readonly property real rhx: 20 + flail
   readonly property real rhy: 9 - flail * 2
@@ -74,6 +75,11 @@ Item {
     // priest: a gold stole
     P { visible: root.kind === "priest"; d: "M10.2 13 L10.8 20.8 M13.8 13 L13.2 20.8"; stroke: root.gold; line: 1.5 }
     P { visible: root.kind === "skeleton"; d: "M9 15 L15 15 M9 17 L15 17 M9.4 19 L14.6 19 M12 13 L12 20.4"; line: 0.8 }   // ribs
+    // royalty: an ermine-trimmed robe (king), a long gown (queen, princess)
+    P { visible: root.kind === "king"; d: "M7.6 20 Q12 21.6 16.4 20 L16.6 21.4 Q12 22.8 7.4 21.4 Z"; fill: root.paper; line: 0.7 }
+    P { visible: root.kind === "king"; d: "M11.4 14 L12.6 14 L12.6 20.6 L11.4 20.6 Z"; fill: root.paper; line: 0.5 }
+    P { visible: root.kind === "queen" || root.kind === "princess"; d: "M8 17 Q12 16 16 17 L18 23 Q12 24.4 6 23 Z"; fill: root.bodyFill[root.kind]; line: 1 }
+    P { visible: root.kind === "queen" || root.kind === "princess"; d: "M9.6 13.4 L14.4 13.4"; stroke: root.gold; line: 0.8 }
     // head
     Rectangle {
       x: 7.4; y: 6; width: 9.2; height: 8.4; radius: 4.2
@@ -109,6 +115,12 @@ Item {
     // orc: tusks, heavy brow
     P { visible: root.kind === "orc"; d: "M10.4 12.6 L10.8 10.8 L11.4 12.6 Z M12.6 12.6 L13.2 10.8 L13.6 12.6 Z"; fill: root.paper; line: 0.5 }
     P { visible: root.kind === "orc"; d: "M8.6 8.2 L11.4 8.8 M12.6 8.8 L15.4 8.2"; line: 1.1 }
+    // crowns: the king's and queen's tall and jewelled, the princess's a tiara over long hair
+    P { visible: root.kind === "princess"; d: "M7.2 9 Q6.4 16 5.4 18.4 Q7.6 17 8.4 12 M16.8 9 Q17.6 16 18.6 18.4 Q16.4 17 15.6 12"; fill: root.gold; line: 0.8 }
+    P { visible: root.kind === "king" || root.kind === "queen"; d: "M8 6.8 L7.6 2.2 L9.8 4.4 L12 1.2 L14.2 4.4 L16.4 2.2 L16 6.8 Z"; fill: root.gold; line: 0.8 }
+    Rectangle { visible: root.kind === "king" || root.kind === "queen"; x: 11.3; y: 3.6; width: 1.4; height: 1.4; radius: 0.7; color: root.red; border.color: root.ink; border.width: 0.4 }
+    P { visible: root.kind === "king"; d: "M8.4 11.6 Q12 17 15.6 11.6 Q12 13.2 8.4 11.6 Z"; fill: root.leather; line: 0.8 }   // beard
+    P { visible: root.kind === "princess"; d: "M8.8 6.6 L9.6 4.8 L10.8 6 L12 3.8 L13.2 6 L14.4 4.8 L15.2 6.6 Z"; fill: root.gold; line: 0.6 }
     // eyes: wide with panic (sockets for the skeleton; hidden behind the knight's visor)
     Rectangle { visible: root.kind !== "knight"; x: 9.2; y: 8.6; width: 2.2; height: 2.4; radius: 1.1; color: root.kind === "skeleton" ? root.ink : root.paper; border.color: root.ink; border.width: 0.6
       Rectangle { visible: root.kind !== "skeleton"; x: 0.6; y: 0.7; width: 1; height: 1; radius: 0.5; color: root.ink } }
