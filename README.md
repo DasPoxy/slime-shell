@@ -39,7 +39,9 @@ Pick how the ooze moves (**Settings → Motion → Drip style**, or
 | **stringy** — hang by strands that thin as the glob pulls away, snap, and let it scatter; neighbouring drips (and widget drips) are webbed together in lattices | ![stringy](docs/images/drip-style-stringy.png) |
 | **lava lamp** — globs of every shape bud off, pinch apart and sink | ![lava lamp](docs/images/drip-style-lava.png) |
 | **gelatinous** — the whole body jiggles and holds on to its goo; only the odd small bead is shaken loose, falling like rain | ![gelatinous](docs/images/drip-style-gelatinous.png) |
-| **cava** — the drips become an audio visualizer: each hangs as far as the music under it reaches (bass on the left, treble on the right), a bead of goo swelling at its tip. Cava runs only while this style is picked. Settings → Motion then shows its own knobs: number of bars, bass → treble or mirrored (bass in the middle), sensitivity (auto or fixed), reach, thickness and smoothing | |
+| **cava** — the drips become an audio visualizer: each hangs as far as the music under it reaches (bass on the left, treble on the right), a bead of goo swelling at its tip. Cava runs only while this style is picked. Settings → Motion then shows its own knobs: style (drips, or **ripple** —
+no drips; the goo's whole underside swells and ripples with the music),
+number of bars, bass → treble or mirrored (bass in the middle), sensitivity (auto or fixed), reach, thickness and smoothing | |
 
 …and how much of it there is (**Drip amount**):
 
@@ -228,6 +230,7 @@ omarchy-shell slime-shell material slime|sinew|bone|plain
 omarchy-shell slime-shell shape classic|pills|islands|notch|blob
 omarchy-shell slime-shell shading 0|1|2|3|4|5    # soft, anime, manga, print, cel, sketch
 omarchy-shell slime-shell drip drip|honey|rain|tar|frozen|stringy|lava|gelatinous|cava
+omarchy-shell slime-shell cava drips|ripple         # the cava style's look
 omarchy-shell slime-shell dock toggle|on|off|apps|top|bottom|left|right|start|center|end|autohide|pinned
 omarchy-shell slime-shell corners on|off|toggle
 omarchy-shell slime-shell wallpaper <path>       # a still, or a video / gif to play

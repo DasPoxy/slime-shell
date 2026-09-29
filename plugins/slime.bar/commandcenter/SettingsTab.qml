@@ -331,6 +331,13 @@ Item {
       // the cava drip style's own knobs (only while it's picked)
       ChoiceRow {
         visible: settings.bar.dripStyle === "cava"
+        title: "CAVA · STYLE"
+        options: [["drips", "drips"], ["ripple", "ripple"]]
+        current: settings.bar.cavaStyle
+        onPicked: value => settings.bar.cavaStyle = value
+      }
+      ChoiceRow {
+        visible: settings.bar.dripStyle === "cava" && settings.bar.cavaStyle !== "ripple"
         title: "CAVA · BARS"
         options: [["24", 24], ["48", 48], ["80", 80], ["120", 120], ["160", 160]]
         current: settings.bar.cavaBars
@@ -358,7 +365,7 @@ Item {
         onPicked: value => settings.bar.cavaReach = value
       }
       ChoiceRow {
-        visible: settings.bar.dripStyle === "cava"
+        visible: settings.bar.dripStyle === "cava" && settings.bar.cavaStyle !== "ripple"
         title: "CAVA · THICKNESS"
         options: [["thin", 0.6], ["normal", 1.0], ["thick", 1.5], ["chunky", 2.2]]
         current: settings.bar.cavaWidth

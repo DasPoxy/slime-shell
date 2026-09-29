@@ -360,6 +360,7 @@ Item {
   }
 
   // cava drip style (Settings → Motion, shown while it's picked)
+  property string cavaStyle: "drips"        // drips (bars) | ripple (the goo's wall swells)
   property int cavaBars: 80                 // bars across the whole bar
   property bool cavaMirror: false           // bass in the middle, treble out to both ends
   property int cavaSens: 0                  // 0 auto, else cava's sensitivity %
@@ -464,7 +465,7 @@ Item {
   readonly property real materialId: ["slime", "sinew", "bone", "plain"].indexOf(material)
   // every material drips (bone and plain included) with the chosen amount
   readonly property real dripLevel: dripAmount < 0 ? 1.2 : dripAmount
-  readonly property vector4d dripExtraVec: Qt.vector4d(dripStyle === "stringy" ? 1 : dripStyle === "lava" ? 2 : dripStyle === "gelatinous" ? 3 : dripStyle === "cava" ? 4 : 0, dripAmount < 0 ? 1 : 0, 0, 0)
+  readonly property vector4d dripExtraVec: Qt.vector4d(dripStyle === "stringy" ? 1 : dripStyle === "lava" ? 2 : dripStyle === "gelatinous" ? 3 : dripStyle === "cava" ? (cavaStyle === "ripple" ? 5 : 4) : 0, dripAmount < 0 ? 1 : 0, 0, 0)
 
   // ---- cava drip style: the drips are an audio visualizer ----
   // the shared ooze visualizer's cava (ui/SlimeCava), run only while the
@@ -500,7 +501,7 @@ Item {
   readonly property var skinKeys: ["slimeRole", "gradientRole", "shadingStyle", "slimeFps", "dripAmount",
     "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material", "dripStyle", "monsterColor",
     "desktopCorners", "cornerSlime", "ccKeyboard", "ccSidebarCollapsed", "ccFontScale",
-    "cavaBars", "cavaMirror", "cavaSens", "cavaReach", "cavaWidth", "cavaSmooth",
+    "cavaStyle", "cavaBars", "cavaMirror", "cavaSens", "cavaReach", "cavaWidth", "cavaSmooth",
     "dockEnabled", "dockEdge", "dockAlign", "dockAutoHide", "dockIconSize", "motionWall",
     "wallAuto", "wallShuffle", "wallPool", "wallSort"]
   property bool skinLoaded: false
@@ -551,6 +552,7 @@ Item {
   onCcKeyboardChanged: skinSaveTimer.restart()
   onCcFontScaleChanged: skinSaveTimer.restart()
   onCavaBarsChanged: skinSaveTimer.restart()
+  onCavaStyleChanged: skinSaveTimer.restart()
   onCavaMirrorChanged: skinSaveTimer.restart()
   onCavaSensChanged: skinSaveTimer.restart()
   onCavaReachChanged: skinSaveTimer.restart()
@@ -639,6 +641,8 @@ Item {
     function shape(name: string): void { root.barShape = name }
     function material(name: string): void { root.material = name }
     function drip(style: string): void { root.dripStyle = style }
+    // the cava drip style's look: drips | ripple
+    function cava(style: string): void { root.cavaStyle = style === "ripple" ? "ripple" : "drips" }
     // SlimeS-Dock: toggle | on | off | apps (the add-apps panel) |
     // top / bottom / left / right (its edge) | start / center / end (along it) |
     // autohide / pinned

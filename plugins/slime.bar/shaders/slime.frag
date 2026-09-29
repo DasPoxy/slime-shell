@@ -697,6 +697,13 @@ vec2 bulb(vec2 p, vec4 b, float seed) {
     d = smin(d, sdEllipse(p, vec2(c.x, c.y + hs.y * 0.45), vec2(hs.x * 0.75, hs.y * 0.8)), 6.0);
 
     float hl = 1e5;
+    // cava ripple: no drips off the bulbs either; their bellies swell with the music
+    if (dripExtra.x > 4.5) {
+        float lv = cavaLevel(p.x);
+        float under = smoothstep(c.y, c.y + hs.y, p.y);
+        d -= under * (lv * 14.0 * (cavaOpts.z > 0.0 ? cavaOpts.z : 1.0) + (0.6 + 2.0 * lv) * sin(p.x * 0.028 - time * 5.0));
+        return vec2(d, hl);
+    }
     float bottom = c.y + hs.y - 3.0;
     float span = max(hs.x - hs.y * 0.6, 4.0);
     vec3 tips[2];
@@ -891,8 +898,21 @@ vec2 mapSceneBody(vec2 p) {
     float hl = 1e5;
     float ci = floor(p.x / CELL);
 
+    // cava ripple (5): no drips; the goo's underside swells out with the music
+    // under it, rings of ripple running along the swollen wall
+    if (dripExtra.x > 4.5) {
+        float lv = cavaLevel(p.x);
+        float reach = cavaOpts.z > 0.0 ? cavaOpts.z : 1.0;
+        float under = smoothstep(barHeight * 0.3, barHeight, p.y);
+        // the loudness under x, blended with its neighbours so the wall bows smoothly
+        lv = (lv * 2.0 + cavaLevel(p.x - 70.0) + cavaLevel(p.x + 70.0)) * 0.25;
+        float swell = lv * 30.0 * reach * clamp(dripAmount, 0.5, 1.8);
+        // broad, gentle rings (sharp ones split the wall into fingers)
+        float rings = (0.8 + 2.4 * lv) * sin(p.x * 0.028 - time * 5.0) * (0.6 + 0.4 * sin(p.x * 0.009 + time * 1.1));
+        d -= under * (swell + rings + 1.5 * sin(p.x * 0.03 + time * 1.7));
+    }
     // cava: evenly spaced bars, like a visualizer's (as many as asked for)
-    if (dripExtra.x > 3.5) {
+    else if (dripExtra.x > 3.5) {
         float sp = cavaStep();
         float bi = floor(p.x / sp);
         for (int k = -1; k <= 1; k++) {
