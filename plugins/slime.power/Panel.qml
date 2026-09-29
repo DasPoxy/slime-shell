@@ -134,9 +134,8 @@ Panel {
   }
 
   function refresh() {
-    if (!batteryPresent) return
-
-    if (!batteryProc.running) batteryProc.running = true
+    // (a desktop has no battery: still the power profile and system stats)
+    if (batteryPresent && !batteryProc.running) batteryProc.running = true
     if (!profilesProc.running) profilesProc.running = true
     if (!systemProc.running) systemProc.running = true
   }
@@ -188,10 +187,6 @@ Panel {
 
   onOpenedChanged: {
     if (opened) {
-      if (!batteryPresent) {
-        close()
-        return
-      }
 
       refresh()
       var idx = profiles.indexOf(activeProfile)
@@ -200,11 +195,11 @@ Panel {
     }
   }
 
-  onBatteryPresentChanged: if (!batteryPresent) close()
-
-  visible: batteryPresent
-  implicitWidth: batteryPresent ? button.implicitWidth : 0
-  implicitHeight: batteryPresent ? button.implicitHeight : 0
+  // no battery (a desktop): a plug, and the panel holds the power profile
+  // and system stats
+  implicitWidth: button.implicitWidth
+  implicitHeight: button.implicitHeight
+  function barIcon() { return batteryPresent ? batteryIcon() : "\uf1e6" }
 
   Process {
     id: batteryProc
@@ -278,14 +273,13 @@ Panel {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: root.showPercentage && !vertical
+    text: root.batteryPresent && root.showPercentage && !vertical
       ? Math.round(root.batteryFraction * 100) + "% " + root.batteryIcon()
-      : root.batteryIcon()
-    slotSize: Style.bar.iconSlot * (root.showPercentage && !vertical ? 2 : 1)
+      : root.barIcon()
+    slotSize: Style.bar.iconSlot * (root.batteryPresent && root.showPercentage && !vertical ? 2 : 1)
     tooltipText: ""
     onPressed: function(b) {
-      if (!root.batteryPresent) return
-      if (b === Qt.RightButton) root.togglePercentage()
+      if (b === Qt.RightButton) { if (root.batteryPresent) root.togglePercentage() }
       else root.toggle()
     }
   }
@@ -295,7 +289,7 @@ Panel {
     anchorItem: button
     owner: root
     bar: root.bar
-    open: root.opened && root.batteryPresent
+    open: root.opened
     focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(380))
     contentHeight: panel.fittedContentHeight(column.implicitHeight)
@@ -327,7 +321,7 @@ Panel {
           Text {
             id: heroIcon
             textFormat: Text.PlainText
-            text: root.batteryIcon()
+            text: root.barIcon()
             color: root.bar.foreground
             font.family: root.bar.fontFamily
             font.pixelSize: Style.font.display
@@ -347,7 +341,7 @@ Panel {
             spacing: Style.space(2)
 
             Text {
-              text: "Battery"
+              text: root.batteryPresent ? "Battery" : "Power"
               color: root.bar.foreground
               font.family: root.bar.fontFamily
               font.pixelSize: Style.font.title
@@ -359,7 +353,7 @@ Panel {
             Text {
               id: heroStatus
               textFormat: Text.PlainText
-              text: root.heroStatusText.toUpperCase()
+              text: (root.batteryPresent ? root.heroStatusText : "On mains · " + (root.activeProfile || "")).toUpperCase()
               color: Qt.darker(root.bar.foreground, 1.4)
               font.family: root.bar.fontFamily
               font.pixelSize: Style.font.caption
@@ -372,6 +366,7 @@ Panel {
 
           Text {
             id: heroPercent
+            visible: root.batteryPresent
             textFormat: Text.PlainText
             text: root.batteryInfo.percentage || "—"
             color: root.bar.foreground
@@ -387,6 +382,7 @@ Panel {
 
         // ---------- Battery progress bar ----------
         Item {
+          visible: root.batteryPresent
           width: parent.width
           implicitHeight: Style.space(8)
 
