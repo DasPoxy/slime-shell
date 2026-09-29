@@ -622,15 +622,28 @@ BarWidget {
     readonly property real room: 84
     readonly property real sinkPx: room * sink
     dropShape: Qt.vector4d(1, sinkPx, fall, beadH)
-    contentWidth: drip.fittedContentWidth(beadW, 600)
-    contentHeight: beadH + room + 110       // (room below for the drop and the burst)
+    // on a side bar the card runs along the bar the other way: its width is
+    // the reach away from the bar, its height the bead's length
+    readonly property bool side: root.bar && (root.bar.position === "left" || root.bar.position === "right")
+    readonly property real reachAway: beadH + room + 110   // (room past it for the drop and the burst)
+    contentWidth: side ? reachAway : drip.fittedContentWidth(beadW, 600)
+    contentHeight: side ? Math.min(beadW, 600) : reachAway
     // where the bead is in this card (the shader hangs it from the bar's edge)
-    readonly property bool fromBottom: root.bar && root.bar.position === "bottom"
+    readonly property bool fromBottom: root.bar && (root.bar.position === "bottom" || root.bar.position === "right")
     readonly property real beadTop: 8 - drip.neck + sinkPx + 70 * Math.min(1, fall / 0.35)
     // the bead's inside, for the bits of debris adrift in it (they ride along
     // as it sinks and falls, and burst with it)
-    readonly property real beadY: fromBottom ? contentHeight - beadTop - beadH : beadTop
-    debrisRect: Qt.rect((contentWidth - beadW) / 2 + beadH * 0.35, beadY + 5, Math.max(10, beadW - beadH * 0.7), Math.max(10, beadH - 10))
+    // the bead in bar space: along the bar (centred), and away from it
+    readonly property real alongLen: side ? contentHeight : contentWidth
+    readonly property real awayLen: side ? contentWidth : contentHeight
+    readonly property real beadAway: fromBottom ? awayLen - beadTop - beadH : beadTop
+    // the bead's box in this card
+    readonly property rect beadBox: side
+      ? Qt.rect(beadAway, (alongLen - beadW) / 2, beadH, beadW)
+      : Qt.rect((alongLen - beadW) / 2, beadAway, beadW, beadH)
+    debrisRect: side
+      ? Qt.rect(beadBox.x + 5, beadBox.y + beadH * 0.35, Math.max(10, beadH - 10), Math.max(10, beadW - beadH * 0.7))
+      : Qt.rect(beadBox.x + beadH * 0.35, beadBox.y + 5, Math.max(10, beadW - beadH * 0.7), Math.max(10, beadH - 10))
     debrisBurst: drip.wordBurst
     Text {
       id: measure
@@ -644,10 +657,11 @@ BarWidget {
     Flow {
       id: lineWords
       width: drip.textW
-      x: (drip.contentWidth - width) / 2
       spacing: 10
-      y: drip.fromBottom ? drip.contentHeight - drip.beadTop - drip.beadH + (drip.beadH - height) / 2
-                         : drip.beadTop + (drip.beadH - height) / 2
+      // centred in the bead; on a side bar turned so the words' tops face the bar
+      x: drip.beadBox.x + (drip.beadBox.width - width) / 2
+      y: drip.beadBox.y + (drip.beadBox.height - height) / 2
+      rotation: !drip.side ? 0 : root.bar.position === "left" ? -90 : 90
       Repeater {
         id: wordItems
         model: drip.words
