@@ -48,7 +48,8 @@ remembers its own folds across restarts.
   the log — a super group, group, todo or sub-todo (in the Todo tab's
   sub-todo list, or the Task Log's lanes) · **↑↓** pick ·
   **→/Enter** into the lanes, then **→/Space** move a sub-todo on and **←**
-  back · **↓** past the last lane item goes on into the log, where **↑↓** pick
+  back · **Tab / Shift+Tab** hop to the next / previous lane (skipping
+  empty ones) · **↓** past the last lane item goes on into the log, where **↑↓** pick
   an entry · **s** / **S** cycle how the log is shown: this todo's newest
   first, or by sub-todo, or *every* todo's log by todo, by group › todo, or
   by super group › group › todo. Every entry is tagged with its full place:

@@ -816,6 +816,15 @@ Item {
     return true
   }
   // move a sub-todo past its neighbour in the same lane
+  function hopLane(dir) {
+    var t = selected, order = ["todo", "doing", "done"]
+    if (!t || !t.subs.length) return
+    var at = order.indexOf(t.subs[Math.min(logSub, t.subs.length - 1)].state)
+    for (var step = 1; step <= 2; step++) {
+      var st = order[(at + dir * step + 3) % 3]
+      for (var i = 0; i < t.subs.length; i++) if (t.subs[i].state === st) { logSub = i; return }
+    }
+  }
   function moveInLane(t, i, dir) {
     var st = t.subs[i].state, j = i + dir
     while (j >= 0 && j < t.subs.length && t.subs[j].state !== st) j += dir
@@ -974,6 +983,12 @@ Item {
       return
     }
     if (txt === "?") { showHelp = !showHelp; event.accepted = true; return }
+    // in the Task Log's lanes, Tab / Shift+Tab hop between the three lanes
+    // (skipping empty ones), onto the first sub-todo there
+    if ((k === Qt.Key_Tab || k === Qt.Key_Backtab) && tab === "log" && logPane === "lanes" && selected) {
+      hopLane(k === Qt.Key_Backtab || (event.modifiers & Qt.ShiftModifier) ? -1 : 1)
+      event.accepted = true; return
+    }
     if (k === Qt.Key_Tab || k === Qt.Key_Backtab) {
       var order = ["todo", "log", "progress"]
       tab = order[(order.indexOf(tab) + (k === Qt.Key_Backtab ? 2 : 1)) % 3]
@@ -1936,6 +1951,17 @@ Item {
         model: tasks.selected ? tasks.selected.subs : []
         currentIndex: tasks.subIndex
         onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+        // a change reloads the list (which scrolls back to the top): stay on
+        // the sub-todo you were on
+        onModelChanged: keepSub.restart()
+        // (the reload resets currentIndex and breaks its binding: put both back)
+        Timer {
+          id: keepSub; interval: 40
+          onTriggered: {
+            subList.currentIndex = Qt.binding(function() { return tasks.subIndex })
+            if (tasks.subIndex >= 0 && tasks.subIndex < subList.count) subList.positionViewAtIndex(tasks.subIndex, ListView.Contain)
+          }
+        }
         Rectangle {
           z: 10
           visible: tasks.dragSub >= 0 && tasks.dropY >= 0
@@ -2213,7 +2239,14 @@ Item {
               height: parent.height - 32
               clip: true
               spacing: 3
+              id: laneList
               model: tasks.selected ? tasks.selected.subs.filter(function(s) { return s.state === parent.modelData[0] }) : []
+              // stay on the picked sub-todo when the lane reloads
+              function keepPicked() {
+                for (var i = 0; i < count; i++) if (model[i] && model[i].i === tasks.logSub) { positionViewAtIndex(i, ListView.Contain); return }
+              }
+              onModelChanged: keepLane.restart()
+              Timer { id: keepLane; interval: 40; onTriggered: laneList.keepPicked() }
               // click moves it a lane on, right-click a lane back
               delegate: Rectangle {
                 id: laneItem
@@ -3251,7 +3284,7 @@ Item {
           ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space", "to do → in progress → done"], ["Enter", "open it over the panel (c copy · e edit)"], ["p", "add a picture (a drip panel of your files)"], ["i", "fold its pictures"], ["a", "add"], ["e", "edit"],
                                 ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
           ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
-          ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["L  on a super group, group, todo or sub-todo (here or on the Todo tab)", "jump to its section of the log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Enter on a sub-todo", "open it over the panel"],
+          ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["L  on a super group, group, todo or sub-todo (here or on the Todo tab)", "jump to its section of the log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Tab  Shift+Tab  in the lanes", "hop to the next / previous lane"], ["Enter on a sub-todo", "open it over the panel"],
                         ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
           ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
                         ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list (you stay in the archive)"], ["r  on an archive heading", "restore the whole group / super group"], ["g  /  right-click", "group, restore or delete an archived list"], ["←  z  /  Enter  →  on a heading", "fold / unfold an archive group"], ["↑ at the top  Esc", "back up"]]]
