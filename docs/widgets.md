@@ -132,7 +132,8 @@ six hours.
 | Left click | a drip panel: up to date or what's pending, *Update now*, *Check again* |
 | Right click | a drip menu: the character, and the bubble on / off |
 
-IPC: `omarchy-shell omarchy.system-update toggle | menu | refresh`.
+It can keep off the bar until there's an update (its right-click menu, or
+Settings → Widgets). IPC: `omarchy-shell omarchy.system-update toggle | menu | refresh`.
 
 ### Keyboard layout
 Omarchy's widget with Omarchy's own click behaviour, restyled for the bar.

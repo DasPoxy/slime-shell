@@ -277,7 +277,8 @@ Command centre → **Settings** (sections fold open and closed):
   its bar count, bass → treble or mirrored, sensitivity, reach, thickness
   and smoothing
 - **Updates** — check GitHub, update & restart
-- **Widgets** — each Slime widget's settings, and a button for every bar
+- **Widgets** — each Slime widget's settings; whether Power shows without a
+  battery and System update without updates; and a button for every bar
   widget (yours and third-party) that drips its panel open
 
 Skin settings are saved in `~/.config/omarchy/slime-shell/skin.json` (dock

@@ -448,7 +448,8 @@ Item {
             ["\uf017", "Date & time", "slime.clock-weather", "settingsOpen"],
             ["\uf1b0", "Launcher icon", "slime.menu", "pickerOpen"],
             ["\uf009", "Workspaces", "slime.workspaces", "menuOpen"],
-            ["\uf001", "Media (lich)", "slime.media", "settingsOpen"],
+            ["\uf001", "Karaoke", "slime.media", "settingsOpen"],
+            ["\uf0a1", "System update", "slime.system-update", "menuOpen"],
             ["\uf07b", "Treasure chest", "slime.plugins", "open()"],
             ["\uf337", "Spacers", "slime.spacer", "menuOpen"]
           ]
@@ -471,6 +472,24 @@ Item {
             }
           }
         }
+      }
+      // widgets that can keep off the bar until they're needed (set here,
+      // since while they're hidden there's nothing on the bar to click)
+      ChoiceRow {
+        readonly property var w: settings.cc.widget("slime.power")
+        visible: !!w
+        title: "POWER ON THE BAR"
+        options: [["always", false], ["only with a battery", true]]
+        current: w ? w.batteryOnly : false
+        onPicked: value => w.setBatteryOnly(value)
+      }
+      ChoiceRow {
+        readonly property var w: settings.cc.widget("omarchy.system-update") || settings.cc.widget("slime.system-update")
+        visible: !!w
+        title: "SYSTEM UPDATE ON THE BAR"
+        options: [["always", false], ["only with updates", true]]
+        current: w ? w.onlyWithUpdates : false
+        onPicked: value => w.setOnlyWithUpdates(value)
       }
       CcHeading { cc: settings.cc; text: "WIDGET PANELS" }
       Flow {

@@ -24,6 +24,10 @@ BarWidget {
                                      ["jester", "jester"], ["candle", "candle"], ["emoteslime", "slime"]]
   readonly property string character: characters.some(function(c) { return c[0] === setting("character", "crier") }) ? setting("character", "crier") : "crier"
   readonly property bool bubble: setting("bubble", true) === true
+  // only on the bar while there are updates (menus open from Settings → Widgets)
+  readonly property bool onlyWithUpdates: setting("onlyWithUpdates", false) === true
+  readonly property bool shown: updateAvailable || !onlyWithUpdates
+  function setOnlyWithUpdates(on) { saveSetting("onlyWithUpdates", on) }
 
   property bool updateAvailable: false
   property var pending: []                // what omarchy-update-available listed
@@ -54,8 +58,9 @@ BarWidget {
       root.bar.shell.updateEntryInline(root.entryId, entry)
   }
 
-  implicitWidth: vertical ? barSize : 30
-  implicitHeight: vertical ? 30 : barSize
+  visible: shown
+  implicitWidth: !shown ? 0 : vertical ? barSize : 30
+  implicitHeight: !shown ? 0 : vertical ? 30 : barSize
 
   IpcHandler {
     target: "omarchy.system-update"
@@ -234,6 +239,13 @@ BarWidget {
         spacing: 6
         CcButton { cc: look; text: "bubble"; on: root.bubble; onClicked: root.saveSetting("bubble", true) }
         CcButton { cc: look; text: "free"; on: !root.bubble; onClicked: root.saveSetting("bubble", false) }
+      }
+      CcHeading { cc: look; text: "ON THE BAR" }
+      Flow {
+        width: parent.width
+        spacing: 6
+        CcButton { cc: look; text: "always"; on: !root.onlyWithUpdates; onClicked: root.setOnlyWithUpdates(false) }
+        CcButton { cc: look; text: "only with updates"; on: root.onlyWithUpdates; onClicked: root.setOnlyWithUpdates(true) }
       }
       Text {
         width: parent.width

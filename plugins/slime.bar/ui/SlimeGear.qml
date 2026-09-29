@@ -1328,6 +1328,56 @@ Item {
       }
     }
 
+    // ============== power: a glass jar of glowing slime. level = how full
+    // (the battery); lit = charging (a bolt, bubbles rising); state3 "mains" =
+    // no battery: full, with a cord plugged into the lid
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "energyjar"
+      sourceComponent: Item {
+        id: jar
+        anchors.fill: parent
+        readonly property bool mains: root.state3 === "mains"
+        readonly property real lv: mains ? 1 : Math.max(0, Math.min(1, root.level))
+        readonly property color goo: lv < 0.2 && !mains ? (root.pal.red || "#ff1720")
+                                   : lv < 0.4 && !mains ? (root.pal.yellow || "#d9b800")
+                                   : (root.bar ? root.bar.slimeColor : (root.pal.green || "#1be33a"))
+        readonly property real surf: 21 - 13.4 * lv
+        // the cord, curling off the lid (mains)
+        GearPath { visible: jar.mains; d: "M14.4 4 Q18 1.6 20.2 4.4 Q22.4 7.6 20.8 12"; stroke: root.ink; line: 1.1 }
+        Rectangle { visible: jar.mains; x: 19.6; y: 11.4; width: 2.6; height: 3; radius: 0.6; color: root.gold; border.color: root.ink; border.width: 0.6 }
+        // the slime inside, its surface wobbling
+        GearPath {
+          visible: jar.lv > 0.02
+          d: "M6.4 " + jar.surf + " Q9 " + (jar.surf - 0.9 + Math.sin(root.time * 2) * 0.6) + " 12 " + jar.surf
+             + " Q15 " + (jar.surf + 0.9 - Math.sin(root.time * 2) * 0.6) + " 17.6 " + jar.surf + " L17.6 20.2 Q17.6 21.2 16.6 21.2 L7.4 21.2 Q6.4 21.2 6.4 20.2 Z"
+          fill: jar.goo; stroke: "transparent"; line: 0
+        }
+        // bubbles while charging
+        Repeater {
+          model: root.lit ? 3 : 0
+          Rectangle {
+            required property int index
+            readonly property real ph: (root.time * 0.8 + index * 0.33) % 1
+            x: 8.6 + index * 2.8; y: 20 - ph * (20 - jar.surf - 1)
+            width: 1.4; height: 1.4; radius: 0.7
+            color: Qt.rgba(1, 1, 1, 0.8); opacity: 1 - ph
+          }
+        }
+        // the glass: a jar with a shine, and a cork lid
+        GearPath { d: "M6 7 L18 7 L18 20.2 Q18 21.8 16.4 21.8 L7.6 21.8 Q6 21.8 6 20.2 Z"; fill: Qt.rgba(1, 1, 1, 0.12); line: 1.2 }
+        GearPath { d: "M8 9 L8 18"; stroke: Qt.rgba(1, 1, 1, 0.7); line: 1 }
+        GearPath { d: "M7.4 3.6 L16.6 3.6 L16.2 7 L7.8 7 Z"; fill: root.leather; line: 1 }
+        // a bolt on the glass while charging
+        GearPath {
+          visible: root.lit
+          d: "M13 9.4 L10.2 14.4 L12.2 14.4 L11 18.6 L14.4 13 L12.4 13 Z"
+          fill: root.flame; line: 0.6
+          opacity: 0.6 + 0.4 * root.pulse
+        }
+      }
+    }
+
     // =================================================================== sword
     Loader {
       anchors.fill: parent

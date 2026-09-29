@@ -196,9 +196,41 @@ Panel {
   }
 
   // no battery (a desktop): a plug, and the panel holds the power profile
-  // and system stats
-  implicitWidth: button.implicitWidth
-  implicitHeight: button.implicitHeight
+  // and system stats — unless it's set to show only with a battery
+  readonly property bool batteryOnly: setting("batteryOnly", false) === true
+  readonly property bool shown: batteryPresent || !batteryOnly
+  function setBatteryOnly(on) {
+    root.settings = Object.assign({}, root.settings, { batteryOnly: on })
+    if (root.bar && root.bar.shell) root.bar.shell.updateEntryInline(root.moduleName, root.settings)
+  }
+  visible: shown
+  implicitWidth: shown ? button.implicitWidth : 0
+  implicitHeight: shown ? button.implicitHeight : 0
+  // on the slime bar: a jar of glowing slime, full as the battery
+  readonly property bool slimeSkin: !!bar && bar.slimeSkin === true
+  Component {
+    id: jarIcon
+    Row {
+      spacing: 2
+      SlimeGear {
+        anchors.verticalCenter: parent.verticalCenter
+        width: 24; height: 24; size: 24
+        kind: "energyjar"
+        bar: root.bar
+        level: root.batteryFraction
+        lit: root.batteryPresent && root.charging
+        state3: root.batteryPresent ? "battery" : "mains"
+      }
+      Text {
+        visible: root.batteryPresent && root.showPercentage
+        anchors.verticalCenter: parent.verticalCenter
+        text: Math.round(root.batteryFraction * 100) + "%"
+        color: root.bar ? root.bar.slimeInk : "black"
+        font.family: root.bar ? root.bar.fontFamily : ""
+        font.pixelSize: 11; font.bold: true
+      }
+    }
+  }
   function barIcon() { return batteryPresent ? batteryIcon() : "\uf1e6" }
 
   Process {
@@ -277,6 +309,8 @@ Panel {
       ? Math.round(root.batteryFraction * 100) + "% " + root.batteryIcon()
       : root.barIcon()
     slotSize: Style.bar.iconSlot * (root.batteryPresent && root.showPercentage && !vertical ? 2 : 1)
+    iconComponent: root.slimeSkin ? jarIcon : null
+    opticalSize: root.slimeSkin ? (root.batteryPresent && root.showPercentage && !vertical ? 56 : 26) : Style.bar.iconCanvas
     tooltipText: ""
     onPressed: function(b) {
       if (b === Qt.RightButton) { if (root.batteryPresent) root.togglePercentage() }
