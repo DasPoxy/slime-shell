@@ -24,7 +24,7 @@ Item {
 
   function reroll() {
     if (!enabled_ || width <= 0 || height <= 0) return
-    var kinds = bar.material === "sinew" ? ["eye", "tooth", "sword", "eye", "axe", "skull"]
+    var kinds = (bar.material === "sinew" || bar.material === "muscle") ? ["eye", "tooth", "sword", "eye", "axe", "skull"]
       : bar.material === "bone" ? ["bone", "skull", "tooth", "sword", "axe", "eye"]
       : ["eye", "bubble", "frog", "bone", "hat", "bubble", "mug", "tooth", "potion", "sword", "axe"]
     var own = ["eye", "bone", "tooth", "bubble"]

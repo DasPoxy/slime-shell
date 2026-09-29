@@ -15,7 +15,9 @@ any screen edge and any screen size.
 
 ## Looks
 
-Mix a **material** (slime, sinew, bone, plain) with a **shape** (classic,
+Mix a **material** (slime, sinew, bone, plain, muscle — striated fibres,
+tendon plaques and burn scarring, the fibres stretching into strands down the
+drips) with a **shape** (classic,
 pills, islands, notch, blob — the three sections huddled together in the
 middle of the edge as one slime) and a **shading** style (soft, anime, manga, print,
 cel, sketch):
@@ -226,7 +228,7 @@ Other IPC for binds or scripts:
 ```sh
 omarchy-shell slime-shell toggle | open | close | tab <name> | toggleTab <name>
 omarchy-shell slime-shell tasks                  # Slime-Tasks pop-out
-omarchy-shell slime-shell material slime|sinew|bone|plain
+omarchy-shell slime-shell material slime|sinew|bone|plain|muscle
 omarchy-shell slime-shell shape classic|pills|islands|notch|blob
 omarchy-shell slime-shell shading 0|1|2|3|4|5    # soft, anime, manga, print, cel, sketch
 omarchy-shell slime-shell drip drip|honey|rain|tar|frozen|stringy|lava|gelatinous|cava

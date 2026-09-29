@@ -462,7 +462,7 @@ Item {
     default: return Qt.vector4d(1, 1, 0, 1)
     }
   }
-  readonly property real materialId: ["slime", "sinew", "bone", "plain"].indexOf(material)
+  readonly property real materialId: ["slime", "sinew", "bone", "plain", "muscle"].indexOf(material)
   // every material drips (bone and plain included) with the chosen amount
   readonly property real dripLevel: dripAmount < 0 ? 1.2 : dripAmount
   readonly property vector4d dripExtraVec: Qt.vector4d(dripStyle === "stringy" ? 1 : dripStyle === "lava" ? 2 : dripStyle === "gelatinous" ? 3 : dripStyle === "cava" ? (cavaStyle === "ripple" ? 5 : 4) : 0, dripAmount < 0 ? 1 : 0, 0, 0)
@@ -2449,7 +2449,7 @@ Item {
       avoid: barWindow.bulbRects
       within: root.barShape === "classic" ? [] : (root.barShape === "pills" ? barWindow.bulbRects : barWindow.groupRects)
       bits: {
-        var out = [], kinds = root.material === "sinew" ? ["eye", "tooth", "sword", "eye", "axe", "tooth", "eye", "skull"]
+        var out = [], kinds = (root.material === "sinew" || root.material === "muscle") ? ["eye", "tooth", "sword", "eye", "axe", "tooth", "eye", "skull"]
           : root.material === "bone" ? ["bone", "skull", "tooth", "sword", "bone", "axe", "eye", "mug"]
           : ["eye", "bubble", "frog", "bone", "hat", "bubble", "mug", "tooth", "potion", "sword", "bubble", "axe"]
         var own = ["eye", "bone", "tooth", "bubble"]

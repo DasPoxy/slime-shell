@@ -248,7 +248,7 @@ Item {
       }
       ChoiceRow {
         title: "MATERIAL"
-        options: [["slime", "slime"], ["sinew", "sinew"], ["bone", "bone"], ["plain", "plain"]]
+        options: [["slime", "slime"], ["sinew", "sinew"], ["bone", "bone"], ["plain", "plain"], ["muscle", "muscle"]]
         current: settings.bar.material
         onPicked: value => settings.bar.material = value
       }

@@ -1417,6 +1417,48 @@ vec3 materialSurface(vec2 p, float d, vec3 col, vec3 base) {
     calm = max(calm, inPanel * smoothstep(-12.0, -22.0, d) * 0.7);
     float rim = fill(d + 2.2);                              // 1 inside, 0 on the outline band
 
+    if (material > 3.5) {
+        // ---- muscle: striated fibres, tendon plaques, burn scarring, and
+        // fibres stretching into strands down the drips ----
+        // fibres run along the bar, and down the length of the drips
+        float t = smoothstep(barHeight - 2.0, barHeight + 16.0, p.y);
+        float along = mix(p.x, p.y, t);
+        float across = mix(p.y, p.x, t);
+        float quiet = 1.0 - calm;
+        vec3 c = col;
+        // broad bundles, some fuller and brighter than their neighbours
+        float bundle = fbm(vec2(along / 150.0, across / 20.0) + 4.0);
+        // (cel / soft shading lights it pale: pull it back toward raw red)
+        c = mix(c, c * vec3(1.0, 0.62, 0.58), 0.45);
+        c *= 0.8 + 0.4 * bundle;
+        // fine striations, warped so the fibres curve and fan
+        float warp = fbm(vec2(along / 55.0, across / 7.0)) * 7.0 + sin(along * 0.012) * 2.0;
+        float fib = sin(across * 1.9 + warp);
+        c = mix(c, c * 0.5, smoothstep(0.35, 0.9, fib) * 0.8 * quiet);
+        c = mix(c, min(c * 1.4 + 0.08, vec3(1.0)), smoothstep(-0.97, -0.75, fib) * 0.45 * quiet);
+        // a second, finer grain of fibres between them
+        float fine = sin(across * 5.3 + warp * 1.7 + along * 0.004);
+        c = mix(c, c * 0.78, smoothstep(0.6, 1.0, fine) * 0.5 * quiet);
+        // burn scarring: crinkled, puckered patches in places
+        float scarZone = smoothstep(0.5, 0.64, vnoise(p / 80.0 + 23.0));
+        float crinkle = fbm(p / 7.0 + fbm(p / 19.0) * 3.2);
+        float ridge = smoothstep(0.05, 0.0, abs(crinkle - 0.5));
+        vec3 scar = mix(c * vec3(1.12, 0.92, 0.88), toneShift(base, 0.9, 0.5, 1.25, 0.9), 0.4);
+        c = mix(c, scar, scarZone * 0.75 * quiet);
+        c = mix(c, c * 0.55, ridge * scarZone * 0.7 * quiet);
+        c = mix(c, min(c * 1.3 + 0.08, vec3(1.0)), smoothstep(0.62, 0.8, crinkle) * scarZone * 0.4 * quiet);
+        // tendon plaques: pearly, glossy strips lying along the fibres
+        float plaque = smoothstep(0.6, 0.72, vnoise(vec2(along / 70.0, across / 10.0) + 11.0)) * (1.0 - t * 0.5);
+        vec3 pearl = mix(paperColor.rgb, vec3(0.97, 0.93, 0.9), 0.5);
+        float sheen = 0.5 + 0.5 * sin(across * 0.9 + warp * 0.5);
+        c = mix(c, pearl * (0.82 + 0.25 * sheen), plaque * 0.85 * quiet);
+        // down the drips the fibres stretch apart into strands
+        float strands = abs(fract(p.x / 3.4 + fbm(vec2(p.x / 9.0, p.y / 40.0)) * 1.4) - 0.5);
+        float gap = smoothstep(0.1, 0.02, strands) * t;
+        c = mix(c, c * 0.5, gap * 0.6 * quiet);
+        c = mix(c, min(c * 1.25 + 0.1, vec3(1.0)), smoothstep(0.36, 0.5, strands) * t * 0.3 * quiet);
+        return mix(ink, c, rim);
+    }
     if (material > 2.5) {
         // plain: flat theme colour and a clean ink edge
         return mix(ink, base, rim);
@@ -1498,6 +1540,7 @@ void main() {
     // materials start from the theme colour and push it toward their stuff
     if (material > 0.5 && material < 1.5) base = toneShift(base, 0.985, 0.75, 1.05, 0.95);          // flesh
     else if (material > 1.5 && material < 2.5) base = mix(paperColor.rgb, base, 0.14);               // ivory
+    else if (material > 3.5) base = mix(vec3(0.72, 0.19, 0.15), base, 0.18);                         // raw muscle
     vec3 col = vec3(0.0);
     if (shadingStyle > 4.5) {
         vec4 sk = sketchShade(p, d, base);

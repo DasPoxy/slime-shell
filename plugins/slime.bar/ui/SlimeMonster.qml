@@ -35,14 +35,14 @@ Item {
   property string face: "happy"
   property color tint: "transparent"
   property real tintAmount: 0
-  readonly property color baseSkin: material === "sinew" ? Qt.tint(body, Qt.rgba(0.86, 0.3, 0.36, 0.5))
+  readonly property color baseSkin: (material === "sinew" || material === "muscle") ? Qt.tint(body, Qt.rgba(0.86, 0.3, 0.36, 0.5))
     // bone: ivory, stained with the monster's own colour (so the colour
     // options still tell apart)
     : material === "bone" ? Qt.tint(Qt.tint(eye, Qt.rgba(0.6, 0.48, 0.3, 0.22)), Qt.rgba(body.r, body.g, body.b, 0.42))
     : body
   readonly property color skin: tintAmount > 0 ? Qt.tint(baseSkin, Qt.rgba(tint.r, tint.g, tint.b, tintAmount)) : baseSkin
   readonly property bool shaded: !Qt.colorEqual(body2, body)
-  readonly property color baseSkin2: material === "sinew" ? Qt.tint(body2, Qt.rgba(0.86, 0.3, 0.36, 0.5))
+  readonly property color baseSkin2: (material === "sinew" || material === "muscle") ? Qt.tint(body2, Qt.rgba(0.86, 0.3, 0.36, 0.5))
     : material === "bone" ? Qt.tint(Qt.tint(eye, Qt.rgba(0.6, 0.48, 0.3, 0.22)), Qt.rgba(body2.r, body2.g, body2.b, 0.42))
     : body2
   readonly property color skin2: tintAmount > 0 ? Qt.tint(baseSkin2, Qt.rgba(tint.r, tint.g, tint.b, tintAmount)) : baseSkin2
@@ -154,15 +154,15 @@ Item {
     Shape {
       anchors.fill: parent
       preferredRendererType: Shape.CurveRenderer
-      visible: root.material === "sinew" || root.material === "bone"
+      visible: (root.material === "sinew" || root.material === "muscle") || root.material === "bone"
       ShapePath {
         fillColor: "transparent"
-        strokeColor: root.material === "sinew" ? Qt.rgba(0.45, 0.05, 0.12, 0.75) : root.ink
-        strokeWidth: root.material === "sinew" ? 0.7 : 0.6
+        strokeColor: (root.material === "sinew" || root.material === "muscle") ? Qt.rgba(0.45, 0.05, 0.12, 0.75) : root.ink
+        strokeWidth: (root.material === "sinew" || root.material === "muscle") ? 0.7 : 0.6
         capStyle: ShapePath.RoundCap
         joinStyle: ShapePath.RoundJoin
         PathSvg {
-          path: root.material === "sinew"
+          path: (root.material === "sinew" || root.material === "muscle")
             ? "M5.4 17.6 Q7.4 14.6 6.4 11.6 Q6 9.6 7.6 8 M6.6 13.4 L4.8 12.2 M18.4 17.8 Q16.4 15 17.6 12 M17.2 14.6 L19 13.8 M10.6 5.6 Q12 7 13.6 6"
             : "M13.6 4.6 L12.8 6.8 L14.2 8.2 L13.4 9.6 M5.6 15.4 L7.2 16.2 L7 17.8 M18.2 9.4 L16.8 10.6"
         }
