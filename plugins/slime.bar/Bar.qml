@@ -218,6 +218,46 @@ Item {
   property int desktopCorners: 0            // rounded screen corners: radius in px, 0 = off
   property bool cornerSlime: false          // slime patches in the corners across from the bar
   property bool ccKeyboard: true            // command centre keyboard navigation
+  // ---- wallpapers switching by themselves (options on the Wallpapers tab) ----
+  property int wallAuto: 0                  // minutes between switches, 0 = off
+  property bool wallShuffle: false          // random, or in order
+  property string wallPool: "all"           // theme | mine | all
+  property string wallSort: "name"          // the tab's order: name | type
+  Timer {
+    interval: Math.max(1, root.wallAuto) * 60000
+    repeat: true
+    running: root.wallAuto > 0
+    onTriggered: root.nextWallpaper()
+  }
+  function nextWallpaper() {
+    if (wallLister.running) return
+    var home = Quickshell.env("HOME")
+    var dirs = wallPool === "theme" ? [home + "/.local/state/omarchy/current/theme/backgrounds"]
+      : wallPool === "mine" ? [home + "/Pictures/SlimeS-Wallpapers"]
+      : [home + "/.local/state/omarchy/current/theme/backgrounds", home + "/Pictures/SlimeS-Wallpapers"]
+    wallLister.command = ["bash", "-c", "for d; do find -L \"$d\" -maxdepth 1 -type f -iregex '.*\\.\\(png\\|jpe?g\\|webp\\|gif\\|mp4\\|webm\\|mkv\\|mov\\|m4v\\)' 2>/dev/null | sort; done; " +
+      "echo \"@current $(readlink -f \"$HOME/.local/state/omarchy/current/background\")\"", "_"].concat(dirs)
+    wallLister.running = true
+  }
+  Process {
+    id: wallLister
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var lines = text.split("\n").filter(function(l) { return l !== "" })
+        var cur = "", files = []
+        lines.forEach(function(l) { if (l.indexOf("@current ") === 0) cur = l.slice(9); else files.push(l) })
+        if (root.motionWall !== "") cur = root.motionWall
+        if (!files.length) return
+        var at = files.indexOf(cur), pick
+        if (root.wallShuffle && files.length > 1) { do { pick = Math.floor(Math.random() * files.length) } while (pick === at) }
+        else pick = (at + 1) % files.length
+        var path = files[pick]
+        if (root.isMotion(path)) root.setMotionWall(path)
+        else { root.clearMotionWall(); Quickshell.execDetached(["omarchy-theme-bg-set", path]) }
+      }
+    }
+  }
+
   // ---- motion wallpapers (videos / gifs from ~/Pictures/SlimeS-Wallpapers) ----
   // Played muted and looping on a background layer over Omarchy's own; a
   // still frame (the poster) is set as the real background so the lock
@@ -460,7 +500,8 @@ Item {
     "slimeLayer", "ccTab", "ccSections", "fontStyle", "clockTimeFirst", "barDebris", "barShape", "material", "dripStyle", "monsterColor",
     "desktopCorners", "cornerSlime", "ccKeyboard", "ccSidebarCollapsed", "ccFontScale",
     "cavaBars", "cavaMirror", "cavaSens", "cavaReach", "cavaWidth", "cavaSmooth",
-    "dockEnabled", "dockEdge", "dockAlign", "dockAutoHide", "dockIconSize", "motionWall"]
+    "dockEnabled", "dockEdge", "dockAlign", "dockAutoHide", "dockIconSize", "motionWall",
+    "wallAuto", "wallShuffle", "wallPool", "wallSort"]
   property bool skinLoaded: false
   // A layer change made while the bar surface is still being set up is lost,
   // so "behind" only takes effect once the bar has been mapped for a moment.
@@ -520,6 +561,10 @@ Item {
   onDockAutoHideChanged: skinSaveTimer.restart()
   onDockIconSizeChanged: skinSaveTimer.restart()
   onMotionWallChanged: skinSaveTimer.restart()
+  onWallAutoChanged: skinSaveTimer.restart()
+  onWallShuffleChanged: skinSaveTimer.restart()
+  onWallPoolChanged: skinSaveTimer.restart()
+  onWallSortChanged: skinSaveTimer.restart()
   onCcSidebarCollapsedChanged: skinSaveTimer.restart()
   // the edge across from the bar (for the corner patches)
   readonly property string oppositeEdge: ({ top: "bottom", bottom: "top", left: "right", right: "left" })[position] || "bottom"
@@ -596,6 +641,8 @@ Item {
     // SlimeS-Dock: toggle | on | off | apps (the add-apps panel) |
     // top / bottom / left / right (its edge) | start / center / end (along it) |
     // autohide / pinned
+    // the next wallpaper (as the Wallpapers tab's switching would pick it)
+    function nextWallpaper(): void { root.nextWallpaper() }
     // a wallpaper: a still (set as the background) or a video / gif (played)
     function wallpaper(path: string): void {
       if (root.isMotion(path)) root.setMotionWall(path)

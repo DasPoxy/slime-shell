@@ -102,7 +102,7 @@ Item {
     folder: "file://" + walls.themeDir
     nameFilters: walls.filters
     showDirs: false
-    sortField: FolderListModel.Name
+    sortField: walls.bar && walls.bar.wallSort === "type" ? FolderListModel.Type : FolderListModel.Name
   }
   FolderListModel {
     id: mine
@@ -112,7 +112,7 @@ Item {
                                        "*.MP4", "*.WEBM", "*.MKV", "*.MOV", "*.M4V", "*.GIF"])
     onCountChanged: posterKick.restart()
     showDirs: false
-    sortField: FolderListModel.Name
+    sortField: walls.bar && walls.bar.wallSort === "type" ? FolderListModel.Type : FolderListModel.Name
   }
 
   // one wallpaper's thumbnail
@@ -186,10 +186,73 @@ Item {
     CcFocus { onActivate: walls.setWallpaper(thumb.filePath) }
   }
 
+  // a row of choices (CcButtons), for the options at the top
+  component Choices: Row {
+    id: ch
+    property string title
+    property var options: []      // [label, value]
+    property var current
+    signal picked(var value)
+    spacing: 6
+    CcHeading { cc: walls.cc; anchors.verticalCenter: parent.verticalCenter; text: ch.title }
+    Repeater {
+      model: ch.options
+      CcButton {
+        required property var modelData
+        cc: walls.cc
+        fontSize: 10
+        text: modelData[0]
+        on: ch.current === modelData[1]
+        onClicked: ch.picked(modelData[1])
+      }
+    }
+  }
+
   Column {
     id: column
     width: parent.width
     spacing: 10
+
+    // sorting, and switching on a timer (these live only here, not in Settings)
+    Flow {
+      width: parent.width
+      spacing: 14
+      visible: !!walls.bar
+      Choices {
+        title: "SORT"
+        options: [["name", "name"], ["type", "type"]]
+        current: walls.bar ? walls.bar.wallSort : "name"
+        onPicked: value => walls.bar.wallSort = value
+      }
+      Choices {
+        title: "SWITCH EVERY"
+        options: [["off", 0], ["5 min", 5], ["15 min", 15], ["30 min", 30], ["1 h", 60]]
+        current: walls.bar ? walls.bar.wallAuto : 0
+        onPicked: value => walls.bar.wallAuto = value
+      }
+      Choices {
+        visible: walls.bar && walls.bar.wallAuto > 0
+        title: "FROM"
+        options: [["theme", "theme"], ["mine", "mine"], ["all", "all"]]
+        current: walls.bar ? walls.bar.wallPool : "all"
+        onPicked: value => walls.bar.wallPool = value
+      }
+      Choices {
+        visible: walls.bar && walls.bar.wallAuto > 0
+        title: "ORDER"
+        options: [["in order", false], ["shuffle", true]]
+        current: walls.bar ? walls.bar.wallShuffle : false
+        onPicked: value => walls.bar.wallShuffle = value
+      }
+      CcButton {
+        visible: walls.bar && walls.bar.wallAuto > 0
+        cc: walls.cc
+        fontSize: 10
+        icon: "\uf074"
+        text: "switch now"
+        onClicked: { walls.bar.nextWallpaper(); refreshDelay.restart() }
+      }
+    }
 
     Row {
       id: header

@@ -95,7 +95,8 @@ panel's ooze.
   marching on a dungeon), Wallpapers (the theme's, plus any you drop in
   `~/Pictures/SlimeS-Wallpapers` — stills, or videos and gifs that play as
   motion wallpapers, muted and looping, paused while a window is fullscreen
-  or you're idle; each section folds away), Tasks, Start-Up (apps to launch
+  or you're idle; each section folds away; sort by name or type, and switch
+  on a timer — in order or shuffled, from the theme's, yours or all), Tasks, Start-Up (apps to launch
   at login, and on which workspace — it adds one hook line to
   `~/.config/hypr/autostart.lua`) and Settings tabs. It fits any screen:
   capped to the space there is (tall tabs scroll) and scaled down on narrow
@@ -229,6 +230,7 @@ omarchy-shell slime-shell drip drip|honey|rain|tar|frozen|stringy|lava|gelatinou
 omarchy-shell slime-shell dock toggle|on|off|apps|top|bottom|left|right|start|center|end|autohide|pinned
 omarchy-shell slime-shell corners on|off|toggle
 omarchy-shell slime-shell wallpaper <path>       # a still, or a video / gif to play
+omarchy-shell slime-shell nextWallpaper          # the next one (the Wallpapers tab's switching order)
 omarchy-shell slime-shell layer above|behind     # draw over or behind windows
 omarchy-shell slime-shell toggleLayer            # flip between the two
 omarchy-shell slime-shell color <theme role>     # accent, green, cyan, …
