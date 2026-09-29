@@ -292,6 +292,18 @@ SlimeKeyboardPanel {
       clip: true
       contentHeight: results.implicitHeight
       boundsBehavior: Flickable.StopAtBounds
+      // keyboard jumps glide, so the new results visibly bubble up
+      Behavior on contentY { enabled: !scroller.moving; NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+
+      // how far a result has risen into view (0 at the very edge, 1 inside):
+      // results swell up out of the goo at the bottom and shrink away at the top
+      function bubble(item, cy) {
+        if (!item) return 1
+        var y = item.mapToItem(results, 0, 0).y, h = item.height, band = Math.max(40, h * 1.1)
+        var fromBottom = (cy + height - y) / band
+        var fromTop = (y + h - cy) / band
+        return Math.max(0, Math.min(1, fromBottom, fromTop))
+      }
 
       // keep result i in view
       function reveal(i) {
@@ -321,6 +333,18 @@ SlimeKeyboardPanel {
               readonly property bool current: index === drawer.selected
               width: drawer.cell
               height: drawer.cell * 1.15
+              // newly scrolled into view: it bubbles up out of the goo
+              readonly property bool inView: scroller.bubble(tile, scroller.contentY) > 0.5
+              property real pop: 1
+              onInViewChanged: if (inView && drawer.open) { pop = 0; popAnim.restart() }
+              SequentialAnimation {
+                id: popAnim
+                PauseAnimation { duration: (tile.index % drawer.columns) * 35 }
+                NumberAnimation { target: tile; property: "pop"; to: 1; duration: 380; easing.type: Easing.OutBack }
+              }
+              opacity: Math.min(1, pop * 1.4)
+              scale: 0.35 + 0.65 * pop
+              transform: Translate { y: (1 - tile.pop) * 30 }
 
               Rectangle {
                 anchors.fill: parent
@@ -379,6 +403,13 @@ SlimeKeyboardPanel {
             readonly property bool current: drawer.apps.length + index === drawer.selected
             width: results.width
             height: 28
+            readonly property bool inView: scroller.bubble(row, scroller.contentY) > 0.5
+            property real pop: 1
+            onInViewChanged: if (inView && drawer.open) { pop = 0; rowPop.restart() }
+            NumberAnimation { id: rowPop; target: row; property: "pop"; to: 1; duration: 340; easing.type: Easing.OutBack }
+            opacity: Math.min(1, pop * 1.4)
+            scale: 0.5 + 0.5 * pop
+            transform: Translate { y: (1 - row.pop) * 22 }
             radius: 12
             color: row.current ? Qt.rgba(1, 1, 1, 0.7) : (rowHover.hovered ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(1, 1, 1, 0.18))
             border.color: row.current ? drawer.ink : "transparent"
@@ -437,6 +468,13 @@ SlimeKeyboardPanel {
             readonly property bool current: drawer.apps.length + drawer.cmds.length + index === drawer.selected
             width: results.width
             height: 34
+            readonly property bool inView: scroller.bubble(fileRow, scroller.contentY) > 0.5
+            property real pop: 1
+            onInViewChanged: if (inView && drawer.open) { pop = 0; fileRowPop.restart() }
+            NumberAnimation { id: fileRowPop; target: fileRow; property: "pop"; to: 1; duration: 340; easing.type: Easing.OutBack }
+            opacity: Math.min(1, pop * 1.4)
+            scale: 0.5 + 0.5 * pop
+            transform: Translate { y: (1 - fileRow.pop) * 22 }
             radius: 12
             color: fileRow.current ? Qt.rgba(1, 1, 1, 0.7) : (fileHover.hovered ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(1, 1, 1, 0.18))
             border.color: fileRow.current ? drawer.ink : "transparent"
