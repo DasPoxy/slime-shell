@@ -1484,6 +1484,30 @@ Item {
   // Revealing the indicators widens their section, which can slide a neighbour
   // under a stationary pointer. Collapsing on that un-hover would move it back
   // out and re-open the peek, so hold until the pointer leaves the bar.
+  // The centre's hover (it reveals the indicators that are off) counts only
+  // on or just beside the indicators widget: the centre's hover area spans the
+  // whole bar, and with the blob shape the whole bar is goo you can hover.
+  readonly property real indicatorRevealReach: 26
+  function pointerNearIndicators(item, pos) {
+    var slots = moduleSlots
+    for (var i = 0; i < slots.length; i++) {
+      var sl = slots[i]
+      if (!sl || sl.moduleName !== "slime.indicators" || !sl.visible || sl.width <= 0) continue
+      var p = item.mapToItem(sl, pos.x, pos.y), r = indicatorRevealReach
+      if (p.x > -r && p.x < sl.width + r && p.y > -r && p.y < sl.height + r) return true
+    }
+    return false
+  }
+  component CenterRevealHover: HoverHandler {
+    id: crh
+    property bool near: false
+    function check() {
+      var n = hovered && root.pointerNearIndicators(crh.parent, point.position)
+      if (n !== near) { near = n; root.setCenterSectionHovered(n) }
+    }
+    onHoveredChanged: check()
+    onPointChanged: check()
+  }
   function setCenterSectionHovered(hovered) {
     centerSectionHovered = hovered
     if (hovered) {
@@ -3213,9 +3237,7 @@ Item {
 
         CenterGestureArea { anchors.fill: parent }
 
-        HoverHandler {
-          onHoveredChanged: root.setCenterSectionHovered(hovered)
-        }
+        CenterRevealHover {}
 
         ModuleList {
           visible: !centerRoot.hasAnchor
@@ -3258,9 +3280,7 @@ Item {
 
         CenterGestureArea { anchors.fill: parent }
 
-        HoverHandler {
-          onHoveredChanged: root.setCenterSectionHovered(hovered)
-        }
+        CenterRevealHover {}
 
         ModuleList {
           visible: !centerRoot.hasAnchor
