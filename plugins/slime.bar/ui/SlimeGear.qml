@@ -944,6 +944,201 @@ Item {
       }
     }
 
+    // ============== town crier (system update): lit = updates! bell ringing, yelling
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "crier"
+      sourceComponent: Item {
+        id: crier
+        anchors.fill: parent
+        readonly property color coat: root.pal.red || "#c0392b"
+        readonly property color skin: "#f2c2a0"
+        readonly property real ring: root.lit ? Math.sin(root.time * 14) * 22 : 0
+        // body in a red coat with gold buttons
+        GearPath { d: "M12 9 Q16.6 9.4 17 13 L18.6 22 Q12 23.2 5.4 22 L7 13 Q7.4 9.4 12 9 Z"; fill: crier.coat }
+        GearPath { d: "M12 11 L12 21.6"; stroke: Qt.darker(crier.coat, 1.4); line: 0.7 }
+        Rectangle { x: 12.8; y: 13; width: 1; height: 1; radius: 0.5; color: root.gold }
+        Rectangle { x: 12.8; y: 16; width: 1; height: 1; radius: 0.5; color: root.gold }
+        // head, and a tricorn hat
+        GearPath { d: "M9.6 5.4 Q12 4.2 14.4 5.4 L14.2 8.8 Q12 10.2 9.8 8.8 Z"; fill: crier.skin; line: 0.8 }
+        Rectangle { x: 10.4; y: 6.2; width: 1; height: 1; radius: 0.5; color: root.ink }
+        Rectangle { x: 12.6; y: 6.2; width: 1; height: 1; radius: 0.5; color: root.ink }
+        // mouth: shut, or wide open, yelling
+        GearPath {
+          d: root.lit ? "M11 8 Q12 10.2 13 8 Z" : "M11.2 8.2 L12.8 8.2"
+          fill: root.lit ? root.ink : "transparent"; line: 0.6
+        }
+        GearPath { d: "M7.4 5.2 Q12 1.6 16.6 5.2 Q12 3.8 7.4 5.2 Z"; fill: root.ink; line: 0.8 }
+        GearPath { d: "M8.6 4.6 L12 2 L15.4 4.6"; stroke: root.gold; line: 0.5 }
+        // the bell, raised and swinging when there's news
+        Item {
+          x: 17; y: root.lit ? 3.4 : 10
+          width: 6; height: 7
+          rotation: crier.ring
+          transformOrigin: Item.Top
+          GearPath { d: "M3 0.4 L3 1.6"; stroke: root.leather; line: 1 }
+          GearPath { d: "M0.6 5.6 Q0.8 1.6 3 1.6 Q5.2 1.6 5.4 5.6 Z"; fill: root.gold; line: 0.8 }
+          Rectangle { x: 2.4; y: 5.4; width: 1.2; height: 1.2; radius: 0.6; color: root.ink }
+        }
+        GearPath { d: root.lit ? "M16 12 L19.6 6.4" : "M16 13 L18.4 12"; stroke: crier.coat; line: 1.6 }
+        // his cry: sound lines out of the open mouth
+        GearPath {
+          visible: root.lit
+          d: "M3.6 6 Q2.4 7.4 3.6 8.8 M2 5 Q0.2 7.4 2 9.8"
+          stroke: root.ink; line: 0.7
+          opacity: root.pulse
+        }
+      }
+    }
+
+    // ============== bard (system update): lit = strumming, notes flying
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "bard"
+      sourceComponent: Item {
+        id: bard
+        anchors.fill: parent
+        readonly property color tunic: root.pal.green || "#3fb950"
+        readonly property color skin: "#f2c2a0"
+        readonly property real strum: root.lit ? Math.sin(root.time * 12) * 1.2 : 0
+        GearPath { d: "M12 9 Q16.4 9.4 16.8 13 L18.2 22 Q12 23.2 5.8 22 L7.2 13 Q7.6 9.4 12 9 Z"; fill: bard.tunic }
+        GearPath { d: "M9.6 5.4 Q12 4.2 14.4 5.4 L14.2 8.8 Q12 10.2 9.8 8.8 Z"; fill: bard.skin; line: 0.8 }
+        Rectangle { x: 10.4; y: 6.2; width: 1; height: 1; radius: 0.5; color: root.ink }
+        Rectangle { x: 12.6; y: 6.2; width: 1; height: 1; radius: 0.5; color: root.ink }
+        GearPath { d: root.lit ? "M11 8.1 Q12 9.4 13 8.1 Z" : "M11.2 8.1 Q12 8.7 12.8 8.1"; fill: root.lit ? root.ink : "transparent"; line: 0.6 }
+        // a floppy hat with a feather
+        GearPath { d: "M8.2 5.6 Q9.4 2.2 13.4 2.6 Q16.4 3.2 16.2 5.8 Q12 4.4 8.2 5.6 Z"; fill: root.pal.red || "#c0392b"; line: 0.8 }
+        GearPath { d: "M15.4 3.6 Q19.4 0.6 20.6 1.4 Q18.4 2.6 16 4.6"; fill: root.paper; line: 0.6 }
+        // the lute across him
+        GearPath { d: "M6.2 18.6 Q4.8 14.4 8.4 13.4 Q11.8 12.8 12.4 16 Q12.8 19.8 8.6 20 Q6.8 20 6.2 18.6 Z"; fill: root.leather; line: 0.9 }
+        Rectangle { x: 8.4; y: 16; width: 1.8; height: 1.8; radius: 0.9; color: root.ink }
+        GearPath { d: "M11.6 14.4 L19 8.6"; stroke: Qt.darker(root.leather, 1.3); line: 1.2 }
+        GearPath { d: "M18.6 8.2 L20.4 7.2 L20 9.2 Z"; fill: Qt.darker(root.leather, 1.3); line: 0.5 }
+        // strumming hand
+        Rectangle { x: 10 + bard.strum; y: 15.8; width: 2.2; height: 2.2; radius: 1.1; color: bard.skin; border.color: root.ink; border.width: 0.5 }
+        // notes drifting up
+        Repeater {
+          model: root.lit ? 2 : 0
+          Text {
+            required property int index
+            readonly property real ph: (root.time * 0.8 + index * 0.5) % 1
+            x: 17 + index * 3 + Math.sin(root.time * 3 + index) * 1.2; y: 10 - ph * 9
+            text: index ? "♫" : "♪"
+            font.pixelSize: 5
+            color: root.ink
+            opacity: 1 - ph
+          }
+        }
+      }
+    }
+
+    // ============== knight (system update): lit = kneeling, sword planted
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "knight"
+      sourceComponent: Item {
+        id: kn
+        anchors.fill: parent
+        readonly property color steel: Qt.tint(root.paper, Qt.rgba(0.35, 0.4, 0.5, 0.5))
+        property real k: root.lit ? 1 : 0
+        Behavior on k { NumberAnimation { duration: 500; easing.type: Easing.OutBack } }
+        Item {
+          anchors.fill: parent
+          // kneeling lowers him
+          transform: Translate { y: kn.k * 3.2 }
+          // body in armour with a tabard
+          GearPath { d: "M12 9.4 Q16 9.6 16.4 13 L17 " + (19 - kn.k * 2) + " L7 " + (19 - kn.k * 2) + " L7.6 13 Q8 9.6 12 9.4 Z"; fill: kn.steel }
+          GearPath { d: "M10.4 11 L13.6 11 L13.2 " + (18.4 - kn.k * 2) + " L10.8 " + (18.4 - kn.k * 2) + " Z"; fill: root.pal.blue || "#3f74ff"; line: 0.6 }
+          // legs: standing, or one knee down
+          GearPath { d: kn.k > 0.5 ? "M8 17 L7.4 20.4 L10.6 20.4 M14 17 L17 17.6 L17.4 20.4" : "M9 19 L8.8 22.4 M15 19 L15.2 22.4"; stroke: root.ink; line: 1.8 }
+          // helmet with a plume
+          GearPath { d: "M8.8 5.6 Q12 2.2 15.2 5.6 L15 9.6 L9 9.6 Z"; fill: kn.steel; line: 0.9 }
+          GearPath { d: "M9.6 7 L14.4 7"; stroke: root.ink; line: 0.9 }
+          GearPath { d: "M12 3.4 Q15 0.6 17.2 2.2 Q14.4 2 12.6 4"; fill: root.pal.red || "#c0392b"; line: 0.6 }
+        }
+        // the sword: at his side, or planted point-down before him
+        GearPath { d: kn.k > 0.5 ? "M19.4 10 L19.4 22.6 M17.6 12 L21.2 12" : "M18.4 9 L21 20.4 M17 11.6 L20.2 10.8"; stroke: root.ink; line: 1.1 }
+        GearPath { d: kn.k > 0.5 ? "M19.4 12.6 L19.4 22.4" : "M18.9 11.4 L20.9 20.2"; stroke: kn.steel; line: 0.6 }
+      }
+    }
+
+    // ============== jester (system update): lit = juggling
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "jester"
+      sourceComponent: Item {
+        id: jest
+        anchors.fill: parent
+        readonly property color a: root.pal.magenta || "#c21e8b"
+        readonly property color b: root.pal.yellow || "#e4cc00"
+        readonly property color skin: "#f2c2a0"
+        // harlequin body
+        GearPath { d: "M12 9.6 L12 22.4 Q6 22.8 5.6 22 L7 13 Q7.4 9.8 12 9.6 Z"; fill: jest.a }
+        GearPath { d: "M12 9.6 Q16.6 9.8 17 13 L18.4 22 Q18 22.8 12 22.4 Z"; fill: jest.b }
+        GearPath { d: "M9.6 6.4 Q12 5.2 14.4 6.4 L14.2 9.4 Q12 10.6 9.8 9.4 Z"; fill: jest.skin; line: 0.8 }
+        Rectangle { x: 10.4; y: 7; width: 1; height: 1; radius: 0.5; color: root.ink }
+        Rectangle { x: 12.6; y: 7; width: 1; height: 1; radius: 0.5; color: root.ink }
+        GearPath { d: "M10.8 8.6 Q12 9.8 13.2 8.6"; line: 0.6 }
+        // the three-pointed cap with bells
+        GearPath { d: "M9 6.6 Q6.4 3 4.6 4.8 Q8 4.4 9.6 6 Z"; fill: jest.a; line: 0.7 }
+        GearPath { d: "M10.6 6 Q12 0.8 13.4 6 Z"; fill: jest.b; line: 0.7 }
+        GearPath { d: "M15 6.6 Q17.6 3 19.4 4.8 Q16 4.4 14.4 6 Z"; fill: jest.a; line: 0.7 }
+        Rectangle { x: 4; y: 4.2; width: 1.4; height: 1.4; radius: 0.7; color: root.gold; border.color: root.ink; border.width: 0.4 }
+        Rectangle { x: 11.3; y: 0.3; width: 1.4; height: 1.4; radius: 0.7; color: root.gold; border.color: root.ink; border.width: 0.4 }
+        Rectangle { x: 18.8; y: 4.2; width: 1.4; height: 1.4; radius: 0.7; color: root.gold; border.color: root.ink; border.width: 0.4 }
+        // arms: at his sides, or up juggling; hands as little skin circles
+        GearPath { d: root.lit ? "M8 12.6 Q5.4 11 4.6 8.4" : "M7.8 12.6 Q6.4 15 6.8 17.4"; stroke: jest.a; line: 1.8 }
+        GearPath { d: root.lit ? "M16 12.6 Q18.6 11 19.4 8.4" : "M16.2 12.6 Q17.6 15 17.2 17.4"; stroke: jest.b; line: 1.8 }
+        GearPath { d: root.lit ? "M3.6 8.4 a1 1 0 1 0 2 0 a1 1 0 1 0 -2 0 M18.4 8.4 a1 1 0 1 0 2 0 a1 1 0 1 0 -2 0"
+                               : "M5.8 17.8 a1 1 0 1 0 2 0 a1 1 0 1 0 -2 0 M16.2 17.8 a1 1 0 1 0 2 0 a1 1 0 1 0 -2 0"
+                   fill: jest.skin; line: 0.6 }
+        // three balls arcing over his head
+        Repeater {
+          model: root.lit ? 3 : 0
+          GearPath {
+            required property int index
+            readonly property real ph: root.time * 2.6 + index * 2.094
+            readonly property real bx: 12 + Math.cos(ph) * 7.4
+            readonly property real by: 4.6 - Math.abs(Math.sin(ph)) * 4.2
+            d: "M" + (bx - 1.5) + " " + by + " a1.5 1.5 0 1 0 3 0 a1.5 1.5 0 1 0 -3 0"
+            fill: [root.pal.red || "#e33", root.pal.cyan || "#1cc", root.pal.green || "#3c3"][index]
+            line: 0.6
+          }
+        }
+      }
+    }
+
+    // ============== a slime that emotes (system update): lit = shocked, "!"
+    Loader {
+      anchors.fill: parent
+      active: root.kind === "emoteslime"
+      sourceComponent: Item {
+        id: es
+        anchors.fill: parent
+        readonly property color body: root.bar ? root.bar.slimeColor : (root.pal.green || "#5fd35f")
+        readonly property real hop: root.lit ? Math.abs(Math.sin(root.time * 6)) * 2.4 : 0
+        Item {
+          anchors.fill: parent
+          transform: Translate { y: -es.hop }
+          GearPath { d: "M3.4 21.8 Q2.8 14.4 7 11 Q12 8.2 17 11 Q21.2 14.4 20.6 21.8 Q12 23.4 3.4 21.8 Z"; fill: es.body; line: 1.2 }
+          GearPath { d: "M6.8 13.6 Q8.2 11.8 10.4 11.4"; stroke: Qt.rgba(1, 1, 1, 0.75); line: 1 }
+          // eyes: sleepy, or wide
+          Rectangle { x: 8; y: root.lit ? 13.6 : 15.6; width: 2.6; height: root.lit ? 3.4 : 1.2; radius: 1.2; color: root.ink }
+          Rectangle { x: 13.4; y: root.lit ? 13.6 : 15.6; width: 2.6; height: root.lit ? 3.4 : 1.2; radius: 1.2; color: root.ink }
+          GearPath { d: root.lit ? "M11 18.4 Q12 20.4 13 18.4 Q12 17.6 11 18.4 Z" : "M10.8 18.6 Q12 19.4 13.2 18.6"; fill: root.lit ? root.ink : "transparent"; line: 0.6 }
+        }
+        // the emote
+        Text {
+          visible: root.lit
+          x: 16.4; y: 1 - es.hop
+          text: "!"
+          color: root.pal.red || "#e33"
+          font.pixelSize: 8; font.bold: true
+          style: Text.Outline; styleColor: root.ink
+        }
+      }
+    }
+
     // =================================================================== sword
     Loader {
       anchors.fill: parent

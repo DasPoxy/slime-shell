@@ -117,8 +117,22 @@ Candle (night light), strapped bell (do not disturb), tankard (stay awake),
 hourglass (reminders), eyeball (screen recording), ear trumpet (dictation).
 Click one to toggle it. Inactive ones show on hover.
 
-### Keyboard layout, system update
-Omarchy's widgets with Omarchy's own click behaviour, restyled for the bar.
+### System update — `slime.system-update`
+A little character in the bar (a town crier by default, trapped in a bubble
+of goo) who stays quiet while Omarchy is up to date and acts up when there
+are updates: the crier rings his bell and yells, the bard strums, the knight
+kneels, the jester juggles, the candle lights, the slime emotes. Checks every
+six hours.
+
+| | |
+|---|---|
+| Left click | a drip panel: up to date or what's pending, *Update now*, *Check again* |
+| Right click | a drip menu: the character, and the bubble on / off |
+
+IPC: `omarchy-shell omarchy.system-update toggle | menu | refresh`.
+
+### Keyboard layout
+Omarchy's widget with Omarchy's own click behaviour, restyled for the bar.
 
 ## Right side
 
