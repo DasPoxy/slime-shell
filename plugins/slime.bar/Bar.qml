@@ -563,8 +563,12 @@ Item {
   function bob(phase) { return slimeSkin ? Math.sin(animTime * 1.3 + phase) * 1.6 : 0 }
   function sway(phase) { return slimeSkin ? Math.sin(animTime * 0.9 + phase * 1.7) * 1.8 : 0 }
 
+  // when a click on the bar just closed it (see the bar's catcher), the same
+  // click reaching the clock shouldn't open it straight back up
+  property real ccClosedByBar: 0
   function toggleCommandCenter() {
     if (!slimeSkin) return
+    if (!commandCenterOpen && Date.now() - ccClosedByBar < 600) return
     commandCenterOpen = !commandCenterOpen
   }
 
@@ -2383,6 +2387,16 @@ Item {
         }
         return out
       }
+    }
+
+    // with the command centre open, a left click anywhere on the bar closes
+    // it (and still reaches whatever widget was clicked)
+    MouseArea {
+      anchors.fill: parent
+      z: 1000
+      enabled: root.commandCenterOpen
+      acceptedButtons: Qt.LeftButton
+      onPressed: mouse => { root.ccClosedByBar = Date.now(); root.commandCenterOpen = false; mouse.accepted = false }
     }
 
     Item {
