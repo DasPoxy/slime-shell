@@ -1241,11 +1241,27 @@ vec3 celShade(vec2 p, vec2 scene, vec3 base, bool screentone) {
         float tone = mix(0.13, 0.3, shadow1);
         tone = mix(tone, 0.42, shadow2);
         tone *= mix(1.0, 0.55, litEdge * (1.0 - shadow1));   // thinner still on the lit rim
+        // variety across the goo: slow regions of different screen
+        float regA = vnoise(p / 170.0 + vec2(7.0, 3.0) + time * 0.015);
+        float regB = vnoise(p / 110.0 + vec2(-4.0, 11.0) - time * 0.01);
+        // cloudy patches of denser tone
+        tone += 0.13 * smoothstep(0.55, 0.78, vnoise(p / 75.0 + vec2(3.0, 1.0)));
         tone *= 1.0 - calm;
-        vec2 q = mat2(0.7071, -0.7071, 0.7071, 0.7071) * p / 6.0;
+        // the dot screen: its pitch and angle drift from region to region
+        float pitch = mix(4.4, 7.6, regA);
+        float ang = mix(0.62, 0.95, regB);
+        vec2 q = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * p / pitch;
         float dist = length(fract(q) - 0.5);
         float dots = clamp((tone - dist) * 7.0 + 0.5, 0.0, 1.0) * step(0.02, tone);
         col = mix(col, ink, dots * 0.8);
+
+        // stipple: specks of grain in some regions
+        float stip = smoothstep(0.58, 0.72, regB) * step(0.86 - shadow1 * 0.12, hash2(floor(p / 1.6)));
+        col = mix(col, ink, stip * 0.5 * (1.0 - calm) * (1.0 - litEdge * 0.6));
+        // flow lines: gentle wavy strokes through other regions
+        float fy = (p.y + 3.5 * sin(p.x * 0.045 + regA * 6.0)) / 5.5;
+        float flow = clamp((0.09 - abs(fract(fy) - 0.5)) * 6.0 + 0.5, 0.0, 1.0) * smoothstep(0.34, 0.2, regA);
+        col = mix(col, ink, flow * 0.38 * (1.0 - calm) * (1.0 - shadow2));
 
         // hatching: diagonal strokes in the deep shadow, crossed near the rim
         float rim = fill(-(d + 9.0)) * (1.0 - fill(-(d + 2.0)));   // band just inside the edge
