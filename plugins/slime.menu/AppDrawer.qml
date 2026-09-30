@@ -24,6 +24,7 @@ SlimeKeyboardPanel {
   required property var widget          // the launcher bar widget
   property string query: ""
   property int selected: 0
+  property bool navigating: false        // moving through the results, not the typed text
   property var commands: []             // from commands.py
 
   readonly property var library: bar && bar.shell && bar.shell.appLibrary ? bar.shell.appLibrary : null
@@ -163,7 +164,7 @@ SlimeKeyboardPanel {
 
   onQueryChanged: { selected = 0; scroller.contentY = 0; fileFilterTimer.restart() }
   onOpenChanged: if (open) {
-    query = ""; search.text = ""; selected = 0; scroller.contentY = 0; files = []
+    query = ""; search.text = ""; selected = 0; navigating = false; scroller.contentY = 0; files = []
     drawer.commandLoader.running = true
     drawer.fileIndexer.running = true
   }
@@ -298,15 +299,18 @@ SlimeKeyboardPanel {
         font.pixelSize: 15
         font.bold: true
         clip: true
-        onTextChanged: drawer.query = text
+        onTextChanged: { drawer.query = text; drawer.navigating = false }
         Keys.onPressed: event => {
           var keys = {}
           keys[Qt.Key_Right] = "right"; keys[Qt.Key_Left] = "left"; keys[Qt.Key_Down] = "down"; keys[Qt.Key_Up] = "up"
           if (event.key === Qt.Key_Escape) { drawer.widget.appsOpen = false; event.accepted = true }
           else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) { drawer.activate(drawer.selected); event.accepted = true }
-          else if (event.key === Qt.Key_Tab) { drawer.move("tab"); event.accepted = true }
-          else if (event.key === Qt.Key_Backtab) { drawer.move("backtab"); event.accepted = true }
-          else if (keys[event.key] && (event.key === Qt.Key_Up || event.key === Qt.Key_Down || search.text === "" || (event.key === Qt.Key_Right && search.cursorPosition === search.text.length) || (event.key === Qt.Key_Left && search.cursorPosition === 0))) {
+          else if (event.key === Qt.Key_Tab) { drawer.navigating = true; drawer.move("tab"); event.accepted = true }
+          else if (event.key === Qt.Key_Backtab) { drawer.navigating = true; drawer.move("backtab"); event.accepted = true }
+          // once you've moved into the results (↑↓ Tab), ←→ move through them too,
+          // until you type again
+          else if (keys[event.key] && (event.key === Qt.Key_Up || event.key === Qt.Key_Down || search.text === "" || drawer.navigating || (event.key === Qt.Key_Right && search.cursorPosition === search.text.length) || (event.key === Qt.Key_Left && search.cursorPosition === 0))) {
+            if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) drawer.navigating = true
             drawer.move(keys[event.key]); event.accepted = true
           }
         }
