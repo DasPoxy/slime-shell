@@ -3041,14 +3041,24 @@ Item {
         readonly property real midEnd: mid.z > 0 ? mid.x + mid.z : width / 2
         readonly property real gap: 30
 
-        CenterModules { anchors.fill: parent }
+        // the centre section slides aside when a side section grows into it
+        // (a tray or indicators opening on a crowded bar) instead of overlapping
+        readonly property real gapMin: 6
+        readonly property real cStart: mid.z > 0 ? mid.x - centerShift : width / 2
+        readonly property real cEnd: mid.z > 0 ? mid.x + mid.z - centerShift : width / 2
+        readonly property real pushRight: Math.max(0, hLeft.x + hLeft.width + gapMin - cStart)
+        readonly property real pushLeft: Math.max(0, cEnd + gapMin - hRight.x)
+        readonly property real centerShift: huddle ? 0 : pushRight - pushLeft
+        CenterModules { anchors.fill: parent; transform: Translate { x: hBar.centerShift } }
 
         LeftModules {
+          id: hLeft
           x: hBar.huddle ? Math.max(Style.space(8), hBar.midStart - hBar.gap - width) : Style.space(8)
           anchors.verticalCenter: parent.verticalCenter
         }
 
         RightModules {
+          id: hRight
           x: hBar.huddle ? Math.min(parent.width - width - Style.space(8), hBar.midEnd + hBar.gap) : parent.width - width - Style.space(8)
           anchors.verticalCenter: parent.verticalCenter
         }
@@ -3067,14 +3077,22 @@ Item {
         readonly property real midEnd: mid.z > 0 ? mid.x + mid.z : height / 2
         readonly property real gap: 30
 
-        CenterModules { anchors.fill: parent }
+        readonly property real gapMin: 6
+        readonly property real cStart: mid.z > 0 ? mid.x - centerShift : height / 2
+        readonly property real cEnd: mid.z > 0 ? mid.x + mid.z - centerShift : height / 2
+        readonly property real pushDown: Math.max(0, vLeft.y + vLeft.height + gapMin - cStart)
+        readonly property real pushUp: Math.max(0, cEnd + gapMin - vRight.y)
+        readonly property real centerShift: huddle ? 0 : pushDown - pushUp
+        CenterModules { anchors.fill: parent; transform: Translate { y: vBar.centerShift } }
 
         LeftModules {
+          id: vLeft
           y: vBar.huddle ? Math.max(Style.space(8), vBar.midStart - vBar.gap - height) : Style.space(8)
           anchors.horizontalCenter: parent.horizontalCenter
         }
 
         RightModules {
+          id: vRight
           y: vBar.huddle ? Math.min(parent.height - height - Style.space(8), vBar.midEnd + vBar.gap) : parent.height - height - Style.space(8)
           anchors.horizontalCenter: parent.horizontalCenter
         }
