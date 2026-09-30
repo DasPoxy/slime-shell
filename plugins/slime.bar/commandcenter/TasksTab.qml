@@ -1004,6 +1004,15 @@ Item {
       event.accepted = true; return
     }
     if (k === Qt.Key_Escape && showHelp) { showHelp = false; event.accepted = true; return }
+    if (showHelp && (k === Qt.Key_Left || k === Qt.Key_Right || txt === "h" || txt === "l")) {
+      var order = [0, 1, 2, 4, 5, 3], at = order.indexOf(helpSection)
+      helpSection = order[(at + (k === Qt.Key_Left || txt === "h" ? 5 : 1)) % 6]
+      event.accepted = true; return
+    }
+    if (showHelp && (k === Qt.Key_Down || k === Qt.Key_Up || txt === "j" || txt === "k")) {
+      helpFlick.contentY = Math.max(0, Math.min(helpFlick.contentHeight - helpFlick.height, helpFlick.contentY + (k === Qt.Key_Down || txt === "j" ? 60 : -60)))
+      event.accepted = true; return
+    }
     if (tab === "todo") {
       var t = selected
       if (pane === "list" && cursor.indexOf("s:") === 0) {
@@ -3257,66 +3266,104 @@ Item {
   }
 
   // ================================================================ keys help
+  // one section at a time (the tab you're on first); ← → or the chips switch
+  property int helpSection: 0
+  readonly property var helpSections: [
+    ["", [["Tab / 1 2 3", "switch tabs"], ["?", "this help"], ["Esc", "back out, or close the command centre"]]],
+    ["TODO · LIST", [["↑ ↓  j k", "pick a todo"], ["→  Enter", "open its sub-todos"], ["n", "new todo"], ["a", "add a sub-todo"],
+                     ["Space", "mark finished"], ["e  F2", "rename"], ["g", "group menu"], ["A", "archive"], ["d d", "delete"], ["f", "show / hide finished"],
+                     ["J K  Shift ↑↓", "move a todo"], ["drag", "move (into another group, too)"],
+                     ["←  z  (or click a heading)", "fold its group"], ["g  /  right-click on a heading", "group menu: archive or delete the group"],
+                     ["A  on a heading", "archive the whole group"], ["e  /  d d  on a heading (any tab)", "rename / delete the group"], ["d d  on a group in the g menu", "delete that group"], ["Enter  Space  →  on a heading", "fold / unfold"],
+                     ["g  on a group: into / new super group", "super groups hold groups; their headings take the same keys"], ["A  on a super group", "archive every todo in it"]]],
+    ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space", "to do → in progress → done"], ["Enter", "open it over the panel (c copy · e edit)"], ["p", "add a picture (a drip panel of your files)"], ["i", "fold its pictures"], ["a", "add"], ["e", "edit"],
+                          ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
+    ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
+    ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["L  on a super group, group, todo or sub-todo (here or on the Todo tab)", "jump to its section of the log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Tab  Shift+Tab  in the lanes", "hop to the next / previous lane"], ["Enter on a sub-todo", "open it over the panel"],
+                  ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
+    ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
+                  ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list (you stay in the archive)"], ["r  on an archive heading", "restore the whole group / super group"], ["g  /  right-click", "group, restore or delete an archived list"], ["←  z  /  Enter  →  on a heading", "fold / unfold an archive group"], ["↑ at the top  Esc", "back up"]]]
+        ]
+  onShowHelpChanged: if (showHelp) helpSection = tab === "log" ? 3 : tab === "progress" ? 4 : 1
   Rectangle {
+    id: helpCard
     visible: tasks.showHelp
     z: 60
     anchors.centerIn: parent
-    width: Math.min(parent.width - 40, 620)
-    height: helpText.implicitHeight + 30
+    width: Math.min(parent.width - 40, 700)
+    height: Math.min(parent.height - 40, helpHead.height + helpFlick.contentHeight + helpFoot.implicitHeight + 44)
     radius: 16
     color: tasks.cc.paper
     border.color: tasks.cc.ink
     border.width: 2
-    Column {
-      id: helpText
-      x: 16; y: 15
-      width: parent.width - 32
-      spacing: 8
+    MouseArea { anchors.fill: parent; onClicked: tasks.showHelp = false }
+    Flow {
+      id: helpHead
+      x: 14; y: 12
+      width: parent.width - 28
+      spacing: 6
       Repeater {
-        model: [
-          ["", [["Tab / 1 2 3", "switch tabs"], ["?", "this help"], ["Esc", "back out, or close the command centre"]]],
-          ["TODO · LIST", [["↑ ↓  j k", "pick a todo"], ["→  Enter", "open its sub-todos"], ["n", "new todo"], ["a", "add a sub-todo"],
-                           ["Space", "mark finished"], ["e  F2", "rename"], ["g", "group menu"], ["A", "archive"], ["d d", "delete"], ["f", "show / hide finished"],
-                           ["J K  Shift ↑↓", "move a todo"], ["drag", "move (into another group, too)"],
-                           ["←  z  (or click a heading)", "fold its group"], ["g  /  right-click on a heading", "group menu: archive or delete the group"],
-                           ["A  on a heading", "archive the whole group"], ["e  /  d d  on a heading (any tab)", "rename / delete the group"], ["d d  on a group in the g menu", "delete that group"], ["Enter  Space  →  on a heading", "fold / unfold"],
-                           ["g  on a group: into / new super group", "super groups hold groups; their headings take the same keys"], ["A  on a super group", "archive every todo in it"]]],
-          ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space", "to do → in progress → done"], ["Enter", "open it over the panel (c copy · e edit)"], ["p", "add a picture (a drip panel of your files)"], ["i", "fold its pictures"], ["a", "add"], ["e", "edit"],
-                                ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
-          ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
-          ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["L  on a super group, group, todo or sub-todo (here or on the Todo tab)", "jump to its section of the log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Tab  Shift+Tab  in the lanes", "hop to the next / previous lane"], ["Enter on a sub-todo", "open it over the panel"],
-                        ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
-          ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
-                        ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list (you stay in the archive)"], ["r  on an archive heading", "restore the whole group / super group"], ["g  /  right-click", "group, restore or delete an archived list"], ["←  z  /  Enter  →  on a heading", "fold / unfold an archive group"], ["↑ at the top  Esc", "back up"]]]
-        ]
-        Column {
-          required property var modelData
-          width: helpText.width
-          spacing: 2
-          CcHeading { visible: parent.modelData[0] !== ""; cc: tasks.cc; text: parent.modelData[0] }
-          Flow {
-            width: parent.width
-            spacing: 14
-            Repeater {
-              model: parent.parent.modelData[1]
-              Row {
-                required property var modelData
-                spacing: 6
-                Text { text: parent.modelData[0]; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs); font.bold: true }
-                Text { text: parent.modelData[1]; color: tasks.cc.ink; opacity: 0.75; font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs) }
-              }
+        model: ["General", "Todo", "Sub-todos", "Task Log", "Progress", "Moving"]
+        CcButton {
+          required property string modelData
+          required property int index
+          cc: tasks.cc
+          fontSize: 11
+          text: modelData
+          on: tasks.helpSection === helpIndex
+          // sections: 0 general, 1 todo, 2 sub-todos, 3 everywhere, 4 log, 5 progress
+          readonly property int helpIndex: [0, 1, 2, 4, 5, 3][index]
+          onClicked: tasks.helpSection = helpIndex
+        }
+      }
+    }
+    Flickable {
+      id: helpFlick
+      x: 14; y: helpHead.y + helpHead.height + 10
+      width: parent.width - 28
+      height: Math.max(0, parent.height - y - helpFoot.implicitHeight - 20)
+      contentHeight: helpGrid.implicitHeight
+      clip: true
+      boundsBehavior: Flickable.StopAtBounds
+      // key | what it does, in two columns of pairs
+      Grid {
+        id: helpGrid
+        width: helpFlick.width
+        columns: width > 520 ? 2 : 1
+        columnSpacing: 18
+        rowSpacing: 5
+        Repeater {
+          model: (tasks.helpSections[tasks.helpSection] || ["", []])[1]
+          Row {
+            required property var modelData
+            width: (helpGrid.width - (helpGrid.columns - 1) * helpGrid.columnSpacing) / helpGrid.columns
+            spacing: 8
+            Text {
+              width: Math.min(130, parent.width * 0.42)
+              wrapMode: Text.Wrap
+              text: parent.modelData[0]
+              color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs); font.bold: true
+            }
+            Text {
+              width: parent.width - Math.min(130, parent.width * 0.42) - 8
+              wrapMode: Text.Wrap
+              text: parent.modelData[1]
+              color: tasks.cc.ink; opacity: 0.78; font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs)
             }
           }
         }
       }
-      Text {
-        width: parent.width
-        wrapMode: Text.Wrap
-        text: "Text boxes: Enter saves, Esc leaves. Your todos are plain markdown in " + tasks.folder.replace(/^\/home\/[^/]+/, "~") + " — open them in Envy or any notes app."
-        color: tasks.cc.ink; opacity: 0.7
-        font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs) }
     }
-    MouseArea { anchors.fill: parent; onClicked: tasks.showHelp = false }
+    Text {
+      id: helpFoot
+      x: 14
+      anchors.bottom: parent.bottom; anchors.bottomMargin: 10
+      width: parent.width - 28
+      wrapMode: Text.Wrap
+      text: "← → sections · Esc or ? closes · text boxes: Enter saves, Esc leaves · todos are plain markdown in " + tasks.folder.replace(/^\/home\/[^/]+/, "~")
+      color: tasks.cc.ink; opacity: 0.6
+      font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs)
+    }
   }
 
   // ================================================== a picture, shown big
