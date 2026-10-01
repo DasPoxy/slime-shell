@@ -289,17 +289,51 @@ Item {
     onExited: code => { if (code === 0) root.motionWall = root.motionPending; root.motionPending = "" }
   }
   function clearMotionWall() { motionWall = "" }
+  // After a shell restart, other plugins may put "their" background back
+  // (Theme Manager re-applies the wallpaper it remembers for the theme, then
+  // checks it again a few seconds later). So the saved motion wallpaper keeps
+  // playing over it, the background is left to settle (no change for 5 s, or
+  // 25 s at most), and then the poster is set again.
+  QtObject {
+    id: motionSettle
+    property bool active: false
+    property string last: ""
+    property int stable: 0
+    property int waited: 0
+    function begin() { active = true; last = ""; stable = 0; waited = 0; motionSettleTimer.restart() }
+    function probe(out) {
+      var lines = out.split("\n"), cur = lines[0] || "", exists = lines[1] === "yes"
+      waited++
+      if (cur === last) stable++
+      else { stable = 0; last = cur }
+      if (!exists) { motionSettleTimer.stop(); active = false; root.clearMotionWall(); return }
+      if (stable < 5 && waited < 25) return
+      motionSettleTimer.stop()
+      active = false
+      if (root.motionWall !== "" && cur !== root.posterFor(root.motionWall)) root.setMotionWall(root.motionWall)
+    }
+  }
+  Timer {
+    id: motionSettleTimer
+    interval: 1000; repeat: true
+    onTriggered: if (!motionSettleProbe.running) motionSettleProbe.running = true
+  }
+  Process {
+    id: motionSettleProbe
+    command: ["bash", "-c", "readlink -f \"$HOME/.local/state/omarchy/current/background\"; [ -f \"$1\" ] && echo yes || echo no", "_", root.motionWall]
+    stdout: StdioCollector { onStreamFinished: motionSettle.probe(text) }
+  }
   // the background moved on without us: stop
   Timer {
     interval: 3000; repeat: true
-    running: root.motionWall !== ""
+    running: root.motionWall !== "" && !motionSettle.active
     onTriggered: motionProbe.running = true
   }
   Process {
     id: motionProbe
     command: ["readlink", "-f", Quickshell.env("HOME") + "/.local/state/omarchy/current/background"]
     stdout: StdioCollector {
-      onStreamFinished: if (root.motionWall !== "" && text.trim() !== "" && text.trim() !== root.posterFor(root.motionWall)) root.motionWall = ""
+      onStreamFinished: if (root.motionWall !== "" && !motionSettle.active && text.trim() !== "" && text.trim() !== root.posterFor(root.motionWall)) root.motionWall = ""
     }
   }
 
@@ -517,6 +551,7 @@ Item {
       var key = skinKeys[i]
       if (saved[key] !== undefined && saved[key] !== null && typeof saved[key] === typeof root[key]) root[key] = saved[key]
     }
+    if (!skinLoaded && motionWall !== "") motionSettle.begin()
     skinLoaded = true
   }
 

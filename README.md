@@ -100,7 +100,8 @@ panel's ooze.
   marching on a dungeon), Wallpapers (the theme's, plus any you drop in
   `~/Pictures/SlimeS-Wallpapers` — stills, or videos and gifs that play as
   motion wallpapers, muted and looping, paused while a window is fullscreen
-  or you're idle; each section folds away; sort by name or type, and switch
+  or you're idle, and kept across shell restarts even when another plugin
+  (e.g. Theme Manager) re-applies its own background at start-up; each section folds away; sort by name or type, and switch
   on a timer — in order or shuffled, from the theme's, yours or all), Tasks, Start-Up (apps to launch
   at login, and on which workspace — it adds one hook line to
   `~/.config/hypr/autostart.lua`) and Settings tabs. It fits any screen:
