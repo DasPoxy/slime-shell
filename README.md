@@ -199,7 +199,9 @@ git clone https://github.com/DasPoxy/slime-shell.git ~/Work/slime-shell
 ~/Work/slime-shell/bin/slime-shell use
 ```
 
-`use` links the plugins into `~/.config/omarchy/plugins/`, backs up your
+`use` copies the plugins into `~/.config/omarchy/plugins/` (real folders,
+not links: some shells' plugin catalogs, Shibumi's for one, won't follow a
+symlinked plugin and then list none at all), backs up your
 current bar layout, switches the bar to Slime, swaps in Slime's notification
 server and restarts the shell. It also links `slime-tasks` into
 `~/.local/bin` and makes `~/Pictures/SlimeS-Wallpapers`. To go back:
@@ -207,7 +209,9 @@ server and restarts the shell. It also links `slime-tasks` into
 ```sh
 ~/Work/slime-shell/bin/slime-shell restore     # your previous bar, exactly
 ~/Work/slime-shell/bin/slime-shell status
-~/Work/slime-shell/bin/slime-shell install     # just (re)link the plugins
+~/Work/slime-shell/bin/slime-shell install     # just (re)copy the plugins
+~/Work/slime-shell/bin/slime-shell sync        # copy your edits in (only what changed)
+~/Work/slime-shell/bin/slime-shell install --dev-hooks   # and sync after every commit / pull
 ```
 
 With the Shell-Swapper plugin installed, `use` and `restore` hand the swap to
