@@ -4,6 +4,7 @@
 #   slime-shell install   symlink plugins/slime.* into ~/.config/omarchy/plugins
 #   slime-shell use       back up the current bar config, switch to slime.bar
 #   slime-shell restore   put the backed-up bar config back
+#   (with Shell-Swapper installed, use / restore swap through it instead)
 #   slime-shell status    show which bar is active
 #
 # The Omarchy shell only loads third-party widgets that are in the bar layout,
@@ -63,12 +64,22 @@ install_plugins() {
   mkdir -p "$HOME/Pictures/SlimeS-Wallpapers"
 }
 
+# With Shell-Swapper installed, it does the swapping: your Slime layout is kept
+# as a loadout, every swap is backed up and asks before it sticks.
+swapper=""
+command -v shell-swapper >/dev/null 2>&1 && swapper=shell-swapper
+
 case "${1:-status}" in
   install)
     install_plugins
     ;;
   use)
     install_plugins
+    if [[ -n $swapper ]]; then
+      "$swapper" apply --suite slime.bar
+      echo "swapping to slime.bar with Shell-Swapper (keep it when it asks)"
+      exit 0
+    fi
     mkdir -p "$state_dir"
     if [[ $(current_bar) != slime.bar ]]; then
       jq '{bar: .bar, plugins: (.plugins // []), disabledPlugins: (.disabledPlugins // [])}' "$shell_json" > "$backup"
@@ -84,6 +95,11 @@ case "${1:-status}" in
     echo "switched to slime.bar (undo with: slime-shell restore)"
     ;;
   restore)
+    if [[ -n $swapper ]]; then
+      "$swapper" apply --previous
+      echo "swapping back with Shell-Swapper (keep it when it asks)"
+      exit 0
+    fi
     [[ -f $backup ]] || { echo "no backup at $backup" >&2; exit 1; }
     # shellcheck disable=SC2016  # $saved/$services are jq variables
     edit_shell_json --slurpfile saved "$backup" --argjson services "$slime_services" '
@@ -97,6 +113,7 @@ case "${1:-status}" in
   status)
     echo "active bar: $(current_bar)"
     [[ -f $backup ]] && echo "backup: $backup ($(jq -r '.bar.id // "omarchy.bar"' "$backup"))"
+    [[ -n $swapper ]] && echo "shell-swapper: $("$swapper" status)"
     ;;
   *)
     sed -n '2,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'

@@ -210,6 +210,10 @@ server and restarts the shell. It also links `slime-tasks` into
 ~/Work/slime-shell/bin/slime-shell install     # just (re)link the plugins
 ```
 
+With the Shell-Swapper plugin installed, `use` and `restore` hand the swap to
+it: your Slime layout is kept as a loadout beside your other shells, every
+swap is backed up, and it reverts itself unless you keep it.
+
 The plugins are symlinks into the clone, so editing the repo changes the live
 bar (restart with `omarchy restart shell` to be sure).
 
