@@ -56,7 +56,10 @@ wmclass() {
 jq -c '.[] | select(.enabled != false)' "$config" | while read -r app; do
   id=$(jq -r '.id' <<<"$app")
   ws=$(jq -r '.workspace // 0' <<<"$app")
-  [[ -n $id && $id != null ]] || continue
+  # a desktop id (no "/" to wander off with) and a workspace number: these go
+  # into paths, bash arithmetic and a Hyprland dispatch, so nothing else passes
+  [[ $id =~ ^[A-Za-z0-9][A-Za-z0-9._+-]*$ ]] || continue
+  [[ $ws =~ ^[0-9]{1,2}$ ]] && ws=$((10#$ws)) || ws=0
   class=$(wmclass "$id"); class=${class:-$id}
   before=$(addresses)
   uwsm-app -- gtk-launch "$id.desktop" >/dev/null 2>&1 &

@@ -592,6 +592,7 @@ Item {
             Text {
               width: parent.width - when.width
               text: modelData.summary || modelData.app
+              textFormat: Text.PlainText
               elide: Text.ElideRight
               color: home.cc.ink
               font.family: home.cc.font
@@ -610,7 +611,8 @@ Item {
           Text {
             visible: text !== ""
             width: parent.width
-            text: modelData.body || ""
+            // (bodies may carry notification markup: show it as plain words)
+            text: (modelData.body || "").replace(/<[^>]*>/g, "")
             textFormat: Text.PlainText
             elide: Text.ElideRight
             maximumLineCount: 2

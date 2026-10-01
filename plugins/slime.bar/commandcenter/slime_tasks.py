@@ -188,7 +188,15 @@ def render(todo):
     return "\n".join(out) + "\n"
 
 
+def check_id(tid):
+    # ids are slugs; anything else (a "/", "..") could reach outside the folder
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", tid or "") or ".." in tid:
+        raise Fail(f"'{tid}' isn't a todo id")
+    return tid
+
+
 def todo_path(root, tid, archived=False):
+    check_id(tid)
     p = os.path.join(root, "Archive" if archived else "Todos", tid + ".md")
     if not os.path.exists(p):
         raise Fail(f"no todo '{tid}'" + (" in the archive" if archived else ""))
@@ -196,6 +204,7 @@ def todo_path(root, tid, archived=False):
 
 
 def log_path(root, tid, archived=False):
+    check_id(tid)
     return os.path.join(root, "Archive/Logs" if archived else "Logs", tid + ".md")
 
 

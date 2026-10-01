@@ -497,6 +497,7 @@ BarWidget {
             width: parent.width
             elide: Text.ElideRight
             text: root.player ? (root.player.trackTitle || root.player.identity) : ""
+            textFormat: Text.PlainText
             color: look.ink; font.family: look.font; font.pixelSize: 14; font.bold: true
           }
           Text {
@@ -504,6 +505,7 @@ BarWidget {
             elide: Text.ElideRight
             visible: text !== ""
             text: root.player ? root.player.trackArtist : ""
+            textFormat: Text.PlainText
             color: look.ink; font.family: look.font; font.pixelSize: 12
           }
           Text {
@@ -515,6 +517,7 @@ BarWidget {
           }
           Text {
             text: root.player ? root.player.identity + (root.playing ? " · playing" : " · paused") : ""
+            textFormat: Text.PlainText
             color: look.ink; font.family: look.font; font.pixelSize: 10; opacity: 0.55
           }
         }
@@ -650,6 +653,7 @@ BarWidget {
       id: measure
       visible: false
       text: drip.line
+      textFormat: Text.PlainText
       font.family: root.bar ? root.bar.displayFontFamily : look.font
       font.weight: root.bar ? root.bar.displayWeight : Font.Bold
       font.pixelSize: 17
@@ -674,6 +678,7 @@ BarWidget {
           readonly property bool now: drip.singing && index === drip.wordNow
           readonly property bool ahead: drip.singing && index > drip.wordNow
           text: modelData
+          textFormat: Text.PlainText
           color: look.ink
           font.family: root.bar ? root.bar.displayFontFamily : look.font
           font.weight: root.bar ? root.bar.displayWeight : Font.Bold
@@ -747,11 +752,13 @@ BarWidget {
           Text {
             width: parent.width; elide: Text.ElideRight
             text: root.player ? (root.player.trackTitle || root.player.identity) : ""
+            textFormat: Text.PlainText
             color: look.ink; font.family: root.bar ? root.bar.displayFontFamily : look.font; font.pixelSize: 16; font.bold: true
           }
           Text {
             width: parent.width; elide: Text.ElideRight
             text: root.player ? root.player.trackArtist : ""
+            textFormat: Text.PlainText
             color: look.ink; font.family: look.font; font.pixelSize: 11; opacity: 0.75
           }
         }
@@ -791,6 +798,7 @@ BarWidget {
           width: songLines.width
           wrapMode: Text.Wrap
           text: songLines.synced ? (modelData.text || "♪") : (modelData || " ")
+          textFormat: Text.PlainText
           color: look.ink
           opacity: now ? 1 : songLines.synced && index < root.lineNow ? 0.45 : 0.75
           font.family: now && root.bar ? root.bar.displayFontFamily : look.font

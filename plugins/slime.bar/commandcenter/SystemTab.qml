@@ -271,6 +271,7 @@ Item {
         Text {
           width: parent.width - 180
           text: modelData.name
+          textFormat: Text.PlainText
           elide: Text.ElideRight
           color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: Math.round(12 * sys.fs); font.bold: true
         }

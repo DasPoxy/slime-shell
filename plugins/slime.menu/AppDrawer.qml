@@ -565,6 +565,7 @@ SlimeKeyboardPanel {
                 width: parent.width
                 elide: Text.ElideMiddle
                 text: fileRow.modelData.name
+                textFormat: Text.PlainText
                 color: drawer.ink
                 font.family: look.font
                 font.pixelSize: 12

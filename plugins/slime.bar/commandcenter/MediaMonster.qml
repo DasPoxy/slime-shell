@@ -194,6 +194,7 @@ Item {
       Text {
         width: parent.width
         text: monster.player ? (monster.player.trackTitle || monster.player.identity) : ""
+        textFormat: Text.PlainText
         elide: Text.ElideRight
         color: monster.ink
         font.family: monster.cc.font
@@ -203,6 +204,7 @@ Item {
       Text {
         width: parent.width
         text: monster.player ? (monster.player.trackArtist || monster.player.identity) : ""
+        textFormat: Text.PlainText
         elide: Text.ElideRight
         color: monster.ink
         font.family: monster.cc.font

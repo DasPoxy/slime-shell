@@ -482,6 +482,7 @@ Item {
               width: parent.width - x - pinBtn.width - 16
               elide: Text.ElideRight
               text: row.modelData.name
+              textFormat: Text.PlainText
               color: dock.bar.slimeInk
               font.family: dock.bar.fontFamily; font.pixelSize: 13; font.bold: row.pinned
             }
