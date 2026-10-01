@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Install Slime Shell's plugins into Omarchy and switch the bar to/from it.
 #
-#   slime-shell install   symlink plugins/slime.* into ~/.config/omarchy/plugins
+#   slime-shell install   copy plugins/slime.* into ~/.config/omarchy/plugins
+#   slime-shell sync      copy them in again (after editing this checkout);
+#                         the git hooks from `install --dev-hooks` do it on commit
+#   slime-shell install --dev-hooks   also add those hooks to this checkout
 #   slime-shell use       back up the current bar config, switch to slime.bar
 #   slime-shell restore   put the backed-up bar config back
 #   (with Shell-Swapper installed, use / restore swap through it instead)
@@ -36,18 +39,54 @@ edit_shell_json() {
   mv "$tmp" "$shell_json"
 }
 
-install_plugins() {
+# The plugins are copied in as real folders, not linked: some shells' plugin
+# catalogs (Shibumi's) won't follow a symlinked plugin folder, and then list
+# no third-party plugins at all. Each copy carries .synced-from (this
+# checkout's plugin folder), so the Updates tab and Shell-Swapper can find the
+# repo. A folder that isn't one of ours is never touched; a link from an
+# older install is swapped for its folder in one step (mv --exchange), so the
+# plugin never goes missing while the shell is running.
+sync_plugins() {
   mkdir -p "$plugins_dir"
+  local dir name dest tmp
   for dir in "$repo"/plugins/slime.*; do
-    local link="$plugins_dir/${dir##*/}"
-    if [[ -L $link ]]; then
-      ln -sfn "$dir" "$link"
-    elif [[ -e $link ]]; then
-      echo "skipping ${dir##*/}: $link exists and is not a symlink" >&2
+    name=${dir##*/}
+    dest="$plugins_dir/$name"
+    if [[ -L $dest ]]; then
+      tmp="$plugins_dir/.sync-$name"
+      rm -rf "$tmp"
+      rsync -a --exclude __pycache__ --exclude .git "$dir/" "$tmp/"
+      printf '%s\n' "$dir" > "$tmp/.synced-from"
+      # -T: swap the link itself, never move into the folder it points at
+      mv -T --exchange "$tmp" "$dest" || { rm -rf "$tmp"; echo "couldn't replace the link $dest" >&2; return 1; }
+      [[ -L $tmp ]] && rm -f "$tmp"   # the old link (only ever a link here)
+    elif [[ -e $dest && ! -f $dest/.synced-from ]]; then
+      echo "skipping $name: $dest is there and isn't Slime Shell's copy" >&2
+      continue
     else
-      ln -s "$dir" "$link"
+      rsync -a --delete --delay-updates --exclude __pycache__ --exclude .git --exclude .synced-from "$dir/" "$dest/"
+      [[ $(cat "$dest/.synced-from" 2>/dev/null) == "$dir" ]] || printf '%s\n' "$dir" > "$dest/.synced-from"
     fi
   done
+}
+
+dev_hooks() {
+  local hooks="$repo/.git/hooks" h
+  [[ -d $hooks ]] || { echo "not a git checkout: no hooks" >&2; return; }
+  for h in post-commit post-merge post-checkout; do
+    if [[ -e $hooks/$h ]] && ! grep -q 'slime-shell sync' "$hooks/$h"; then
+      echo "skipping the $h hook: there's one already" >&2
+      continue
+    fi
+    printf '#!/bin/sh\n# Slime Shell: copy the plugins into Omarchy after the checkout changes\n"%s" sync >/dev/null 2>&1 &\n' \
+      "$repo/bin/slime-shell" > "$hooks/$h"
+    chmod +x "$hooks/$h"
+  done
+  echo "git hooks: plugins are copied in after every commit, pull and checkout"
+}
+
+install_plugins() {
+  sync_plugins
   omarchy-shell -q shell rescanPlugins
   # Discovery is asynchronous; wait until every slime plugin is listed.
   local want
@@ -72,6 +111,10 @@ command -v shell-swapper >/dev/null 2>&1 && swapper=shell-swapper
 case "${1:-status}" in
   install)
     install_plugins
+    if [[ ${2:-} == --dev-hooks ]]; then dev_hooks; fi
+    ;;
+  sync)
+    sync_plugins
     ;;
   use)
     install_plugins

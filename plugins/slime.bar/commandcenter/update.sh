@@ -2,10 +2,15 @@
 # Slime Shell self-update, for the Settings > Updates section.
 #   update.sh check   fetch, print JSON {status, branch, behind, ahead, dirty, local, remote, log[]}
 #   update.sh pull    fast-forward to the remote (refuses on local changes / divergence)
-# The repo is wherever this plugin really lives (it is symlinked into Omarchy).
+# The repo is the checkout the plugins were copied from (slime.bar/.synced-from
+# names it); after pulling, the plugins are copied in again.
 set -uo pipefail
 
-repo="$(git -C "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" rev-parse --show-toplevel 2>/dev/null)" || {
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+plugin="$(dirname "$here")"
+src="$plugin"
+[[ -f $plugin/.synced-from ]] && src="$(head -1 "$plugin/.synced-from")"
+repo="$(git -C "$src" rev-parse --show-toplevel 2>/dev/null)" || {
   echo '{"status":"error","message":"not a git checkout"}'; exit 0; }
 cd "$repo" || exit 0
 
@@ -29,6 +34,8 @@ case "${1:-check}" in
   pull)
     [[ -z $(git status --porcelain) ]] || json_err "local changes; commit or stash them first"
     git merge --ff-only --quiet '@{u}' 2>/dev/null || json_err "can't fast-forward (branches diverged)"
+    # the running copies in ~/.config/omarchy/plugins
+    [[ -x $repo/bin/slime-shell ]] && "$repo/bin/slime-shell" sync >/dev/null 2>&1
     jq -cn --arg l "$(git rev-parse --short HEAD)" '{status:"updated", local:$l}'
     ;;
 esac
