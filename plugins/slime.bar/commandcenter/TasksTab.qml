@@ -1624,13 +1624,17 @@ Item {
       font.family: tasks.cc.font
       font.pixelSize: Math.round(12 * tasks.fs)
       clip: true
-      Keys.onReturnPressed: {
+      function submit() {
         var t = text.trim()
         if (field.clearOnEnter) text = ""
         if (t !== "") field.accepted(t)
         if (!field.keepFocus) tasks.forceActiveFocus()
         field.entered()
       }
+      // both Enter keys (the keypad one too), handled here so the key isn't
+      // passed on to the tab (which would open the highlighted sub-todo)
+      Keys.onReturnPressed: submit()
+      Keys.onEnterPressed: submit()
       Keys.onEscapePressed: { text = ""; tasks.forceActiveFocus() }
       Text {
         visible: fieldInput.text === "" && !fieldInput.activeFocus
@@ -1928,6 +1932,7 @@ Item {
             font.pixelSize: Math.round(16 * tasks.fs)
             font.bold: true
             Keys.onReturnPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["rename", tasks.selected.id, text.trim()]); tasks.forceActiveFocus() }
+            Keys.onEnterPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["rename", tasks.selected.id, text.trim()]); tasks.forceActiveFocus() }
             Keys.onEscapePressed: tasks.forceActiveFocus()
           }
         }
@@ -2113,6 +2118,7 @@ Item {
         font.pixelSize: Math.round(12 * tasks.fs)
         Rectangle { anchors.fill: parent; anchors.margins: -4; z: -1; radius: 6; color: Qt.rgba(1, 1, 1, 0.9); border.color: tasks.cc.ink }
         Keys.onReturnPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["sub-edit", tasks.selected.id, String(index), text.trim()]); tasks.forceActiveFocus() }
+        Keys.onEnterPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["sub-edit", tasks.selected.id, String(index), text.trim()]); tasks.forceActiveFocus() }
         Keys.onEscapePressed: tasks.forceActiveFocus()
       }
     }
@@ -3260,6 +3266,7 @@ Item {
         font.pixelSize: Math.round(13 * tasks.fs)
         clip: true
         Keys.onReturnPressed: tasks.finishRenameGroup(text.trim())
+        Keys.onEnterPressed: tasks.finishRenameGroup(text.trim())
         Keys.onEscapePressed: { tasks.renamingGroup = ""; tasks.renamingIsSuper = false; tasks.forceActiveFocus() }
       }
     }
