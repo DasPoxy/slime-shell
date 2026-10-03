@@ -2092,7 +2092,7 @@ Item {
         property vector4d bulb21: Qt.vector4d(0, 0, 0, 0)
         property vector4d bulb22: Qt.vector4d(0, 0, 0, 0)
         property vector4d bulb23: Qt.vector4d(0, 0, 0, 0)
-        property real blobMode: 1
+        property real blobMode: 2   // a drip panel: its edge jiggles
         property real orient: 0
         property vector2d screenSize: Qt.vector2d(0, 0)
         property real barShape: 0

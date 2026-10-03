@@ -34,7 +34,7 @@ layout(std140, binding = 0) uniform buf {
     float clipTop;
     float poolDepth;
     vec2 origin;      // this window's top-left on the screen
-    float blobMode;   // 1 = no bar: just a free-standing blob in panelRect
+    float blobMode;   // 1 = no bar: just a free-standing blob in panelRect (2: its edge alive)
     float barShape;   // 0 classic strip, 1 pills, 2 islands, 3 notch, 4 corners, 5 dock, 6 blob
     vec4 dripStyle;   // speed x, thickness x, frozen (1 = hang still), density x
     vec4 dripExtra;   // x: shape 0 drip / 1 stringy / 2 mitosis; y: variable amount 0/1;
@@ -754,15 +754,23 @@ vec2 bulb(vec2 p, vec4 b, float seed) {
     return vec2(d, hl);
 }
 
-// A free-standing blob (blobMode): a gooey dome in panelRect that wobbles a
-// little and drips from its underside.
+// A free-standing blob (blobMode): a gooey dome in panelRect whose walls are
+// alive like a panel hanging from the bar's, and drips from its underside.
 vec2 mapBlob(vec2 p) {
     vec2 c = panelRect.xy + panelRect.zw * 0.5;
     vec2 hs = panelRect.zw * 0.5;
-    float wob = 2.0 * sin(p.x * 0.05 + time * 1.3) + 1.5 * sin(p.y * 0.07 - time * 0.9);
+    // blobMode 1 (the media monster): a gentle wobble of its own
+    float wob = blobMode < 1.5 ? 2.0 * sin(p.x * 0.05 + time * 1.3) + 1.5 * sin(p.y * 0.07 - time * 0.9) : 0.0;
     float d = sdRoundBox(p, c, hs, min(hs.y, 46.0)) + wob * 0.4;
     // heavier bottom: goo pools downward
     d = smin(d, sdEllipse(p, vec2(c.x, c.y + hs.y * 0.45), vec2(hs.x * 0.85, hs.y * 0.6)), 10.0);
+    // blobMode 2 (a drip panel off the bar): the same slow swells and quicker
+    // jiggles running round the edge as openPanel's (only near the edge, and
+    // calm while it's still opening)
+    float live = step(1.5, blobMode) * smoothstep(0.7, 1.0, openProgress) * (1.0 - smoothstep(0.0, 26.0, -d));
+    d += live * (2.4 * sin(p.x * 0.045 + p.y * 0.03 + time * 2.1)
+               + 1.3 * sin(p.y * 0.11 - p.x * 0.02 - time * 4.3)
+               + 0.8 * sin((p.x + p.y) * 0.19 + time * 7.1));
 
     float hl = 1e5;
     float bottom = panelRect.y + panelRect.w - 6.0;

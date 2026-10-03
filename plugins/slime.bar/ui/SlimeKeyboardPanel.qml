@@ -429,7 +429,7 @@ PanelWindow {
       : orient < 1.5 ? root.screenH - card.y
       : orient < 2.5 ? card.x + card.width
       : root.screenW - card.x
-    property real blobMode: root.floating ? 1 : 0
+    property real blobMode: root.floating ? 2 : 0   // 2: a blob whose edge jiggles like the bar's panels
 
     readonly property var bulbs: root.anchorWindow && root.anchorWindow.bulbRects ? root.anchorWindow.bulbRects : []
     readonly property vector4d noBulb: Qt.vector4d(0, 0, 0, 0)
