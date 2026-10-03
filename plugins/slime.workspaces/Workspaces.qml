@@ -7,6 +7,7 @@ import qs.Commons
 import qs.Ui
 import "../slime.bar/ui"
 import "../slime.bar/commandcenter"
+import "../slime.bar/ui/WidgetSettings.js" as WidgetSettings
 
 // Slime Shell workspaces. Right-click for a slime menu that picks
 //   count  "5" / "10" (always shown, 1..n) or "populated" (only workspaces
@@ -52,14 +53,7 @@ BarWidget {
     root.bar.run("hyprctl dispatch " + Util.shellQuote("hl.dsp.focus({ workspace = \"" + id + "\" })"))
   }
 
-  function saveSetting(key, value) {
-    var entry = { id: root.moduleName }
-    for (var k in root.settings) if (k !== "id") entry[k] = root.settings[k]
-    entry[key] = value
-    root.settings = entry
-    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
-      root.bar.shell.updateEntryInline(root.moduleName, entry)
-  }
+  function saveSetting(key, value) { WidgetSettings.save(root, WidgetSettings.one(key, value)) }
 
   // popout contract so the bar closes this menu when another panel opens
   function close() { menuOpen = false }
@@ -196,7 +190,7 @@ BarWidget {
           width: wsButton.focused ? 22 : 15
           height: width
           rotation: wsButton.focused ? Math.sin(wsButton.t * 2) * 12 : 0
-          fill: wsButton.focused ? (root.slime && root.bar.palette.yellow ? root.bar.palette.yellow : "#ffd000")
+          fill: wsButton.focused ? (root.slime && root.bar.slimePalette.yellow ? root.bar.slimePalette.yellow : "#ffd000")
             : wsButton.occupied ? (root.slime ? root.bar.monsterBody : "white") : "transparent"
           ink: wsButton.ink
           opacity: wsButton.focused || wsButton.occupied ? 1 : 0.55

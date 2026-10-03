@@ -4,6 +4,7 @@ import Quickshell.Io
 import qs.Commons
 import qs.Ui
 import "../slime.bar/ui"
+import "../slime.bar/ui/WidgetSettings.js" as WidgetSettings
 
 // Slime Shell's centre widget: the clock and the weather in one label, and the
 // source of the command centre. Left click drips the command centre open from
@@ -37,16 +38,9 @@ BarWidget {
   readonly property bool goblins: setting("goblins", false) === true
   readonly property bool slime: !!bar && bar.slimeSkin === true
 
-  function saveSetting(key, value) {
-    var entry = { id: root.moduleName }
-    for (var k in root.settings) if (k !== "id") entry[k] = root.settings[k]
-    entry[key] = value
-    // Applied locally first so the clock changes on the click; the shell.json
-    // write comes back through the bar as the same value.
-    root.settings = entry
-    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
-      root.bar.shell.updateEntryInline(root.moduleName, entry)
-  }
+  // (applied locally first so the clock changes on the click; the shell.json
+  // write comes back through the bar as the same value)
+  function saveSetting(key, value) { WidgetSettings.save(root, WidgetSettings.one(key, value)) }
 
   function toggleHour24() { saveSetting("hour24", !hour24) }
 
@@ -241,7 +235,7 @@ BarWidget {
               ink: root.bar ? root.bar.slimeInk : "black"
               paper: root.bar ? root.bar.paperColor : "white"
               goo: root.bar ? root.bar.slimeColor : "green"
-              pal: root.bar && root.bar.palette ? root.bar.palette : ({})
+              pal: root.bar && root.bar.slimePalette ? root.bar.slimePalette : ({})
             }
           }
         }

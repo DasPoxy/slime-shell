@@ -1501,7 +1501,7 @@ Item {
       ink: tasks.cc.ink
       paper: tasks.cc.paper
       goo: tasks.cc.slime
-      pal: tasks.bar && tasks.bar.palette ? tasks.bar.palette : ({})
+      pal: tasks.bar && tasks.bar.slimePalette ? tasks.bar.slimePalette : ({})
     }
   }
   Repeater {   // a couple of tankards and a lute's worth of flotsam

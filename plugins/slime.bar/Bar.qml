@@ -147,7 +147,8 @@ Item {
   property var ccSections: ({})
 
   // Full theme palette from colors.toml (Color only exposes a few roles).
-  property var palette: ({})
+  // (not "palette": every Item has one of its own)
+  property var slimePalette: ({})
   function parsePalette(raw) {
     var out = {}
     var lines = String(raw || "").split("\n")
@@ -155,7 +156,7 @@ Item {
       var m = lines[i].match(/^\s*([a-z_]+)\s*=\s*"(#[0-9a-fA-F]{6,8})"/)
       if (m) out[m[1]] = m[2]
     }
-    palette = out
+    slimePalette = out
   }
   FileView {
     id: paletteFile
@@ -174,12 +175,12 @@ Item {
 
   // Widgets are inked in the theme's darkest tone so they read on the ooze;
   // active states use its lightest ("paper") tone.
-  readonly property color slimeInk: palette.background || Color.background
+  readonly property color slimeInk: slimePalette.background || Color.background
   property string slimeRole: "accent"
-  readonly property color slimeColor: palette[slimeRole] || Color.accent
+  readonly property color slimeColor: slimePalette[slimeRole] || Color.accent
   readonly property color paperColor: {
-    var fg = Qt.color(palette.foreground || Color.foreground)
-    var bg = Qt.color(palette.background || Color.background)
+    var fg = Qt.color(slimePalette.foreground || Color.foreground)
+    var bg = Qt.color(slimePalette.background || Color.background)
     return fg.hslLightness >= bg.hslLightness ? fg : bg
   }
   // "auto" picks the palette colour whose hue sits roughly 100° away from the
@@ -189,13 +190,13 @@ Item {
     "bright_red", "bright_yellow", "bright_green", "bright_cyan", "bright_blue", "bright_magenta"]
   readonly property color slimeColor2: {
     if (gradientRole === "none") return slimeColor
-    if (gradientRole !== "auto") return palette[gradientRole] || slimeColor
+    if (gradientRole !== "auto") return slimePalette[gradientRole] || slimeColor
     var h1 = slimeColor.hsvHue
-    if (h1 < 0) return palette.accent || slimeColor
+    if (h1 < 0) return slimePalette.accent || slimeColor
     var best = slimeColor, bestScore = 1e9
     for (var i = 0; i < hueRoles.length; i++) {
-      if (!palette[hueRoles[i]]) continue
-      var c = Qt.color(palette[hueRoles[i]])
+      if (!slimePalette[hueRoles[i]]) continue
+      var c = Qt.color(slimePalette[hueRoles[i]])
       if (c.hsvHue < 0 || c.hsvSaturation < 0.35) continue
       var diff = Math.abs(c.hsvHue - h1) * 360
       if (diff > 180) diff = 360 - diff
@@ -208,7 +209,7 @@ Item {
   // Slime monsters (workspaces, launcher): bodies in the theme's paper tone
   // tinted with the gradient partner, so they pop off the ooze they float in.
   readonly property color monsterBody: Qt.tint(paperColor, Qt.rgba(slimeColor2.r, slimeColor2.g, slimeColor2.b, 0.3))
-  readonly property color monsterBlush: palette.bright_magenta || palette.magenta || "#ff6fa8"
+  readonly property color monsterBlush: slimePalette.bright_magenta || slimePalette.magenta || "#ff6fa8"
   // How the slime icons (workspaces, agents, launcher) are coloured:
   //   paper     pale paper tinted with the gradient partner (default: pops off the ooze)
   //   theme     the theme's own colours; workspace slimes each take a different hue
@@ -275,6 +276,9 @@ Item {
   }
   // the poster is made first (if it isn't cached), then set as the background
   function setMotionWall(path) {
+    // absolute paths only: ImageMagick reads "msl:", "ephemeral:"... prefixes
+    // as coders, not files
+    if (String(path).charAt(0) !== "/") return
     motionStarter.command = ["bash", "-c",
       "mkdir -p \"$(dirname \"$2\")\"; [ -s \"$2\" ] || { case \"$1\" in " +
       "*.gif|*.GIF) magick \"$1[0]\" -resize 1920x \"$2\" ;; " +
@@ -408,9 +412,9 @@ Item {
   function monsterBodyFor(i) {
     if (monsterColor === "gradient") return slimeColor
     if (monsterColor === "theme") {
-      if (i < 0) return palette.accent || slimeColor2
+      if (i < 0) return slimePalette.accent || slimeColor2
       for (var k = 0; k < monsterHues.length; k++) {
-        var c = palette[monsterHues[(i + k) % monsterHues.length]]
+        var c = slimePalette[monsterHues[(i + k) % monsterHues.length]]
         if (c) return c
       }
       return slimeColor2
@@ -496,7 +500,7 @@ Item {
     default: return Qt.vector4d(1, 1, 0, 1)
     }
   }
-  readonly property real materialId: ["slime", "sinew", "bone", "plain", "muscle"].indexOf(material)
+  readonly property real materialId: Math.max(0, materialNames.indexOf(material))
   // every material drips (bone and plain included) with the chosen amount
   readonly property real dripLevel: dripAmount < 0 ? 1.2 : dripAmount
   readonly property vector4d dripExtraVec: Qt.vector4d(dripStyle === "stringy" ? 1 : dripStyle === "lava" ? 2 : dripStyle === "gelatinous" ? 3 : dripStyle === "cava" ? (cavaStyle === "ripple" ? 5 : 4) : 0, dripAmount < 0 ? 1 : 0, 0, 0)
@@ -525,7 +529,11 @@ Item {
       root.cava3 = Qt.vector4d(n(12), n(13), n(14), n(15))
     }
   }
-  readonly property real barShapeId: barShape === "blob" ? 6 : ["classic", "pills", "islands", "notch"].indexOf(barShape)
+  readonly property var shapeNames: ["classic", "pills", "islands", "notch", "blob"]
+  readonly property var materialNames: ["slime", "sinew", "bone", "plain", "muscle"]
+  readonly property var dripNames: ["drip", "honey", "rain", "tar", "frozen", "stringy", "lava", "gelatinous", "cava"]
+  // (an unknown name, from an old or hand-edited skin.json, draws as the default)
+  readonly property real barShapeId: barShape === "blob" ? 6 : Math.max(0, ["classic", "pills", "islands", "notch"].indexOf(barShape))
   // Latest left/centre/right section extents, for overlays (see sharedBulbRects).
   property var sharedGroupRects: []
 
@@ -671,11 +679,12 @@ Item {
     function shading(style: int): void { root.shadingStyle = style }
     function gradient(role: string): void { root.gradientRole = role }
     function color(role: string): void { root.slimeRole = role }
-    function fps(n: int): void { root.slimeFps = n }
+    // (each checked: these are saved to skin.json, and a typo would stay)
+    function fps(n: int): void { root.slimeFps = Math.max(5, Math.min(144, n)) }
     // Draw the slime "above" windows or "behind" them.
-    function shape(name: string): void { root.barShape = name }
-    function material(name: string): void { root.material = name }
-    function drip(style: string): void { root.dripStyle = style }
+    function shape(name: string): void { if (root.shapeNames.indexOf(name) >= 0) root.barShape = name }
+    function material(name: string): void { if (root.materialNames.indexOf(name) >= 0) root.material = name }
+    function drip(style: string): void { if (root.dripNames.indexOf(style) >= 0) root.dripStyle = style }
     // the cava drip style's look: drips | ripple
     function cava(style: string): void { root.cavaStyle = style === "ripple" ? "ripple" : "drips" }
     // SlimeS-Dock: toggle | on | off | apps (the add-apps panel) |
@@ -2708,7 +2717,7 @@ Item {
         ink: root.slimeInk
         paper: root.paperColor
         goo: root.slimeColor
-        pal: root.palette
+        pal: root.slimePalette
       }
     }
 

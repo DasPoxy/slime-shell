@@ -7,6 +7,7 @@ import qs.Commons
 import qs.Ui
 import "../slime.bar/ui"
 import "../slime.bar/commandcenter"
+import "../slime.bar/ui/WidgetSettings.js" as WidgetSettings
 
 // SlimeS-Karaoke (was SlimeS-Media): a caster conjuring the music — the ooze
 // visualizer pours out of the raised hand in the theme's colours while
@@ -44,7 +45,7 @@ BarWidget {
   readonly property bool hasMedia: !!player && (player.trackTitle || player.trackArtist)
   readonly property string track: player ? (player.trackTitle || player.identity) + (player.trackArtist ? " — " + player.trackArtist : "") : ""
   readonly property bool showViz: setting("visualizer", true) === true
-  readonly property var pal: slime && bar.palette ? bar.palette : ({})
+  readonly property var pal: slime && bar.slimePalette ? bar.slimePalette : ({})
   readonly property color ink: slime ? bar.slimeInk : (bar ? bar.barForeground : Color.foreground)
   readonly property color paper: slime ? bar.paperColor : "white"
   readonly property real t: slime ? bar.animTime : 0
@@ -178,15 +179,7 @@ BarWidget {
     var m = Math.floor(sec / 60), s = sec % 60
     return m + ":" + (s < 10 ? "0" : "") + s
   }
-  function saveSetting(key, value) {
-    var entry = { id: root.moduleName }
-    // (never "source": the bar would try to load the widget from it)
-    for (var k in root.settings) if (k !== "id" && k !== "source") entry[k] = root.settings[k]
-    entry[key] = value
-    root.settings = entry
-    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
-      root.bar.shell.updateEntryInline(root.moduleName, entry)
-  }
+  function saveSetting(key, value) { WidgetSettings.save(root, WidgetSettings.one(key, value)) }
 
   visible: hasMedia
   implicitWidth: !hasMedia ? 0 : vertical ? barSize : row.implicitWidth + 14
@@ -358,13 +351,7 @@ BarWidget {
     }
   }
 
-  QtObject {
-    id: look
-    readonly property var bar: root.bar
-    readonly property color ink: root.ink
-    readonly property color slime: root.slime ? root.bar.slimeColor : Color.accent
-    readonly property string font: root.bar ? root.bar.fontFamily : Style.font.family
-  }
+  SlimeLook { id: look; bar: root.bar; skin: root.slime; ink: root.ink }
 
   SlimePopupCard {
     id: settingsCard

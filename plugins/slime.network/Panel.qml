@@ -448,7 +448,7 @@ Panel {
 
   function copyToClipboard(value) {
     if (!value || !root.bar) return
-    Quickshell.execDetached(["bash", "-c", "printf %s " + Util.shellQuote(value) + " | wl-copy"])
+    Quickshell.execDetached(["wl-copy", "--", String(value)])
   }
 
   readonly property string icon: Model.connectionIcon(kind, signalStrength)

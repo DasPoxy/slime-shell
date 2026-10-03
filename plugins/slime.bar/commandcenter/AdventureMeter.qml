@@ -19,7 +19,7 @@ Item {
   readonly property real t: cc.bar ? cc.bar.animTime : 0
   readonly property color ink: cc.ink
   readonly property color paper: cc.paper
-  readonly property var pal: cc.bar.palette || ({})
+  readonly property var pal: cc.bar.slimePalette || ({})
   readonly property color dirt: Qt.tint(paper, Qt.rgba(0.55, 0.36, 0.2, 0.35))
   readonly property real roadY: 38
   readonly property real roadEnd: width - 30          // where the dungeon starts

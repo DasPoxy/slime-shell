@@ -203,7 +203,10 @@ Panel {
   }
 
   function brightnessIpc(percent) {
+    // a number (1-100); anything else is refused, not read as 1% (a near-black
+    // screen from a typo, or from "+5" meaning "a little brighter")
     var value = Number(percent)
+    if (String(percent).trim() === "" || !isFinite(value)) return "error: brightness takes a number, 1-100"
     root.setBrightness(value)
     return "got " + root.pendingBrightnessPercent
   }

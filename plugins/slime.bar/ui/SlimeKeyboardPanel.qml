@@ -30,7 +30,7 @@ import qs.Ui
 // reach the dismissal surfaces below.
 //
 // API is a subset of Common.PopupCard: anchorItem, owner, bar, open,
-// padding, margin, contentWidth/Height, centerOnBar, default contentItem.
+// padding, margin, contentWidth/Height, centerOnBar, default contents.
 // Missing on purpose (for now): triggerMode ("hover"), containsMouse.
 //
 // Positioning: full-screen layer-shell with the card placed inside at
@@ -71,7 +71,8 @@ PanelWindow {
   // mapped and child items have completed layout.
   property Item focusTarget: null
 
-  default property alias contentItem: contentHolder.children
+  // (not "contentItem": a window has one of its own)
+  default property alias contents: contentHolder.children
 
   readonly property var coordinatorKey: owner || root
 

@@ -70,6 +70,6 @@ Item {
     ink: root.bar ? root.bar.slimeInk : "black"
     paper: root.bar ? root.bar.paperColor : "white"
     goo: root.bar ? root.bar.slimeColor : "green"
-    pal: root.bar && root.bar.palette ? root.bar.palette : ({})
+    pal: root.bar && root.bar.slimePalette ? root.bar.slimePalette : ({})
   }
 }

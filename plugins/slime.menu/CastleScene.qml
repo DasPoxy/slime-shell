@@ -16,7 +16,7 @@ Item {
   readonly property color ink: bar ? bar.slimeInk : "black"
   readonly property color goo: bar ? bar.slimeColor : "green"
   readonly property color paper: bar ? bar.paperColor : "white"
-  readonly property var pal: bar && bar.palette ? bar.palette : ({})
+  readonly property var pal: bar && bar.slimePalette ? bar.slimePalette : ({})
   readonly property color stone: Qt.tint(paper, Qt.rgba(ink.r, ink.g, ink.b, 0.45))
   readonly property color stoneDark: Qt.darker(stone, 1.25)
   readonly property color roof: pal.blue || "#3f74ff"

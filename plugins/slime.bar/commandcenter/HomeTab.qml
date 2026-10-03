@@ -422,7 +422,7 @@ Item {
           font.pixelSize: Math.round(12 * home.fs)
           font.bold: true
         }
-        SlimeValueEdit { target: volumeText; slider: volumeSlider; scale: 100 }
+        SlimeValueEdit { target: volumeText; slider: volumeSlider; unitScale: 100 }
       }
     }
 

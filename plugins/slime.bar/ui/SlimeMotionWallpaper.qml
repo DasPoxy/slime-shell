@@ -34,7 +34,7 @@ PanelWindow {
     loops: MediaPlayer.Infinite
     videoOutput: motionVideo
     // no audio output at all: wallpapers are silent
-    onSourceChanged: if (source != "" && !bar.motionPaused) play()
+    onSourceChanged: if (String(source) !== "" && !bar.motionPaused) play()
     onMediaStatusChanged: if (mediaStatus === MediaPlayer.LoadedMedia && !bar.motionPaused) play()
   }
   Connections {

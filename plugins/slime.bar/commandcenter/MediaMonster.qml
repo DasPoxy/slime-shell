@@ -121,7 +121,7 @@ Item {
       fill: monster.ink
       // theme colours sweeping across the goo, bright but see-through so
       // the track text on top stays readable
-      readonly property var pal: monster.cc.bar.palette || ({})
+      readonly property var pal: monster.cc.bar.slimePalette || ({})
       colors: [pal.bright_magenta || "#ff69c1", pal.bright_blue || "#6695ff", pal.bright_cyan || "#10ffd9",
         pal.bright_green || "#3dff41", pal.bright_yellow || "#e4cc00", pal.bright_red || "#ff5155"]
       colorAlpha: 0.5

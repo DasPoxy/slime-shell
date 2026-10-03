@@ -54,7 +54,7 @@ Item {
   property bool flip: false
 
   // ---- palette ----
-  readonly property var pal: bar && bar.palette ? bar.palette : ({})
+  readonly property var pal: bar && bar.slimePalette ? bar.slimePalette : ({})
   readonly property color ink: bar ? bar.slimeInk : "#101315"
   readonly property color paper: bar ? bar.paperColor : "#f3e9d2"
   readonly property color gold: pal.yellow || "#d9b800"

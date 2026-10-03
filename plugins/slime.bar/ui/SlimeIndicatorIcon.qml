@@ -19,7 +19,7 @@ Item {
   implicitHeight: size
 
   readonly property real t: bar ? bar.animTime : 0
-  readonly property var pal: bar && bar.palette ? bar.palette : ({})
+  readonly property var pal: bar && bar.slimePalette ? bar.slimePalette : ({})
   readonly property color ink: bar ? bar.slimeInk : "#101315"
   readonly property var hues: [pal.green, pal.cyan, pal.magenta, pal.yellow, pal.blue, pal.red]
   readonly property color goo: hues[hue % hues.length] || (bar ? bar.slimeColor : "#5fd35f")

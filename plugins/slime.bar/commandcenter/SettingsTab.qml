@@ -124,7 +124,7 @@ Item {
             cc: settings.cc
             text: Math.round(sizeSlider.liveValue * 100) + "%"
             // click it to type the size
-            SlimeValueEdit { target: sizeReadout; slider: sizeSlider; scale: 100 }
+            SlimeValueEdit { target: sizeReadout; slider: sizeSlider; unitScale: 100 }
           }
           CcHeading { cc: settings.cc; text: " (THE BAR'S CLOCK HAS ITS OWN, IN ITS MENU)" }
         }

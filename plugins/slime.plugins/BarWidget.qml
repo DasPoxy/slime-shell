@@ -117,15 +117,7 @@ BarWidget {
   }
 
   // the command centre's look-and-feel helpers want a `cc`
-  QtObject {
-    id: look
-    readonly property var bar: root.bar
-    readonly property color ink: root.slime ? root.bar.slimeInk : Color.foreground
-    readonly property color slime: root.slime ? root.bar.slimeColor : Color.accent
-    readonly property string font: root.bar ? root.bar.fontFamily : Style.font.family
-    readonly property string displayFont: root.bar && root.bar.displayFontFamily ? root.bar.displayFontFamily : font
-    readonly property color wash: Qt.rgba(1, 1, 1, 0.45)
-  }
+  SlimeLook { id: look; bar: root.bar; skin: root.slime }
 
   // ---- the chest panel -------------------------------------------------------------
   SlimeKeyboardPanel {
@@ -213,7 +205,7 @@ BarWidget {
                   x: 10
                   anchors.verticalCenter: parent.verticalCenter
                   width: 16; height: 16; radius: 8
-                  color: entry.modelData.on ? (root.bar && root.bar.palette.yellow ? root.bar.palette.yellow : "#d9b800") : "transparent"
+                  color: entry.modelData.on ? (root.bar && root.bar.slimePalette.yellow ? root.bar.slimePalette.yellow : "#d9b800") : "transparent"
                   border.color: look.ink
                   border.width: 2
                   Text {

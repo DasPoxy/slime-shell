@@ -4,7 +4,7 @@ import QtQuick
 // the readout (same parent) with `target` the readout Text and `slider` the
 // SlimePanelSlider: it lies over the readout, and a click turns it into a
 // little input. Enter sets the slider — the number is read in the readout's
-// units (`scale`: 100 for a 0..1 slider shown as %), and anything out of
+// units (`unitScale`: 100 for a 0..1 slider shown as %), and anything out of
 // range or between steps snaps to the nearest value the slider allows. Esc
 // or clicking away leaves it as it was.
 // `fromDisplay` (optional) maps the typed number to a slider value itself
@@ -14,7 +14,7 @@ Item {
 
   required property Item target
   required property var slider
-  property real scale: 1
+  property real unitScale: 1
   property var fromDisplay: null
   property color ink: target && target.color !== undefined ? target.color : "black"
   property bool editing: false
@@ -48,7 +48,7 @@ Item {
     var n = parseFloat(String(input.text).replace(",", "."))
     editing = false
     if (isNaN(n)) return
-    var v = snap(typeof fromDisplay === "function" ? fromDisplay(n) : n / scale)
+    var v = snap(typeof fromDisplay === "function" ? fromDisplay(n) : n / unitScale)
     slider.liveValue = v
     slider.moved(v)
     slider.released(v)

@@ -30,7 +30,6 @@ SlimeKeyboardPanel {
   readonly property var library: bar && bar.shell && bar.shell.appLibrary ? bar.shell.appLibrary : null
   readonly property int columns: 6
   readonly property real cell: (contentWidth - 2 * padding) / columns
-  readonly property bool slime: !!bar && bar.slimeSkin === true
   readonly property color ink: slime ? bar.slimeInk : Color.foreground
   readonly property bool commandsOnly: query.indexOf(">") === 0
   readonly property bool filesOnly: query.indexOf("/") === 0

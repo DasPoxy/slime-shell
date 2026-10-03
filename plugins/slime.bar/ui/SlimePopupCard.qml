@@ -101,7 +101,8 @@ PopupWindow {
     else root.open = false
   }
 
-  default property alias contentItem: contentHolder.children
+  // (not "contentItem": a window has one of its own)
+  default property alias contents: contentHolder.children
 
   visible: keepMapped || open || card.opacity > 0 || (slime && dripProgress > 0)
   color: "transparent"

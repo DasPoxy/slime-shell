@@ -27,7 +27,7 @@ Item {
   property int smoothing: 60              // cava's noise_reduction: low snappy, high syrupy
   property bool stereo: false             // true: left channel mirrored beside the right
   readonly property bool tuned: sensitivity > 0 || smoothing !== 60 || stereo
-  readonly property string configPath: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/slime-shell-cava-" + bars
+  readonly property string configPath: (Quickshell.env("XDG_RUNTIME_DIR") || Quickshell.env("HOME") + "/.cache") + "/slime-shell-cava-" + bars
     + (tuned ? "-s" + sensitivity + "-n" + smoothing + (stereo ? "-st" : "") : "") + ".conf"
   readonly property bool silent: levels.every(function(v) { return v < 0.02 })
   property bool configReady: false
