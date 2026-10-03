@@ -5,6 +5,7 @@ import qs.Commons
 import qs.Ui
 import "../slime.bar/ui"
 import "../slime.bar/commandcenter"
+import "../slime.bar/ui/WidgetSettings.js" as WidgetSettings
 
 // SlimeS-System Update: a little character in the bar that tells you when
 // Omarchy has updates. It stays put while there's nothing new, and acts up
@@ -49,14 +50,7 @@ BarWidget {
     close()
     if (root.bar) root.bar.run("omarchy-launch-floating-terminal-with-presentation omarchy-update")
   }
-  function saveSetting(key, value) {
-    var entry = { id: root.entryId }
-    for (var k in root.settings) if (k !== "id" && k !== "source") entry[k] = root.settings[k]
-    entry[key] = value
-    root.settings = entry
-    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
-      root.bar.shell.updateEntryInline(root.entryId, entry)
-  }
+  function saveSetting(key, value) { WidgetSettings.save(root, WidgetSettings.one(key, value), root.entryId) }
 
   visible: shown
   implicitWidth: !shown ? 0 : vertical ? barSize : 30
@@ -135,17 +129,7 @@ BarWidget {
     }
   }
 
-  QtObject {
-    id: look
-    readonly property var bar: root.bar
-    readonly property color ink: root.bar ? root.bar.slimeInk : Color.foreground
-    readonly property color slime: root.bar ? root.bar.slimeColor : Color.accent
-    readonly property color paper: root.bar ? root.bar.paperColor : "white"
-    readonly property string font: root.bar ? root.bar.fontFamily : Style.font.family
-    readonly property string displayFont: root.bar ? root.bar.displayFontFamily : Style.font.family
-    readonly property int displayWeight: root.bar ? root.bar.displayWeight : Font.Bold
-    readonly property color wash: Qt.rgba(1, 1, 1, 0.45)
-  }
+  SlimeLook { id: look; bar: root.bar }
 
   // ---- left-click: what's new ----
   SlimePopupCard {

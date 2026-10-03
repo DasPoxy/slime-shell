@@ -5,6 +5,7 @@ import qs.Commons
 import qs.Ui
 import "../slime.bar/ui"
 import "../slime.bar/commandcenter"
+import "../slime.bar/ui/WidgetSettings.js" as WidgetSettings
 
 BarWidget {
   id: root
@@ -26,21 +27,8 @@ BarWidget {
   property bool iconMenuOpen: false
   function openIconMenu() { iconMenuOpen = !iconMenuOpen }
   function close() { iconMenuOpen = false }
-  function saveSetting(key, value) {
-    var entry = { id: "slime.indicators" }
-    for (var k in root.settings) if (k !== "id" && k !== "source") entry[k] = root.settings[k]
-    entry[key] = value
-    root.settings = entry
-    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
-      root.bar.shell.updateEntryInline("slime.indicators", entry)
-  }
-  QtObject {
-    id: look
-    readonly property var bar: root.bar
-    readonly property color ink: root.bar ? root.bar.slimeInk : Color.foreground
-    readonly property color slime: root.bar ? root.bar.slimeColor : Color.accent
-    readonly property string font: root.bar ? root.bar.fontFamily : Style.font.family
-  }
+  function saveSetting(key, value) { WidgetSettings.save(root, WidgetSettings.one(key, value), "slime.indicators") }
+  SlimeLook { id: look; bar: root.bar }
   SlimePopupCard {
     id: iconMenu
     anchorItem: root

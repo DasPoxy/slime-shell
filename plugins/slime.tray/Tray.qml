@@ -8,6 +8,7 @@ import qs.Commons
 import qs.Ui
 import "../slime.bar/ui"
 import "TrayModel.js" as TrayModel
+import "../slime.bar/ui/WidgetSettings.js" as WidgetSettings
 
 BarWidget {
   id: root
@@ -184,15 +185,7 @@ BarWidget {
 
   function persistTrayState(pinned, hidden) { saveTraySettings({ pinned: pinned, hidden: hidden }) }
   // (keeps the other settings: pins, hidden items, the icon)
-  function saveTraySettings(changes) {
-    if (!root.bar || !root.bar.shell || typeof root.bar.shell.updateEntryInline !== "function") return
-    var id = root.moduleName || "omarchy.tray"
-    var entry = { id: id }
-    for (var k in root.settings) if (k !== "id" && k !== "source") entry[k] = root.settings[k]
-    for (var c in changes) entry[c] = changes[c]
-    root.settings = entry
-    root.bar.shell.updateEntryInline(id, entry)
-  }
+  function saveTraySettings(changes) { WidgetSettings.save(root, changes, root.moduleName || "omarchy.tray") }
   IpcHandler {
     target: "slime-tray"
     function menu(): void { root.managePopupOpen = !root.managePopupOpen }

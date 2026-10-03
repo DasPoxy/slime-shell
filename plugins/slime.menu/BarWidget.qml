@@ -3,6 +3,7 @@ import Quickshell.Io
 import qs.Commons
 import qs.Ui
 import "../slime.bar/ui"
+import "../slime.bar/ui/WidgetSettings.js" as WidgetSettings
 
 // Slime Shell launcher button. Left click drips open the Slime app launcher
 // (AppDrawer.qml; it links to the Omarchy menu), middle click opens a
@@ -61,24 +62,8 @@ BarWidget {
 
   // results in the launcher drawn inside bubbles of goo (toggle in its header)
   readonly property bool resultBubbles: setting("bubbles", false) === true
-  function setResultBubbles(on) {
-    var entry = { id: root.moduleName }
-    for (var key in root.settings) if (key !== "id" && key !== "source") entry[key] = root.settings[key]
-    entry.bubbles = on
-    root.settings = entry
-    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
-      root.bar.shell.updateEntryInline(root.moduleName, entry)
-  }
-  function pickIcon(id) {
-    var entry = { id: root.moduleName }
-    for (var key in root.settings) if (key !== "id") entry[key] = root.settings[key]
-    entry.icon = id
-    // Applied locally first so the icon changes on the click; the shell.json
-    // write comes back through the bar as the same value.
-    root.settings = entry
-    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
-      root.bar.shell.updateEntryInline(root.moduleName, entry)
-  }
+  function setResultBubbles(on) { WidgetSettings.save(root, { bubbles: on }) }
+  function pickIcon(id) { WidgetSettings.save(root, { icon: id }) }
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight

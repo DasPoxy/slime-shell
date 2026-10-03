@@ -4,6 +4,7 @@ import qs.Commons
 import qs.Ui
 import "../slime.bar/ui"
 import "../slime.bar/commandcenter"
+import "../slime.bar/ui/WidgetSettings.js" as WidgetSettings
 
 // A gap in the Slime bar. Settings (shell.json, also reachable by
 // right-clicking the gap):
@@ -59,18 +60,8 @@ BarWidget {
   }
 
 
-  function saveSetting(key, value) {
-    var entry = { id: root.moduleName }
-    for (var k in root.settings) if (k !== "id") entry[k] = root.settings[k]
-    entry[key] = value
-    root.settings = entry
-    var at = place()
-    if (!at || !bar.shell || typeof bar.shell.mutateShellConfig !== "function") return
-    bar.shell.mutateShellConfig(function(config) {
-      var list = config.bar && config.bar.layout ? config.bar.layout[at.region] : null
-      if (list && list[at.index] && list[at.index].id === root.moduleName) list[at.index] = entry
-    })
-  }
+  // (its own place: a spacer can be on the bar more than once)
+  function saveSetting(key, value) { WidgetSettings.saveAt(root, WidgetSettings.one(key, value), place()) }
 
   // A new spacer right after this one, with the same size and contents.
   function addAnother() {
@@ -154,13 +145,7 @@ BarWidget {
     onWheel: wheel => root.saveSetting("size", Math.max(4, Math.min(160, root.span + (wheel.angleDelta.y > 0 ? 4 : -4))))
   }
 
-  QtObject {
-    id: look
-    readonly property var bar: root.bar
-    readonly property color ink: root.slime ? root.bar.slimeInk : Color.foreground
-    readonly property color slime: root.slime ? root.bar.slimeColor : Color.accent
-    readonly property string font: root.bar ? root.bar.fontFamily : Style.font.family
-  }
+  SlimeLook { id: look; bar: root.bar; skin: root.slime }
 
   SlimePopupCard {
     id: menu

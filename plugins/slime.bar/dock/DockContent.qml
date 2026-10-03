@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import "../commandcenter"
+import "../ui"
 
 // SlimeS-Dock's contents, over the dock's slime (drawn by the bar's shader in
 // Bar.qml): the icons, a label while hovering one, the right-click menu, the
@@ -389,18 +390,7 @@ Item {
     if (bar.dockHas(it)) bar.dockRemoveItem(it); else bar.dockAdd(it)
   }
   // the cc look for CcButton / CcHeading on the panel
-  QtObject {
-    id: look
-    readonly property var bar: dock.bar
-    readonly property color ink: dock.bar.slimeInk
-    readonly property color slime: dock.bar.slimeColor
-    readonly property color paper: dock.bar.paperColor
-    readonly property string font: dock.bar.fontFamily
-    readonly property string displayFont: dock.bar.displayFontFamily
-    readonly property int displayWeight: dock.bar.displayWeight
-    readonly property real fontScale: 1
-    readonly property color wash: Qt.rgba(1, 1, 1, 0.45)
-  }
+  SlimeLook { id: look; bar: dock.bar }
   Item {
     id: panel
     readonly property rect r: dock.box(dock.geo.panelX + 14, dock.geo.panelX + dock.geo.panelW - 14,

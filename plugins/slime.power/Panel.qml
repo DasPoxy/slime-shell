@@ -6,6 +6,7 @@ import qs.Commons
 import qs.Ui
 import "../slime.bar/ui"
 import "Model.js" as Model
+import "../slime.bar/ui/WidgetSettings.js" as WidgetSettings
 
 Panel {
   id: root
@@ -169,10 +170,7 @@ Panel {
     actionProc.running = true
   }
 
-  function togglePercentage() {
-    root.settings = Object.assign({}, root.settings, { showPercentage: !root.showPercentage })
-    if (root.bar && root.bar.shell) root.bar.shell.updateEntryInline(root.moduleName, root.settings)
-  }
+  function togglePercentage() { WidgetSettings.save(root, { showPercentage: !root.showPercentage }) }
 
   IpcHandler {
     target: "omarchy.power"
@@ -199,10 +197,7 @@ Panel {
   // and system stats — unless it's set to show only with a battery
   readonly property bool batteryOnly: setting("batteryOnly", false) === true
   readonly property bool shown: batteryPresent || !batteryOnly
-  function setBatteryOnly(on) {
-    root.settings = Object.assign({}, root.settings, { batteryOnly: on })
-    if (root.bar && root.bar.shell) root.bar.shell.updateEntryInline(root.moduleName, root.settings)
-  }
+  function setBatteryOnly(on) { WidgetSettings.save(root, { batteryOnly: on }) }
   visible: shown
   implicitWidth: shown ? button.implicitWidth : 0
   implicitHeight: shown ? button.implicitHeight : 0
