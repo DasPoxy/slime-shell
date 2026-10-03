@@ -30,8 +30,22 @@ Everything is keyboard driven — press **?** in the tab for the full list:
   **p** pins a picture to the highlighted sub-todo (a drip panel of your files
   opens: arrows pick, **Enter** opens a folder or adds the picture, **⌫** goes
   up) · **i** folds its pictures ·
-  **A** archive · **d d** delete · **f** show/hide finished ·
+  **A** archive · **d d** delete (a todo or a sub-todo) · **f** show/hide finished ·
   **J/K** or **Shift+↑↓** move the todo / sub-todo
+
+Every delete asks twice: press **d**, then **d** again within a couple of
+seconds (the row turns red and says so; anything else cancels). That goes for
+todos, sub-todos, pictures, archived todos, groups and super groups. Nothing
+is gone for good: deleted todos go to `.slime/trash/` with their log and
+pictures, and a deleted sub-todo is written to
+`.slime/trash/deleted-sub-todos.md`, where you can copy it back from.
+
+Sub-todos edit inline (**e**, **F2** or a double-click), or over the panel
+for longer text: a sub-todo can run to several lines and paragraphs. What you
+type is kept when you press Enter, click away or close the tab (**Esc**
+cancels). Long sub-todos show as their first few words in the Task Log and
+Progress tabs; open one to read it all. Every list scrolls to follow the
+keyboard.
 
 **Shift+↑↓ moves whatever is highlighted**, on every tab: a todo (within its
 group), a sub-todo (in the Todo tab's list, or past its neighbour in a Task
@@ -62,11 +76,12 @@ remembers its own folds across restarts.
   and **Esc** closes; **c** / **e** work on the highlighted entry too ·
   **w** write in the log (about the sub-todo picked in the lanes) ·
   **PgUp/PgDn** scroll
-- Progress: **↑↓** pick · **Enter/Space** expand · **A** archive · **↓** past
+- Progress: **↑↓** pick · **Enter/Space** expand · **A** archive · **a** or **↓** past
   the end drops into the archive — sorted by group, whose headings fold like
   everywhere else — where **Enter/r**
   restores (you stay in the archive, to restore several), **g** or a
-  right-click gives a menu to set its group, restore or delete it, and
+  right-click gives a menu to set its group, restore or delete it, **d d**
+  deletes it (to the trash), and
   **↑**/**Esc** climb back · **/** search the archive (Enter drops into the results)
 
 On a group heading, **A** archives the whole group — and on a super group's
@@ -103,7 +118,9 @@ heading) to move it there.
 ## Where it's stored
 
 Plain markdown in **`~/Documents/Slime-Notes`**, so Envy, Obsidian or any text
-editor can read and edit it too:
+editor can read and edit it too. Slime-Tasks only rewrites the lines it
+changes, so notes, links and lists you add to those files yourself stay as
+you wrote them:
 
 ```
 Slime-Notes/
@@ -177,6 +194,7 @@ slime-tasks super-order <super> <super> …       # put super groups in this ord
 slime-tasks log-all                             # every todo's log, tagged with its group and super group
 slime-tasks sub-image-add <id> <n> <file>       # pin a picture to sub-todo n
 slime-tasks sub-image-remove <id> <n> <k>       # take picture k off it (the file goes to the trash)
+slime-tasks sub-edit <id> <n> TEXT / sub-delete <id> <n> / sub-move <id> <n> <to>   # each takes --expect TEXT
 slime-tasks archive <id>   /   unarchive <id>
 slime-tasks --help                              # everything else
 ```
@@ -184,5 +202,5 @@ slime-tasks --help                              # everything else
 `<n>` is a sub-todo's 0-based position. The tab re-reads the folder every two
 seconds while it's open, so you can watch an agent shift sub-todos across the
 lanes and write its log. Writes are locked and atomic, so the tab and an agent
-never clobber each other; `--expect` makes a state change refuse if the
-sub-todo's text changed meanwhile.
+never clobber each other; `--expect` makes an edit, delete, move or state
+change refuse if the sub-todo's text changed meanwhile.

@@ -35,12 +35,13 @@ Commands (all print JSON; errors go to stderr with exit status 1):
   done ID true|false                mark a top-level todo finished (or not)
   delete ID                         moves it (and its log) to .slime/trash
   sub-add ID TEXT
-  sub-edit ID N TEXT
+  sub-edit ID N TEXT [--expect OLD]
   sub-set ID N todo|doing|done [--expect TEXT]
-  sub-delete ID N
+  sub-delete ID N [--expect TEXT]   (its lines go to .slime/trash/deleted-sub-todos.md)
   sub-image-add ID N FILE           copy a picture to Attachments/ID/ and attach it to sub-todo N
-  sub-image-remove ID N K           take picture K off sub-todo N (the file goes to the trash)
-  sub-move ID N TO                  reorder sub-todos
+  sub-image-remove ID N K [--expect TEXT]  take picture K off sub-todo N (the file goes to the trash)
+  sub-move ID N TO [--expect TEXT]  reorder sub-todos
+  (--expect: sub-todo N must still read TEXT, else nothing changes)
   order ID [ID ...]                 put todos in this order (others keep theirs, after)
   start ID N [NOTE] [--by WHO]      sub-todo -> doing, and log it
   finish ID N [NOTE] [--by WHO]     sub-todo -> done, and log it
@@ -119,10 +120,20 @@ def ensure(root):
 
 
 def write(path, text):
+    """Atomic (a temp file, then a rename), keeping the file's permissions:
+    a file that's there keeps its own; a new one gets the usual ones (your
+    umask), not the temp file's owner-only."""
     d = os.path.dirname(path)
+    try:
+        mode = os.stat(path).st_mode & 0o7777
+    except OSError:
+        mask = os.umask(0)
+        os.umask(mask)
+        mode = 0o666 & ~mask
     fd, tmp = tempfile.mkstemp(dir=d, prefix=".tmp-")
     with os.fdopen(fd, "w") as f:
         f.write(text)
+    os.chmod(tmp, mode)
     os.replace(tmp, path)
 
 
@@ -152,66 +163,164 @@ def slug(title, taken):
 
 
 def parse(path):
+    """A todo file: its front matter, title and sub-todos, plus where each sits
+    in the file (so a save can change just those lines; see render)."""
     with open(path) as f:
         lines = f.read().split("\n")
-    meta, body_start = {}, 0
+    meta, meta_line, body_start = {}, {}, 0
     if lines and lines[0].strip() == "---":
         for i in range(1, len(lines)):
             if lines[i].strip() == "---":
                 body_start = i + 1
                 break
-            k, _, v = lines[i].partition(":")
-            meta[k.strip()] = v.strip()
-    title, subs = "", []
+            k, sep, v = lines[i].partition(":")
+            if sep and k.strip():
+                meta[k.strip()] = v.strip()
+                meta_line[k.strip()] = i
+    title, title_line, subs, blanks = "", -1, [], 0
     for i in range(body_start, len(lines)):
         line = lines[i]
-        if not title and line.startswith("# "):
-            title = line[2:].strip()
+        if title_line < 0 and line.startswith("# "):
+            title, title_line = line[2:].strip(), i
             continue
         m = SUB.match(line)
         if m:
-            subs.append({"line": i, "state": MARK_STATE[m.group(2)], "text": m.group(3), "indent": len(m.group(1)), "images": []})
+            subs.append({"line": i, "end": i + 1, "state": MARK_STATE[m.group(2)], "text": m.group(3),
+                         "indent": len(m.group(1)), "images": []})
+            blanks = 0
             continue
         m = IMG.match(line)
-        if m and subs and len(m.group(1)) > subs[-1]["indent"]:
+        if m and subs and len(m.group(1)) > subs[-1]["indent"] and i - blanks == subs[-1]["end"]:
             subs[-1]["images"].append({"name": m.group(2), "path": m.group(3)})
-    return {"meta": meta, "title": title, "subs": subs, "lines": lines}
+            subs[-1]["end"] = i + 1
+            blanks = 0
+            continue
+        # a sub-todo's further lines: indented under it (Markdown list
+        # continuation), blank lines between paragraphs kept
+        if not line.strip():
+            blanks += 1
+            continue
+        lead = len(line) - len(line.lstrip(" "))
+        if subs and lead > subs[-1]["indent"] and i - blanks == subs[-1]["end"]:
+            if subs[-1]["images"] or subs[-1].get("extra"):
+                # indented under it, after its pictures: kept with it as written
+                subs[-1].setdefault("extra", []).extend(lines[subs[-1]["end"]:i + 1])
+            else:
+                cut = min(lead, subs[-1]["indent"] + 2)
+                subs[-1]["text"] += "\n" * (blanks + 1) + line[cut:].rstrip()
+            subs[-1]["end"] = i + 1
+        blanks = 0
+    # what each sub-todo looked like, to tell later whether it changed
+    for s in subs:
+        s["orig"] = lines[s["line"]:s["end"]]
+        s["was"] = sub_lines(s)
+    return {"meta": meta, "title": title, "subs": subs, "lines": lines, "metaLine": meta_line,
+            "metaOrig": dict(meta), "titleLine": title_line, "titleOrig": title, "bodyStart": body_start}
+
+
+def sub_lines(s):
+    """A sub-todo as markdown lines: the checkbox line, further lines indented
+    under it, then its pictures."""
+    ind = " " * s.get("indent", 0)
+    first, *more = s["text"].strip().split("\n")
+    out = [f"{ind}- [{STATE_MARK[s['state']]}] {first}"] + [(ind + "  " + ln).rstrip() for ln in more]
+    return (out + [f"{ind}  ![{im['name']}]({im['path']})" for im in s.get("images", [])]
+            + s.get("extra", []))
 
 
 def render(todo):
+    """The todo as file text. A todo read from a file is changed in place:
+    only the front matter keys, title and sub-todos that changed are
+    rewritten, and every other line (notes, other lists, states Slime-Tasks
+    doesn't use) stays exactly as it was."""
     meta = todo["meta"]
-    out = ["---"] + [f"{k}: {v}" for k, v in meta.items() if v != ""] + ["---", f"# {todo['title']}", ""]
-    for s in todo["subs"]:
-        out.append(f"{' ' * s.get('indent', 0)}- [{STATE_MARK[s['state']]}] {s['text']}")
-        for im in s.get("images", []):
-            out.append(f"{' ' * (s.get('indent', 0) + 2)}![{im['name']}]({im['path']})")
-    return "\n".join(out) + "\n"
+    if "lines" not in todo:   # a new todo
+        out = ["---"] + [f"{k}: {v}" for k, v in meta.items() if v != ""] + ["---", f"# {todo['title']}", ""]
+        for s in todo["subs"]:
+            out += sub_lines(s)
+        return "\n".join(out) + "\n"
+    lines = list(todo["lines"])
+    repl, head = {}, []   # line index -> replacement lines ([] removes it); lines put first
+    # front matter: changed keys in place, gone ones out, new ones at its end
+    if meta != todo["metaOrig"]:
+        new_keys = []
+        for k, v in meta.items():
+            at = todo["metaLine"].get(k)
+            if at is None:
+                if v != "":
+                    new_keys.append(f"{k}: {v}")
+            elif v != todo["metaOrig"].get(k):
+                repl[at] = [f"{k}: {v}"] if v != "" else []
+        for k, at in todo["metaLine"].items():
+            if k not in meta:
+                repl[at] = []
+        if new_keys:
+            if todo["bodyStart"]:
+                close = todo["bodyStart"] - 1
+                repl[close] = repl.get(close, []) + new_keys + [lines[close]]
+            else:   # no front matter yet
+                head = ["---"] + new_keys + ["---"]
+    if todo["title"] != todo["titleOrig"]:
+        if todo["titleLine"] >= 0:
+            repl[todo["titleLine"]] = [f"# {todo['title']}"]
+        else:
+            at = todo["bodyStart"]
+            repl[at] = [f"# {todo['title']}", ""] + ([lines[at]] if at < len(lines) else [])
+    # sub-todos: the places the old ones held get the new ones, in order
+    # (unchanged ones keep their exact lines); extra new ones follow the last
+    olds = sorted((s for s in todo.get("orig_subs", []) if "line" in s), key=lambda s: s["line"])
+    blocks = [s["orig"] if s.get("orig") and sub_lines(s) == s.get("was") else sub_lines(s) for s in todo["subs"]]
+    if olds:
+        for k, o in enumerate(olds):
+            mine = blocks[k:k + 1] if k < len(olds) - 1 else blocks[k:]
+            repl[o["line"]] = [l for b in mine for l in b]
+            for x in range(o["line"] + 1, o["end"]):
+                repl[x] = []
+    elif blocks:
+        # no sub-todos yet: after the title (and the blank line under it)
+        at = todo["titleLine"] + 1 if todo["titleLine"] >= 0 else todo["bodyStart"]
+        while at < len(lines) and not lines[at].strip() and at in repl:
+            at += 1
+        new = [l for b in blocks for l in b]
+        if at < len(lines) and not lines[at].strip():
+            repl[at] = [""] + new + ([""] if at + 1 < len(lines) and lines[at + 1].strip() else [])
+        else:
+            repl[at] = [""] + new + ([""] + [lines[at]] if at < len(lines) else [])
+    out = list(head)
+    for i, l in enumerate(lines):
+        out += repl[i] if i in repl else [l]
+    if len(lines) in repl:
+        out += repl[len(lines)]
+    text = "\n".join(out)
+    return text if text.endswith("\n") else text + "\n"
 
 
 def check_id(tid):
-    # ids are slugs; anything else (a "/", "..") could reach outside the folder
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", tid or "") or ".." in tid:
+    """A todo id is a file name in the folder, nothing more: no "/" or "..",
+    no hidden name (.slime), so an id can't reach outside the notes folder.
+    (Not just the slugs `add` makes: a notes app may name a file "My todo.md".)"""
+    if (not tid or tid in (".", "..") or tid.startswith(".") or "/" in tid or "\\" in tid
+            or "\0" in tid or os.path.basename(tid) != tid):
         raise Fail(f"'{tid}' isn't a todo id")
     return tid
 
 
 def todo_path(root, tid, archived=False):
-    check_id(tid)
-    p = os.path.join(root, "Archive" if archived else "Todos", tid + ".md")
+    p = os.path.join(root, "Archive" if archived else "Todos", check_id(tid) + ".md")
     if not os.path.exists(p):
         raise Fail(f"no todo '{tid}'" + (" in the archive" if archived else ""))
     return p
 
 
 def log_path(root, tid, archived=False):
-    check_id(tid)
-    return os.path.join(root, "Archive/Logs" if archived else "Logs", tid + ".md")
+    return os.path.join(root, "Archive/Logs" if archived else "Logs", check_id(tid) + ".md")
 
 
 def load(root, tid, archived=False):
     p = todo_path(root, tid, archived)
     t = parse(p)
     t["path"] = p
+    t["orig_subs"] = list(t["subs"])   # where the sub-todos were (render)
     return t
 
 
@@ -223,28 +332,22 @@ def now():
     return dt.datetime.now().strftime("%Y-%m-%d %H:%M")
 
 
-def groups(root):
+def group_file(root):
+    """.slime/groups.json: {groups, order, supers, superOrder}."""
     try:
         with open(os.path.join(root, ".slime", "groups.json")) as f:
-            return json.load(f).get("groups", {})
+            g = json.load(f)
+        return g if isinstance(g, dict) else {}
     except (OSError, ValueError):
         return {}
+
+
+def groups(root):
+    return group_file(root).get("groups", {})
 
 
 def group_order(root):
-    try:
-        with open(os.path.join(root, ".slime", "groups.json")) as f:
-            return json.load(f).get("order", [])
-    except (OSError, ValueError):
-        return []
-
-
-def group_file(root):
-    try:
-        with open(os.path.join(root, ".slime", "groups.json")) as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return {}
+    return group_file(root).get("order", [])
 
 
 def supers(root):
@@ -257,10 +360,35 @@ def super_order(root):
 
 
 def save_groups(root, g, order=None, sup=None, sorder=None):
+    cur = group_file(root)   # read once: what isn't given stays as it is
     write(os.path.join(root, ".slime", "groups.json"),
-          json.dumps({"groups": g, "order": group_order(root) if order is None else order,
-                      "supers": supers(root) if sup is None else sup,
-                      "superOrder": super_order(root) if sorder is None else sorder}, indent=2) + "\n")
+          json.dumps({"groups": g, "order": cur.get("order", []) if order is None else order,
+                      "supers": cur.get("supers", {}) if sup is None else sup,
+                      "superOrder": cur.get("superOrder", []) if sorder is None else sorder}, indent=2) + "\n")
+
+
+def ensure_group(root, name):
+    """A group that's new gets the next colour of the palette."""
+    g = groups(root)
+    if name and name not in g:
+        g[name] = {"color": PALETTE[len(g) % len(PALETTE)]}
+        save_groups(root, g)
+
+
+def archive_todo(root, tid):
+    """A todo and its log into the archive."""
+    shutil.move(todo_path(root, tid), os.path.join(root, "Archive", tid + ".md"))
+    if os.path.exists(log_path(root, tid)):
+        shutil.move(log_path(root, tid), log_path(root, tid, True))
+
+
+def todos_in(root, test, archived=(False, True)):
+    """(todo, archived) for every todo whose front matter passes test(meta)."""
+    for arch in archived:
+        for i in all_ids(root, arch):
+            t = load(root, i, arch)
+            if test(t["meta"]):
+                yield t, arch
 
 
 def log_entries(root, tid, archived=False):
@@ -278,7 +406,7 @@ def log_entries(root, tid, archived=False):
             elif cur is not None:
                 cur["text"] += line + "\n"
     for e in entries:
-        e["text"] = e["text"].strip()
+        e["text"] = log_text(e["text"].strip())
         # older entries: the sub-todo is named in "Started: …" / "Finished: …"
         if not e["sub"]:
             m = re.match(r"^(?:Started|Finished): (.*)", e["text"])
@@ -288,6 +416,18 @@ def log_entries(root, tid, archived=False):
 
 
 LOG_HEAD = re.compile(r"^## \d{4}-\d\d-\d\d \d\d:\d\d(?: · .*)?$")
+
+
+def log_body(text):
+    """A log entry's text as written to the file: a line that looks like an
+    entry's heading (pasted output, say) is escaped (\\## ...), so it can't
+    start an entry of its own. Markdown shows it as written."""
+    return "\n".join("\\" + l if LOG_HEAD.match(l) else l for l in text.strip().split("\n"))
+
+
+def log_text(text):
+    """The other way: an entry's text as it was given."""
+    return "\n".join(l[1:] if l.startswith("\\") and LOG_HEAD.match(l[1:]) else l for l in text.split("\n"))
 
 
 def edit_log(root, tid, n, text, expect=None, archived=False):
@@ -301,9 +441,9 @@ def edit_log(root, tid, n, text, expect=None, archived=False):
     if not 0 <= n < len(heads):
         raise Fail(f"the log has no entry {n}")
     start, end = heads[n] + 1, heads[n + 1] if n + 1 < len(heads) else len(lines)
-    if expect is not None and "\n".join(lines[start:end]).strip() != expect.strip():
+    if expect is not None and log_text("\n".join(lines[start:end]).strip()) != expect.strip():
         raise Fail("that log entry changed meanwhile — reopen it and try again")
-    body = text.strip().split("\n") + [""]
+    body = log_body(text).split("\n") + [""]
     lines[start:end] = body
     write(p, "\n".join(lines).rstrip("\n") + "\n")
 
@@ -316,9 +456,11 @@ def append_log(root, tid, message, by="", archived=False, sub=""):
     else:
         with open(p) as f:
             head = f.read().rstrip("\n") + "\n"
-    # heading: "## <time> · <who> · <sub-todo>" (who / sub-todo optional)
+    # heading: "## <time> · <who> · <sub-todo>" (who / sub-todo optional);
+    # a sub-todo is named by its first line
+    sub = sub.split("\n")[0].strip()
     tag = (f" · {by or 'anon'} · {sub}" if sub else f" · {by}" if by else "")
-    write(p, head + f"\n## {now()}{tag}\n{message.strip()}\n")
+    write(p, head + f"\n## {now()}{tag}\n{log_body(message)}\n")
 
 
 def summary(root, tid, archived=False):
@@ -337,7 +479,7 @@ def summary(root, tid, archived=False):
         "group": t["meta"].get("group", ""),
         "done": t["meta"].get("done", "false") == "true",
         "created": t["meta"].get("created", ""),
-        "order": int(t["meta"].get("order", "0") or 0),
+        "order": int(t["meta"].get("order", "0")) if t["meta"].get("order", "").isdigit() else 0,
         "archived": archived,
         "mtime": os.path.getmtime(t["path"]),
         "subs": subs,
@@ -362,11 +504,17 @@ def all_ids(root, archived=False):
     return sorted(f[:-3] for f in os.listdir(d) if f.endswith(".md") and not f.startswith("."))
 
 
-def sub_at(t, n):
+def sub_at(t, n, expect=None):
+    """Sub-todo n. With `expect` (its text as the caller last saw it), it must
+    still read that: the tab and agents edit at the same time, and a position
+    can go stale between a refresh and a keypress."""
     n = int(n)
     if not 0 <= n < len(t["subs"]):
         raise Fail(f"'{t['title']}' has no sub-todo {n}")
-    return t["subs"][n]
+    s = t["subs"][n]
+    if expect and s["text"] != expect:
+        raise Fail(f"sub-todo {n} changed meanwhile (it now reads '{s['text'].split(chr(10))[0]}')")
+    return s
 
 
 # ---- commands ---------------------------------------------------------------
@@ -389,7 +537,10 @@ def run(argv):
     if cmd == "folder":
         if rest:
             os.makedirs(os.path.dirname(CONF), exist_ok=True)
-            write(CONF, json.dumps({"folder": rest[0]}, indent=2) + "\n") if rest[0] else (os.path.exists(CONF) and os.remove(CONF))
+            if rest[0]:
+                write(CONF, json.dumps({"folder": rest[0]}, indent=2) + "\n")
+            elif os.path.exists(CONF):
+                os.remove(CONF)   # back to the default folder
         ensure(folder())
         return {"folder": folder()}
 
@@ -398,11 +549,17 @@ def run(argv):
     archived = bool(opts.get("archived"))
 
     if cmd == "list":
-        todos = [summary(root, i, archived) for i in all_ids(root, archived)]
+        # a file that can't be read is left out and named, not the end of the list
+        todos, broken = [], []
+        for i in all_ids(root, archived):
+            try:
+                todos.append(summary(root, i, archived))
+            except (OSError, ValueError, KeyError, UnicodeDecodeError) as e:
+                broken.append({"id": i, "error": f"{type(e).__name__}: {e}"})
         # hand-set order first (0 = never ordered), then oldest first
         todos.sort(key=lambda t: (t["order"] or 10**9, t["created"] or ""))
         return {"folder": root, "groups": groups(root), "groupOrder": group_order(root),
-                "supers": supers(root), "superOrder": super_order(root), "todos": todos}
+                "supers": supers(root), "superOrder": super_order(root), "todos": todos, "broken": broken}
     if cmd == "log-show":
         return {"title": load(root, rest[0], archived)["title"], "entries": log_entries(root, rest[0], archived)}
     if cmd == "log-all":
@@ -435,10 +592,7 @@ def run(argv):
             tid = slug(title, set(all_ids(root)) | set(all_ids(root, True)))
             meta = {"group": opts.get("group", ""), "done": "false", "created": now()}
             write(os.path.join(root, "Todos", tid + ".md"), render({"meta": meta, "title": title, "subs": []}))
-            if meta["group"] and meta["group"] not in groups(root):
-                g = groups(root)
-                g[meta["group"]] = {"color": PALETTE[len(g) % len(PALETTE)]}
-                save_groups(root, g)
+            ensure_group(root, meta["group"])
             return {"id": tid}
 
         tid = rest[0] if rest else ""
@@ -458,13 +612,10 @@ def run(argv):
             # the group goes; its todos (active and archived) just lose it
             name = " ".join(rest).strip()
             n = 0
-            for arch in (False, True):
-                for i in all_ids(root, arch):
-                    t = load(root, i, arch)
-                    if t["meta"].get("group", "") == name:
-                        t["meta"]["group"] = ""
-                        save(t)
-                        n += 1
+            for t, _ in todos_in(root, lambda m: m.get("group", "") == name):
+                t["meta"]["group"] = ""
+                save(t)
+                n += 1
             g = groups(root)
             g.pop(name, None)
             save_groups(root, g, [x for x in group_order(root) if x != name])
@@ -524,40 +675,31 @@ def run(argv):
             if new != old and new in groups(root):
                 raise Fail(f"there's already a group called '{new}'")
             n = 0
-            for arch in (False, True):
-                for i in all_ids(root, arch):
-                    t = load(root, i, arch)
-                    if t["meta"].get("group", "") == old:
-                        t["meta"]["group"] = new
-                        save(t)
-                        n += 1
+            for t, _ in todos_in(root, lambda m: m.get("group", "") == old):
+                t["meta"]["group"] = new
+                save(t)
+                n += 1
             g = groups(root)
             g[new] = g.pop(old, {"color": PALETTE[len(g) % len(PALETTE)]})
             save_groups(root, g, [new if x == old else x for x in group_order(root)])
             return {"renamed": old, "to": new, "todos": n}
         if cmd in ("group-archive", "super-archive"):
             # every active todo in the group (or in any group of the super group)
-            name = " ".join(rest).strip()
-            g, done = groups(root), []
-            for i in all_ids(root):
-                t = load(root, i)
-                grp = t["meta"].get("group", "")
-                if (grp == name) if cmd == "group-archive" else (grp and g.get(grp, {}).get("super") == name):
-                    shutil.move(t["path"], os.path.join(root, "Archive", i + ".md"))
-                    if os.path.exists(log_path(root, i)):
-                        shutil.move(log_path(root, i), log_path(root, i, True))
-                    done.append(i)
+            name, g = " ".join(rest).strip(), groups(root)
+            inside = (lambda m: m.get("group", "") == name) if cmd == "group-archive" else \
+                (lambda m: bool(m.get("group")) and g.get(m.get("group"), {}).get("super") == name)
+            done = [os.path.basename(t["path"])[:-3] for t, _ in todos_in(root, inside, (False,))]
+            for i in done:
+                archive_todo(root, i)
             return {"archived": done}
         if cmd in ("group-restore", "super-restore"):
             # every archived todo in the group (or in any group of the super group)
-            name = " ".join(rest).strip()
-            g, done = groups(root), []
-            for i in all_ids(root, True):
-                t = load(root, i, True)
-                grp = t["meta"].get("group", "")
-                if (grp == name) if cmd == "group-restore" else (grp and g.get(grp, {}).get("super") == name):
-                    unarchive(root, i)
-                    done.append(i)
+            name, g = " ".join(rest).strip(), groups(root)
+            inside = (lambda m: m.get("group", "") == name) if cmd == "group-restore" else \
+                (lambda m: bool(m.get("group")) and g.get(m.get("group"), {}).get("super") == name)
+            done = [os.path.basename(t["path"])[:-3] for t, _ in todos_in(root, inside, (True,))]
+            for i in done:
+                unarchive(root, i)
             return {"restored": done}
         if cmd == "group-order":
             names = [n for n in rest if n]
@@ -598,7 +740,7 @@ def run(argv):
         elif cmd == "sub-image-remove":
             # take picture K off sub-todo N (its file goes to the trash)
             n, k = int(rest[1]), int(rest[2])
-            ims = t["subs"][n].get("images", []) if 0 <= n < len(t["subs"]) else []
+            ims = sub_at(t, n, opts.get("expect")).get("images", [])
             if not 0 <= k < len(ims):
                 raise Fail("no such picture")
             im = ims.pop(k)
@@ -617,35 +759,32 @@ def run(argv):
                 shutil.move(log_path(root, tid, archived), os.path.join(trash, "log.md"))
             return {"deleted": tid}
         elif cmd == "archive":
-            shutil.move(t["path"], os.path.join(root, "Archive", tid + ".md"))
-            if os.path.exists(log_path(root, tid)):
-                shutil.move(log_path(root, tid), log_path(root, tid, True))
+            archive_todo(root, tid)
             return {"archived": tid}
         elif cmd == "group":
             name = " ".join(rest[1:]).strip()
             t["meta"]["group"] = name
-            if name and name not in groups(root):
-                g = groups(root)
-                g[name] = {"color": PALETTE[len(g) % len(PALETTE)]}
-                save_groups(root, g)
+            ensure_group(root, name)
         elif cmd == "sub-add":
             text = " ".join(rest[1:]).strip()
             if not text:
                 raise Fail("a sub-todo needs some text")
             t["subs"].append({"state": "todo", "text": text, "indent": 0})
         elif cmd == "sub-edit":
-            sub_at(t, rest[1])["text"] = " ".join(rest[2:]).strip()
+            s = sub_at(t, rest[1], opts.get("expect"))
+            s["text"] = " ".join(rest[2:]).strip()
         elif cmd == "sub-delete":
-            s = sub_at(t, rest[1])
+            s = sub_at(t, rest[1], opts.get("expect"))
             t["subs"].remove(s)
+            # not gone for good: its lines go to the trash's sub-todo log
+            with open(os.path.join(root, ".slime", "trash", "deleted-sub-todos.md"), "a") as f:
+                f.write(f"\n## {now()} · {tid}\n" + "\n".join(s.get("orig") or sub_lines(s)) + "\n")
         elif cmd == "sub-move":
-            s = sub_at(t, rest[1])
+            s = sub_at(t, rest[1], opts.get("expect"))
             t["subs"].remove(s)
             t["subs"].insert(max(0, min(len(t["subs"]), int(rest[2]))), s)
         elif cmd in ("sub-set", "start", "finish"):
-            s = sub_at(t, rest[1])
-            if opts.get("expect") and s["text"] != opts["expect"]:
-                raise Fail(f"sub-todo {rest[1]} changed meanwhile (it now reads '{s['text']}')")
+            s = sub_at(t, rest[1], opts.get("expect"))
             state = {"start": "doing", "finish": "done"}.get(cmd) or rest[2]
             if state not in STATE_MARK:
                 raise Fail("state is todo, doing or done")
@@ -675,8 +814,11 @@ def main():
     except Fail as e:
         print(str(e), file=sys.stderr)
         sys.exit(1)
-    except (IndexError, ValueError):
-        print("missing or bad arguments (see --help)", file=sys.stderr)
+    except IndexError:
+        print("missing arguments (see --help)", file=sys.stderr)
+        sys.exit(1)
+    except ValueError as e:
+        print(f"bad value: {e} (see --help)", file=sys.stderr)
         sys.exit(1)
     if out is not None:
         print(json.dumps(out))

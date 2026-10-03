@@ -86,7 +86,7 @@ Item {
     if (t && file) act(["sub-image-add", t.id, String(n), String(file)])
   }
   function removePicture(n, k) {
-    if (selected) act(["sub-image-remove", selected.id, String(n), String(k)])
+    if (selected && selected.subs[n]) act(["sub-image-remove", selected.id, String(n), String(k), "--expect", selected.subs[n].text])
     armedPic = -1
   }
   Timer { id: disarmPic; interval: 2500; onTriggered: tasks.armedPic = -1 }
@@ -123,12 +123,30 @@ Item {
     var text = viewEditor.text.trim()
     if (text === "" || text === viewEntry.text) { viewEditing = false; forceActiveFocus(); return }
     var before = viewEntry.text, n = viewEntry.n
-    if (viewEntry.isSub) act(["sub-edit", selected.id, String(n), text])
+    if (viewEntry.isSub) act(["sub-edit", selected.id, String(n), text, "--expect", before])
     else act(["log-edit", viewEntry.id !== undefined ? viewEntry.id : selected.id, String(n), text, "--expect", before])
     viewEntry = Object.assign({}, viewEntry, { text: text })
     viewEditing = false
     forceActiveFocus()
   }
+  // closing keeps what's being typed (a sub-todo, an entry in the viewer)
+  // rather than dropping it; Esc still cancels
+  property bool closing: false
+  // (run on their own: the tab may be torn down before a queued save runs)
+  function keepTyping() {
+    var was = closing
+    closing = true
+    if (todoTab.subEdit.todoId !== "") todoTab.subEdit.commit()
+    if (viewEditing) saveEdit()
+    closing = was
+  }
+  onVisibleChanged: if (!visible) keepTyping()
+  Connections {
+    target: tasks.bar
+    ignoreUnknownSignals: true
+    function onCommandCenterOpenChanged() { if (tasks.bar && !tasks.bar.commandCenterOpen) tasks.keepTyping() }
+  }
+  Component.onDestruction: keepTyping()
   function closeEntry() { viewEntry = null; viewEditing = false; picIndex = -1; zoomPic = ""; armedPic = -1; forceActiveFocus() }
   // L: straight to the selected todo's log (first entry), from either tab
   property bool jumpToLog: false
@@ -247,11 +265,24 @@ Item {
     : logEntries
   // an entry's full tag: super group › group › todo  ↳ sub-todo
   function entryGroup(e) { return e.id !== undefined ? e.group : (selected ? selected.group : "") }
+  // a long sub-todo, shortened for the log and progress panels: its first
+  // line, cut after 7-10 words (at a sentence break if there is one, and not
+  // on a dangling "the" / "to" / "that")
+  function brief(text) {
+    var toks = (text || "").split("\n")[0].trim().split(/\s+/), ends = []
+    toks.forEach(function(w, i) { if (/[A-Za-z0-9]/.test(w)) ends.push(i + 1) })   // "+" isn't a word
+    if (ends.length <= 10) return toks.join(" ")
+    var cut = ends[7]
+    for (var n = 10; n >= 7; n--) if (/[.,;:!?]$/.test(toks[ends[n - 1] - 1])) { cut = ends[n - 1]; break }
+    var out = toks.slice(0, cut)
+    while (out.length > 5 && /^(a|an|the|to|of|and|or|that|which|with|for|in|on|at|by|from|is|be|will)$/i.test(out[out.length - 1])) out.pop()
+    return out.join(" ").replace(/[,;:]$/, "") + "…"
+  }
   function entryTag(e) {
     var grp = entryGroup(e)
     var title = e.id !== undefined ? e.title : (selected ? selected.title : "")
     var sup = grp ? superOf(grp) : ""
-    return (sup ? sup + "  \u203a  " : "") + (grp ? grp + "  \u203a  " : "") + title + (e.sub ? "   \u21b3  " + e.sub : "")
+    return (sup ? sup + "  \u203a  " : "") + (grp ? grp + "  \u203a  " : "") + title + (e.sub ? "   \u21b3  " + brief(e.sub) : "")
   }
   // what the log shows: entries, and a heading per section (levels nest)
   readonly property var logDisplay: {
@@ -289,10 +320,10 @@ Item {
     if (!logBySub || !selected) return logEntries.map(function(e) { return { kind: "entry", e: e, level: 0 } })
     var used = {}
     selected.subs.forEach(function(sb, i) {
-      var mine = logEntries.filter(function(e) { return e.sub === sb.text })
+      var mine = logEntries.filter(function(e) { return e.sub === sb.text.split("\n")[0].trim() })
       if (!mine.length) return
       var key = sectionKey(sb.text), shut = sectionFolded(key)
-      rows.push({ kind: "head", what: "sub", i: i, sub: sb, key: key, level: 0, label: sb.text, count: mine.length, collapsed: shut })
+      rows.push({ kind: "head", what: "sub", i: i, sub: sb, key: key, level: 0, label: brief(sb.text), count: mine.length, collapsed: shut })
       mine.forEach(function(e) { used[logEntries.indexOf(e)] = true; if (!shut) rows.push({ kind: "entry", e: e, section: i, level: 1 }) })
     })
     var rest = logEntries.filter(function(e, n) { return !used[n] })
@@ -320,7 +351,7 @@ Item {
     logDisplay.forEach(function(r) { if (r.kind === "head" && r.i >= 0) secs.push(r.i) })
     var at = secs.indexOf(sec), nb = secs[at + dir]
     if (nb === undefined) return
-    act(["sub-move", selected.id, String(sec), String(nb)])
+    act(["sub-move", selected.id, String(sec), String(nb), "--expect", selected.subs[sec].text])
   }
   // ---- folding log sections (per todo and sub-todo, remembered) ----
   function sectionKey(subText) { return "tasks-log-sec:" + selectedId + ":" + subText }
@@ -615,6 +646,8 @@ Item {
   property var pendingThen: null
   // run slime_tasks.py with args, then (optionally) `then` with its JSON
   function act(args, then) {
+    // closing: the tab (and its runner) is going away, so this runs on its own
+    if (closing) { Quickshell.execDetached(["python3", script].concat(args)); return }
     queue = queue.concat([{ args: args, then: then || null }])
     next()
   }
@@ -641,6 +674,9 @@ Item {
           tasks.supersMap = r.supers || ({})
           tasks.superOrderList = r.superOrder || []
           tasks.todos = r.todos
+          // files that couldn't be read are left out: say which
+          if (r.broken && r.broken.length)
+            tasks.error = "couldn't read " + r.broken.map(function(b) { return "Todos/" + b.id + ".md" }).join(", ") + " (" + r.broken[0].error + ")"
           if (tasks.selectedId === "" || !tasks.selected) tasks.selectedId = tasks.todoOrder.length ? tasks.todoOrder[0] : ""
         } catch (e) { tasks.error = "couldn't read the notes folder" }
       }
@@ -793,7 +829,7 @@ Item {
     var st = t.subs[i].state, j = i + dir
     while (j >= 0 && j < t.subs.length && t.subs[j].state !== st) j += dir
     if (j < 0 || j >= t.subs.length) return
-    act(["sub-move", t.id, String(i), String(j)])
+    act(["sub-move", t.id, String(i), String(j), "--expect", t.subs[i].text])
     logSub = j
   }
   // drag state (todos: list rows; subs: sub rows)
@@ -813,12 +849,23 @@ Item {
     var next = s.state === "todo" ? "doing" : s.state === "doing" ? "done" : "todo"
     act(["sub-set", t.id, String(i), next, "--expect", s.text])
   }
-  function remove(id) {
+  function remove(id, archived) {
     if (armedDelete !== id) { armedDelete = id; disarm.restart(); return }
     armedDelete = ""
-    act(["delete", id])
+    act(archived ? ["delete", id, "--archived"] : ["delete", id])
   }
   Timer { id: disarm; interval: 2500; onTriggered: tasks.armedDelete = "" }
+  // a sub-todo the same way: d marks it, d again (within 2.5 s) deletes it
+  property string armedSub: ""                // "<todo id>/<position>"
+  function removeSub(t, i) {
+    var key = t.id + "/" + i
+    if (armedSub !== key) { armedSub = key; disarmSub.restart(); return }
+    armedSub = ""
+    act(["sub-delete", t.id, String(i), "--expect", t.subs[i].text])
+    subIndex = Math.max(0, Math.min(subIndex, t.subs.length - 2))
+  }
+  Timer { id: disarmSub; interval: 2500; onTriggered: tasks.armedSub = "" }
+  onSubIndexChanged: armedSub = ""
   // the same menu on a group heading: archive or delete the whole group
   function openSuperMenu(name, x, y) {
     menu.archived = false
@@ -1024,7 +1071,7 @@ Item {
         var n = t ? t.subs.length : 0
         if ((up || down) && (event.modifiers & Qt.ShiftModifier) && t) {
           var to = subIndex + (up ? -1 : 1)
-          if (to >= 0 && to < n) { act(["sub-move", t.id, String(subIndex), String(to)]); subIndex = to }
+          if (to >= 0 && to < n) { act(["sub-move", t.id, String(subIndex), String(to), "--expect", t.subs[subIndex].text]); subIndex = to }
         }
         else if (up) subIndex = Math.max(0, subIndex - 1)
         else if (down) subIndex = Math.min(n - 1, subIndex + 1)
@@ -1035,10 +1082,10 @@ Item {
         else if (txt === "L" && t && n) jumpLogFromTodo("sub", subIndex)
         else if (txt === "p" && t && n) openPicker(t, subIndex)
         else if (txt === "i" && t && n) togglePics(t, t.subs[subIndex])
-        else if ((txt === "e" || k === Qt.Key_F2) && t && n) { todoTab.subEdit.index = subIndex; todoTab.subEdit.text = t.subs[subIndex].text; todoTab.subEdit.forceActiveFocus() }
-        else if ((txt === "d" || k === Qt.Key_Delete) && t && n) { act(["sub-delete", t.id, String(subIndex)]); subIndex = Math.max(0, subIndex - 1) }
-        else if (txt === "K" && t && subIndex > 0) { act(["sub-move", t.id, String(subIndex), String(subIndex - 1)]); subIndex-- }
-        else if (txt === "J" && t && subIndex < n - 1) { act(["sub-move", t.id, String(subIndex), String(subIndex + 1)]); subIndex++ }
+        else if ((txt === "e" || k === Qt.Key_F2) && t && n) todoTab.subEdit.begin(t, subIndex)
+        else if ((txt === "d" || k === Qt.Key_Delete) && t && n) removeSub(t, subIndex)
+        else if (txt === "K" && t && subIndex > 0) { act(["sub-move", t.id, String(subIndex), String(subIndex - 1), "--expect", t.subs[subIndex].text]); subIndex-- }
+        else if (txt === "J" && t && subIndex < n - 1) { act(["sub-move", t.id, String(subIndex), String(subIndex + 1), "--expect", t.subs[subIndex].text]); subIndex++ }
         else return
       }
     } else if (tab === "log") {
@@ -1112,6 +1159,8 @@ Item {
       var r = rows[Math.min(progressIndex, rows.length - 1)]
       var na = archivedTodos.length
       if (txt === "/") archiveInput.forceActiveFocus()
+      // a: straight to the first thing in the archive
+      else if (txt === "a" && archiveRows.length) { progressPane = "archive"; archiveIndex = 0 }
       else if (progressPane === "list" && r && r.kind === "super"
                && !(down && !(event.modifiers & Qt.ShiftModifier) && progressIndex >= rows.length - 1 && na)) {
         if ((up || down) && (event.modifiers & Qt.ShiftModifier)) progressFollow = "s:" + r.name
@@ -1170,6 +1219,8 @@ Item {
         // on an archived todo
         else if (ar && ar.kind === "todo" && (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "r")) restoreArchived(ar.t)
         else if (ar && ar.kind === "todo" && txt === "g") openMenu(ar.t, tasks.width * 0.3, tasks.height - 360, true)
+        // d, then d again: delete it (with its log and pictures, into the trash)
+        else if (ar && ar.kind === "todo" && (txt === "d" || k === Qt.Key_Delete)) remove(ar.t.id, true)
         else if (ar && ar.kind === "todo" && (k === Qt.Key_Left || txt === "h" || txt === "z") && archiveRows.some(function(x) { return x.kind === "head" })) foldArchiveGroupOf(ar.t)
         else if (k === Qt.Key_Escape) progressPane = "list"
         else return
@@ -1912,14 +1963,14 @@ Item {
                      ["A  on a heading", "archive the whole group"], ["e  /  d d  on a heading (any tab)", "rename / delete the group"], ["d d  on a group in the g menu", "delete that group"], ["Enter  Space  →  on a heading", "fold / unfold"],
                      ["g  on a group: into / new super group", "super groups hold groups; their headings take the same keys"], ["A  on a super group", "archive every todo in it"]]],
     ["TODO · SUB-TODOS", [["↑ ↓", "pick"], ["Space", "to do → in progress → done"], ["Enter", "open it over the panel (c copy · e edit)"], ["p", "add a picture (a drip panel of your files)"], ["i", "fold its pictures"], ["a", "add"], ["e", "edit"],
-                          ["d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
+                          ["d d", "delete"], ["J K  Shift ↑↓  drag", "move down / up"], ["←  Esc", "back to the list"]]],
     ["EVERYWHERE", [["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
     ["TASK LOG", [["L  (here or on the Todo tab)", "jump to the selected todo's log"], ["L  on a super group, group, todo or sub-todo (here or on the Todo tab)", "jump to its section of the log"], ["↑ ↓", "pick a todo"], ["→ … ↓", "into the lanes, then on down into the log"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"], ["Enter on an entry", "open it over the panel"], ["c  /  e", "copy / edit the entry"], ["←  z  /  Enter  →  on a section", "fold / unfold it (by sub-todo)"], ["←  z  /  →  Enter on a heading", "fold / unfold its group"], ["→  Enter", "into its lanes"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Tab  Shift+Tab  in the lanes", "hop to the next / previous lane"], ["Enter on a sub-todo", "open it over the panel"],
                   ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"], ["click / right-click", "a lane on / back"]]],
-    ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"],
-                  ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list (you stay in the archive)"], ["r  on an archive heading", "restore the whole group / super group"], ["g  /  right-click", "group, restore or delete an archived list"], ["←  z  /  Enter  →  on a heading", "fold / unfold an archive group"], ["↑ at the top  Esc", "back up"]]]
+    ["PROGRESS", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["z", "fold the group"], ["A", "archive"], ["↓ past the end", "into the archive"], ["a", "jump to the archive's first item"],
+                  ["/", "search the archive (Enter: into the results)"], ["Enter  r", "restore an archived list (you stay in the archive)"], ["r  on an archive heading", "restore the whole group / super group"], ["d d  on an archived todo", "delete it (to the trash)"], ["g  /  right-click", "group, restore or delete an archived list"], ["←  z  /  Enter  →  on a heading", "fold / unfold an archive group"], ["↑ at the top  Esc", "back up"]]]
         ]
-  onShowHelpChanged: if (showHelp) helpSection = tab === "log" ? 3 : tab === "progress" ? 4 : 1
+  onShowHelpChanged: if (showHelp) { helpSection = tab === "log" ? 4 : tab === "progress" ? 5 : 1; helpCard.helpFlick.contentY = 0 }
   HelpCard { id: helpCard; tasks: tasksTab }
 
   // ================================================== a picture, shown big

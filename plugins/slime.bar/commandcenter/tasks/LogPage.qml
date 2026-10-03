@@ -23,6 +23,11 @@ Item {
     clip: true
     spacing: 5
     model: tasks.logRows
+    // keep the picked row (a heading, or the selected todo) in view as the
+    // keyboard moves it, and when the list reloads
+    readonly property int pickIndex: tasks.logNav.indexOf(tasks.logCursor !== "" ? tasks.logCursor : tasks.selectedId)
+    onPickIndexChanged: if (pickIndex >= 0) positionViewAtIndex(pickIndex, ListView.Contain)
+    onCountChanged: Qt.callLater(function() { if (logTodoList.pickIndex >= 0) logTodoList.positionViewAtIndex(logTodoList.pickIndex, ListView.Contain) })
     delegate: Item {
       id: logRow
       required property var modelData
@@ -136,6 +141,12 @@ Item {
             }
             onModelChanged: keepLane.restart()
             Timer { id: keepLane; interval: 40; onTriggered: laneList.keepPicked() }
+            // ...and as the keyboard moves the pick (up / down, lane to lane)
+            Connections {
+              target: tasks
+              function onLogSubChanged() { laneList.keepPicked() }
+              function onLogPaneChanged() { laneList.keepPicked() }
+            }
             // click moves it a lane on, right-click a lane back
             delegate: Rectangle {
               id: laneItem
@@ -151,7 +162,7 @@ Item {
                 id: laneText
                 x: 4; y: 3
                 width: parent.width - 8
-                text: "• " + laneItem.modelData.text
+                text: "• " + tasks.brief(laneItem.modelData.text)
                 wrapMode: Text.Wrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
@@ -185,7 +196,7 @@ Item {
       width: parent.width
       // in the lanes, a note is about the sub-todo you've picked there
       readonly property var about: tasks.logPane === "lanes" && tasks.selected && tasks.selected.subs[tasks.logSub] ? tasks.selected.subs[tasks.logSub] : null
-      placeholder: about ? "write in the log about “" + about.text + "”…  (w)" : "write in the log…  (w)"
+      placeholder: about ? "write in the log about “" + tasks.brief(about.text) + "”  (w)" : "write in the log…  (w)"
       onAccepted: t => {
         if (!tasks.selected) return
         var args = ["log", tasks.selected.id, t, "--by", "you"]

@@ -88,7 +88,7 @@ Item {
         spacing: 8
         StateBox { tasks: progressTab.tasks; state3: prow.modelData.kind === "sub" ? prow.modelData.s.state : "todo"; anchors.verticalCenter: parent.verticalCenter; scale: 0.8 }
         Text {
-          text: prow.modelData.kind === "sub" ? prow.modelData.s.text : ""
+          text: prow.modelData.kind === "sub" ? tasks.brief(prow.modelData.s.text) : ""
           color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs)
           opacity: prow.modelData.kind === "sub" && prow.modelData.s.state === "done" ? 0.55 : 1
           anchors.verticalCenter: parent.verticalCenter
@@ -250,20 +250,23 @@ Item {
           anchors.fill: parent
           anchors.leftMargin: (arow.modelData.depth || 0) * 14
           readonly property var t: arow.modelData.kind === "todo" ? arow.modelData.t : ({ id: "", title: "", group: "", counts: { done: 0 }, subs: [] })
+          // d once: waiting for the second d
+          readonly property bool armed: tasks.armedDelete !== "" && tasks.armedDelete === t.id
           Rectangle {
             anchors.fill: parent
             anchors.leftMargin: -6; anchors.rightMargin: -2
             radius: 10
-            visible: tasks.progressPane === "archive" && arow.index === tasks.archiveIndex
-            color: Qt.rgba(1, 1, 1, 0.7)
-            border.color: tasks.cc.ink; border.width: 2
+            visible: parent.armed || (tasks.progressPane === "archive" && arow.index === tasks.archiveIndex)
+            color: parent.armed ? Qt.rgba(1, 0.4, 0.4, 0.6) : Qt.rgba(1, 1, 1, 0.7)
+            border.color: tasks.cc.ink; border.width: tasks.progressPane === "archive" && arow.index === tasks.archiveIndex ? 2 : 0
           }
           Rectangle { x: 6; width: 6; height: 20; radius: 3; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(parent.t.group) }
           Text {
             x: 20; width: parent.width - restoreBtn.width - 30
             anchors.verticalCenter: parent.verticalCenter
             elide: Text.ElideRight
-            text: parent.t.title + "  ·  " + parent.t.counts.done + "/" + parent.t.subs.length
+            text: parent.armed ? "d again: delete " + parent.t.title + " (it goes to the trash)"
+              : parent.t.title + "  ·  " + parent.t.counts.done + "/" + parent.t.subs.length
             color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs) }
           MouseArea {
             anchors.fill: parent

@@ -336,7 +336,9 @@ Item {
         readonly property real textH: Math.max(30, subText.implicitHeight + 12)
         height: textH + (picsShown ? 72 : 0)
         radius: 10
-        color: sel ? Qt.rgba(1, 1, 1, 0.7) : Qt.rgba(1, 1, 1, 0.3)
+        // d once: waiting for the second d
+        readonly property bool armed: tasks.selected !== null && tasks.armedSub === tasks.selected.id + "/" + index
+        color: armed ? Qt.rgba(1, 0.4, 0.4, 0.6) : sel ? Qt.rgba(1, 1, 1, 0.7) : Qt.rgba(1, 1, 1, 0.3)
         border.color: tasks.cc.ink
         border.width: sel ? 2 : 0
         StateBox {
@@ -351,7 +353,7 @@ Item {
           visible: !(subEdit.activeFocus && subEdit.index === subRow.index)
           x: 32; width: parent.width - x - 8 - (subRow.pics.length ? picChip.width + 6 : 0)
           y: (subRow.textH - implicitHeight) / 2
-          text: subRow.modelData.text
+          text: subRow.armed ? "d again: delete this sub-todo" : subRow.modelData.text
           wrapMode: Text.Wrap
           textFormat: Text.PlainText
           color: tasks.cc.ink
@@ -437,14 +439,14 @@ Item {
             dragging = false
             var to = target(mouse)
             if (to !== subRow.index && tasks.selected) {
-              tasks.act(["sub-move", tasks.selected.id, String(subRow.index), String(to)])
+              tasks.act(["sub-move", tasks.selected.id, String(subRow.index), String(to), "--expect", subRow.modelData.text])
               tasks.subIndex = to
             }
             tasks.dragSub = -1
             tasks.dropY = -1
           }
           onClicked: { tasks.pane = "subs"; tasks.subIndex = subRow.index; tasks.forceActiveFocus() }
-          onDoubleClicked: { subEdit.index = subRow.index; subEdit.text = subRow.modelData.text; subEdit.forceActiveFocus() }
+          onDoubleClicked: subEdit.begin(tasks.selected, subRow.index)
         }
       }
     }
@@ -460,9 +462,28 @@ Item {
       font.family: tasks.cc.font
       font.pixelSize: Math.round(12 * tasks.fs)
       Rectangle { anchors.fill: parent; anchors.margins: -4; z: -1; radius: 6; color: Qt.rgba(1, 1, 1, 0.9); border.color: tasks.cc.ink }
-      Keys.onReturnPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["sub-edit", tasks.selected.id, String(index), text.trim()]); tasks.forceActiveFocus() }
-      Keys.onEnterPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["sub-edit", tasks.selected.id, String(index), text.trim()]); tasks.forceActiveFocus() }
-      Keys.onEscapePressed: tasks.forceActiveFocus()
+      // the todo and text it was opened on, so the save lands on that row
+      property string todoId: ""
+      property string original: ""
+      function begin(t, i) {
+        if (!t || !t.subs[i]) return
+        // several lines don't fit a one-line box: edit those over the panel
+        if (t.subs[i].text.indexOf("\n") >= 0) { tasks.openSub(t, i, true); return }
+        todoId = t.id; original = t.subs[i].text
+        index = i; text = original
+        forceActiveFocus()
+      }
+      // saves on Enter, and also when focus goes elsewhere or the tab closes
+      function commit() {
+        var v = text.trim(), id = todoId
+        todoId = ""
+        if (id !== "" && v !== "" && v !== original)
+          tasks.act(["sub-edit", id, String(index), v, "--expect", original])
+      }
+      onActiveFocusChanged: if (!activeFocus) commit()
+      Keys.onReturnPressed: { commit(); tasks.forceActiveFocus() }
+      Keys.onEnterPressed: { commit(); tasks.forceActiveFocus() }
+      Keys.onEscapePressed: { todoId = ""; tasks.forceActiveFocus() }
     }
   }
   Text {
