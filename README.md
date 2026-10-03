@@ -317,7 +317,7 @@ git -C ~/Work/slime-shell pull && omarchy restart shell
 
 | Path | What |
 |---|---|
-| `plugins/slime.bar/` | the bar; `shaders/slime.frag` (the skin), `commandcenter/` (tabs, `slime_tasks.py`, `slime-startup`), `dock/` (the dock's icons, menu and apps panel), `ui/` (shared panels, monsters, gear, debris, the motion-wallpaper player), `fonts/` |
+| `plugins/slime.bar/` | the bar; `shaders/slime.frag` (the skin), `bar/` (the per-screen bar window, widget slots and drag ghosts, split out of `Bar.qml`), `commandcenter/` (tabs, `slime_tasks.py`, `slime-startup`; `tasks/` holds the Tasks tab's pages and parts), `dock/` (the dock's icons, menu and apps panel), `ui/` (shared panels, monsters, gear, debris, the motion-wallpaper player), `fonts/` |
 | `plugins/slime.*` | widgets, mostly cloned from Omarchy's and restyled |
 | `plugins/slime.notifications/` | notification service |
 | `layouts/default.json` | the bar layout `slime-shell use` installs |
