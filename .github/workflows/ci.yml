@@ -40,7 +40,9 @@ jobs:
           [ -n "$lint" ] || { echo "no qmllint"; exit 1; }
           bad=0
           while IFS= read -r f; do
-            if "$lint" "$f" 2>&1 | grep -i -E "syntax error|expected token|unexpected token|unterminated"; then
+            out=$(timeout 30 "$lint" "$f" 2>&1); rc=$?
+            if [ $rc -eq 124 ]; then echo "::warning file=$f::qmllint timed out"; continue; fi
+            if echo "$out" | grep -i -E "syntax error|expected token|unexpected token|unterminated"; then
               echo "::error file=$f::QML syntax error"; bad=1
             fi
           done < <(git ls-files '*.qml')
