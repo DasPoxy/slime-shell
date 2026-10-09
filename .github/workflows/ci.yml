@@ -36,11 +36,13 @@ jobs:
 
       - name: QML syntax (every file; Quickshell's imports aren't available here, so only syntax errors fail)
         run: |
-          lint=$(ls /usr/lib/qt6/bin/qmllint /usr/lib/qt6/libexec/qmllint 2>/dev/null | head -1)
+          lint=$(command -v qmllint6 || command -v qmllint || ls /usr/lib/qt6/bin/qmllint /usr/lib/qt6/libexec/qmllint 2>/dev/null | head -1 || true)
           [ -n "$lint" ] || { echo "no qmllint"; exit 1; }
           bad=0
           while IFS= read -r f; do
-            out=$(timeout 30 "$lint" "$f" 2>&1); rc=$?
+            # qmllint exits non-zero on mere warnings (the imports it can't
+            # see): only the syntax errors in its output count
+            rc=0; out=$(timeout 30 "$lint" "$f" 2>&1) || rc=$?
             if [ $rc -eq 124 ]; then echo "::warning file=$f::qmllint timed out"; continue; fi
             if echo "$out" | grep -i -E "syntax error|expected token|unexpected token|unterminated"; then
               echo "::error file=$f::QML syntax error"; bad=1
