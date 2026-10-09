@@ -7,15 +7,19 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Omarchy is Arch: the same Qt (and qmllint) its users have
+    container: archlinux:latest
+    defaults:
+      run:
+        shell: bash
     steps:
+      - name: Tools
+        run: pacman -Syu --noconfirm --needed git python qt6-declarative shellcheck
+
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-
-      - name: Tools
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck qt6-declarative-dev-tools
+      - name: Trust the checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Slime-Tasks tests
         run: python -W error::ResourceWarning -m unittest discover -s tests -v
