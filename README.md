@@ -218,8 +218,9 @@ With the Shell-Swapper plugin installed, `use` and `restore` hand the swap to
 it: your Slime layout is kept as a loadout beside your other shells, every
 swap is backed up, and it reverts itself unless you keep it.
 
-The plugins are symlinks into the clone, so editing the repo changes the live
-bar (restart with `omarchy restart shell` to be sure).
+The plugins are copies of the clone's, so after editing the repo run
+`slime-shell sync` (or set up `install --dev-hooks` to do it on every commit)
+and restart with `omarchy restart shell` to be sure.
 
 ## Keybinds
 
@@ -312,6 +313,46 @@ fast-forwards, and stays off if you have local changes). Or by hand:
 ```sh
 git -C ~/Work/slime-shell pull && omarchy restart shell
 ```
+
+## Uninstall
+
+Switch back to your previous bar first, then take Slime out:
+
+```sh
+~/Work/slime-shell/bin/slime-shell restore     # your previous bar (keep it, if Shell-Swapper asks)
+~/Work/slime-shell/bin/slime-shell uninstall
+```
+
+`uninstall` won't run while Slime is still your bar. It removes only what Slime
+Shell put in place:
+
+- its plugin copies in `~/.config/omarchy/plugins/slime.*` (a `slime.*` folder
+  that isn't Slime Shell's own copy is left alone)
+- Slime's entries in `~/.config/omarchy/shell.json`. If Slime's notification
+  server had replaced Omarchy's, Omarchy's is turned back on. A backup of the
+  file is saved beside it first.
+- the Start-Up tab's block in `~/.config/hypr/autostart.lua` (also backed up)
+- the `~/.local/bin/slime-tasks` link and this clone's `--dev-hooks` git hooks
+
+If another bar's layout still lists Slime widgets, it tells you which ones, so
+you can take them off in that bar's settings. Your own things are kept:
+
+| Path | What it is |
+|---|---|
+| `~/Documents/Slime-Notes` | your todos and task logs (or wherever you pointed Slime-Tasks) |
+| `~/Pictures/SlimeS-Wallpapers` | your wallpapers |
+| `~/.config/omarchy/slime-shell` | settings, dock, start-up apps, the bar backup |
+| `~/.cache/slime-shell` | lyrics and thumbnails |
+
+Delete any of those, and the clone itself (`rm -rf ~/Work/slime-shell`), if you
+want everything gone. With Shell-Swapper, also delete the Slime loadout in its
+picker.
+
+If the clone is already gone, do the same by hand: `restore` from a fresh clone
+(or put your bar back in Omarchy's settings), then remove the
+`~/.config/omarchy/plugins/slime.*` folders and the `~/.local/bin/slime-tasks`
+link. Delete the block between the `slime-shell startup` markers in
+`~/.config/hypr/autostart.lua`, and run `omarchy restart shell`.
 
 ## Layout of the repo
 

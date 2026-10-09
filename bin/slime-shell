@@ -9,6 +9,8 @@
 #   slime-shell restore   put the backed-up bar config back
 #   (with Shell-Swapper installed, use / restore swap through it instead)
 #   slime-shell status    show which bar is active
+#   slime-shell uninstall take the plugins out again (switch back first);
+#                         your todos, wallpapers and settings are kept
 #
 # The Omarchy shell only loads third-party widgets that are in the bar layout,
 # so switching swaps the whole `bar` subtree of shell.json. Slime's own
@@ -74,7 +76,7 @@ dev_hooks() {
   local hooks="$repo/.git/hooks" h
   [[ -d $hooks ]] || { echo "not a git checkout: no hooks" >&2; return; }
   for h in post-commit post-merge post-checkout; do
-    if [[ -e $hooks/$h ]] && ! grep -q 'slime-shell sync' "$hooks/$h"; then
+    if [[ -e $hooks/$h ]] && ! grep -q 'Slime Shell: copy the plugins' "$hooks/$h"; then
       echo "skipping the $h hook: there's one already" >&2
       continue
     fi
@@ -108,7 +110,90 @@ install_plugins() {
 swapper=""
 command -v shell-swapper >/dev/null 2>&1 && swapper=shell-swapper
 
+# Take Slime Shell out again: only what it put there. Your bar must be another
+# one first (restore), so nothing running loses its plugins underneath it.
+uninstall() {
+  if [[ -f $shell_json && $(current_bar) == slime.bar ]]; then
+    echo "Slime is your bar right now: switch back first with" >&2
+    echo "  $repo/bin/slime-shell restore" >&2
+    echo "(and keep it, if Shell-Swapper asks), then run uninstall again." >&2
+    exit 1
+  fi
+  local dest from removed=0
+
+  # the plugin copies: only Slime's (a .synced-from, or a link into this checkout)
+  for dest in "$plugins_dir"/slime.*; do
+    [[ -e $dest || -L $dest ]] || continue
+    if [[ -L $dest ]]; then
+      [[ $(readlink -f "$dest") == "$repo"/plugins/* ]] || { echo "skipping $dest: it links elsewhere" >&2; continue; }
+      rm -f "$dest"
+    else
+      from=$(cat "$dest/.synced-from" 2>/dev/null || true)
+      [[ -n $from && ${from##*/} == "${dest##*/}" ]] || { echo "skipping $dest: it isn't Slime Shell's copy" >&2; continue; }
+      rm -rf "$dest"
+    fi
+    removed=$((removed + 1))
+  done
+  echo "removed $removed plugins from $plugins_dir"
+
+  # shell.json: Slime's entries out, and Omarchy's notifications back on if
+  # Slime's had taken their place (a backup of it first)
+  if [[ -f $shell_json ]]; then
+    cp "$shell_json" "$shell_json.bak.slime-uninstall.$(date +%s)"
+    # shellcheck disable=SC2016  # $slimeNotes / $slimeNotesOff are jq variables
+    edit_shell_json '
+      ((.plugins // []) | map(select(.id == "slime.notifications")) | length > 0) as $slimeNotes
+      | ((.disabledPlugins // []) | index("slime.notifications") != null) as $slimeNotesOff
+      | .plugins = ((.plugins // []) | map(select(.id | startswith("slime.") | not)))
+      | .disabledPlugins = ((.disabledPlugins // []) | map(select(startswith("slime.") | not))
+          | if $slimeNotes and ($slimeNotesOff | not) then map(select(. != "omarchy.notifications")) else . end)'
+    echo "tidied $shell_json (backup beside it)"
+  fi
+
+  # the Start-Up tab's hook in autostart.lua (the fenced block it wrote)
+  local autostart="$HOME/.config/hypr/autostart.lua"
+  if [[ -f $autostart ]] && grep -q -e '-- >>> slime-shell startup >>>' "$autostart"; then
+    cp "$autostart" "$autostart.bak.$(date +%s)"
+    sed -i '/^-- >>> slime-shell startup >>>$/,/^-- <<< slime-shell startup <<<$/d' "$autostart"
+    echo "took the start-up hook out of $autostart (backup beside it)"
+  fi
+
+  # the tasks command, if it's ours
+  if [[ -L $HOME/.local/bin/slime-tasks && $(readlink -f "$HOME/.local/bin/slime-tasks") == "$repo/bin/slime-tasks" ]]; then
+    rm -f "$HOME/.local/bin/slime-tasks"
+    echo "removed ~/.local/bin/slime-tasks"
+  fi
+
+  # the dev hooks, if they're ours
+  local h
+  for h in post-commit post-merge post-checkout; do
+    if [[ -f $repo/.git/hooks/$h ]] && grep -q 'Slime Shell: copy the plugins' "$repo/.git/hooks/$h"; then
+      rm -f "$repo/.git/hooks/$h"
+    fi
+  done
+
+  command -v omarchy-shell >/dev/null && omarchy-shell -q shell rescanPlugins 2>/dev/null || true
+
+  # widgets of Slime's still on another bar's layout (they just won't show)
+  local left
+  left=$(jq -r '[.bar.layout // {} | .[]? | .[]? | .id? // empty | select(startswith("slime."))] | unique | join(", ")' "$shell_json" 2>/dev/null || true)
+  [[ -n $left ]] && echo "your bar still lists Slime widgets ($left): take them off in its settings"
+
+  cat <<MSG
+
+Slime Shell is uninstalled. Kept, in case you want them:
+  ~/Documents/Slime-Notes          your todos and task logs (Slime-Tasks)
+  ~/Pictures/SlimeS-Wallpapers     your wallpapers
+  ~/.config/omarchy/slime-shell    settings, dock, start-up apps, the bar backup
+  ~/.cache/slime-shell             lyrics and thumbnails (safe to delete)
+  $repo                            this checkout
+MSG
+}
+
 case "${1:-status}" in
+  uninstall)
+    uninstall
+    ;;
   install)
     install_plugins
     if [[ ${2:-} == --dev-hooks ]]; then dev_hooks; fi
@@ -159,7 +244,7 @@ case "${1:-status}" in
     [[ -n $swapper ]] && echo "shell-swapper: $("$swapper" status)"
     ;;
   *)
-    sed -n '2,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac
