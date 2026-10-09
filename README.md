@@ -13,6 +13,14 @@ any screen edge and any screen size.
 | ![Command centre](docs/images/cc-home.png) | ![Launcher](docs/images/launcher.png) |
 | ![System tab](docs/images/cc-system.png) | ![Audio panel](docs/images/panel-audio.png) |
 
+
+> **Status:** 1.0, used daily by its author; it leans on details of Omarchy's
+> Quickshell shell that can change in an update. `slime-shell restore` puts
+> your previous bar back exactly, and `slime-shell uninstall` takes it all
+> out (see [Uninstall](#uninstall)). See the [changelog](CHANGELOG.md);
+> problems and "it works here" reports are welcome as
+> [issues](https://github.com/DasPoxy/slime-shell/issues).
+
 ## Looks
 
 Mix a **material** (slime, sinew, bone, plain, muscle — striated fibres,

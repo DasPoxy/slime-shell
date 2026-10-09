@@ -138,6 +138,7 @@ Item {
         color: Qt.rgba(1, 1, 1, hov.hovered ? 0.5 : 0.28)
         border.color: dock.bar.slimeInk; border.width: 2
         Text {
+          textFormat: Text.PlainText
           anchors.centerIn: parent
           text: ""
           color: dock.bar.slimeInk
@@ -171,6 +172,7 @@ Item {
     color: Qt.rgba(1, 1, 1, 0.85)
     border.color: dock.bar.slimeInk; border.width: 1.5
     Text {
+      textFormat: Text.PlainText
       id: labelText
       anchors.centerIn: parent
       text: label.target < 0 ? "" : label.target === dock.bar.dockItems.length ? "add apps…" : dock.nameOf(dock.bar.dockItems[label.target])
@@ -298,6 +300,7 @@ Item {
       width: parent.width
       spacing: 2
       Text {
+        textFormat: Text.PlainText
         width: parent.width
         elide: Text.ElideRight
         text: dock.menuIndex >= 0 && dock.menuIndex < dock.bar.dockItems.length ? dock.nameOf(dock.bar.dockItems[dock.menuIndex]).toUpperCase() : ""
@@ -316,6 +319,7 @@ Item {
           color: (here || rowMouse.containsMouse) && !modelData.off ? Qt.rgba(1, 1, 1, 0.6) : Qt.rgba(1, 1, 1, 0.15)
           border.color: dock.bar.slimeInk; border.width: here ? 1.5 : 0
           Text {
+            textFormat: Text.PlainText
             x: 10; anchors.verticalCenter: parent.verticalCenter
             width: parent.width - 16; elide: Text.ElideRight
             text: parent.modelData.text
@@ -423,6 +427,7 @@ Item {
             font.family: dock.bar.fontFamily; font.pixelSize: 13
             clip: true
             Text {
+              textFormat: Text.PlainText
               visible: !parent.text
               text: "search apps…  (↑↓ pick · Enter adds / removes)"
               color: dock.bar.slimeInk; opacity: 0.5
@@ -495,6 +500,7 @@ Item {
           }
         }
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           wrapMode: Text.Wrap
           text: "Drag folders or files onto the dock to pin them · right-click an icon to move or remove it"

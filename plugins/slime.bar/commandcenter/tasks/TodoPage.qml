@@ -96,10 +96,11 @@ Item {
             x: 6 + (row.modelData.depth || 0) * 16
             spacing: 6
             anchors.verticalCenter: parent.verticalCenter
-            Text { anchors.verticalCenter: parent.verticalCenter; text: row.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
+            Text { textFormat: Text.PlainText; anchors.verticalCenter: parent.verticalCenter; text: row.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
             Rectangle { width: 12; height: 12; radius: 6; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(row.modelData.name); border.color: tasks.cc.ink; border.width: 1.2; visible: !!row.modelData.name }
             CcHeading { cc: tasks.cc; anchors.verticalCenter: parent.verticalCenter; text: !row.modelData.name ? "NO GROUP" : row.modelData.name.toUpperCase() }
             Text {
+              textFormat: Text.PlainText
               anchors.verticalCenter: parent.verticalCenter
               visible: !!row.modelData.collapsed
               text: row.modelData.count + (row.modelData.count === 1 ? " todo" : " todos")
@@ -142,6 +143,7 @@ Item {
               onClicked: tasks.act(["done", parent.parent.t.id, parent.parent.t.done ? "false" : "true"]) }
           }
           Text {
+            textFormat: Text.PlainText
             x: 40; width: parent.width - x - countText.width - 14
             anchors.verticalCenter: parent.verticalCenter
             text: parent.t ? parent.t.title : ""
@@ -154,6 +156,7 @@ Item {
             font.bold: true
           }
           Text {
+            textFormat: Text.PlainText
             id: countText
             anchors.right: parent.right; anchors.rightMargin: 10
             anchors.verticalCenter: parent.verticalCenter
@@ -254,6 +257,7 @@ Item {
         width: parent.width
         height: 26
         Text {
+          textFormat: Text.PlainText
           visible: !renameInput.activeFocus
           width: parent.width
           anchors.verticalCenter: parent.verticalCenter
@@ -282,6 +286,7 @@ Item {
         visible: tasks.selected !== null
         Rectangle { width: 10; height: 10; radius: 5; anchors.verticalCenter: parent.verticalCenter; color: tasks.selected ? tasks.colorOf(tasks.selected.group) : "transparent"; visible: tasks.selected && tasks.selected.group !== "" }
         Text {
+          textFormat: Text.PlainText
           text: tasks.selected ? (tasks.selected.group || "no group") + "  ·  " + tasks.selected.counts.done + " of " + tasks.selected.subs.length + " done" + (tasks.selected.counts.doing ? "  ·  " + tasks.selected.counts.doing + " in progress" : "") : ""
           color: tasks.cc.ink; opacity: 0.7
           font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs) }
@@ -374,6 +379,7 @@ Item {
           color: chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(tasks.cc.ink.r, tasks.cc.ink.g, tasks.cc.ink.b, 0.12)
           border.color: tasks.cc.ink; border.width: 1
           Text {
+            textFormat: Text.PlainText
             id: chipText
             anchors.centerIn: parent
             text: "\uf03e " + subRow.pics.length + "  " + (subRow.picsShown ? "\uf077" : "\uf078")
@@ -487,6 +493,7 @@ Item {
     }
   }
   Text {
+    textFormat: Text.PlainText
     visible: tasks.selected === null
     x: todoLeft.width + 24; y: 30
     width: parent.width - x

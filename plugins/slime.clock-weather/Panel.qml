@@ -592,6 +592,7 @@ Panel {
             }
 
             Text {
+              textFormat: Text.PlainText
               text: ""  // nf-fa-map_marker
               color: Qt.darker(root.bar.foreground, 1.4)
               font.family: root.bar.fontFamily
@@ -684,6 +685,7 @@ Panel {
             Column {
               spacing: Style.space(5)
               Text {
+                textFormat: Text.PlainText
                 text: "FEELS"
                 color: Qt.darker(root.bar.foreground, 1.5)
                 font.family: root.bar.fontFamily
@@ -702,6 +704,7 @@ Panel {
             Column {
               spacing: Style.space(5)
               Text {
+                textFormat: Text.PlainText
                 text: "WIND"
                 color: Qt.darker(root.bar.foreground, 1.5)
                 font.family: root.bar.fontFamily
@@ -720,6 +723,7 @@ Panel {
             Column {
               spacing: Style.space(5)
               Text {
+                textFormat: Text.PlainText
                 text: "HUMID"
                 color: Qt.darker(root.bar.foreground, 1.5)
                 font.family: root.bar.fontFamily
@@ -792,6 +796,7 @@ Panel {
       }
 
       Text {
+        textFormat: Text.PlainText
         visible: !root.current
         text: "Fetching forecast…"
         color: Qt.darker(root.bar.foreground, 1.5)

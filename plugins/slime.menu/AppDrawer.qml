@@ -228,6 +228,7 @@ SlimeKeyboardPanel {
         material: drawer.slime ? drawer.bar.material : "slime"
       }
       Text {
+        textFormat: Text.PlainText
         x: headMonster.width + 10
         width: (bubbleToggle.visible ? bubbleToggle.x : menuButton.x) - x - 8
         elide: Text.ElideRight
@@ -279,6 +280,7 @@ SlimeKeyboardPanel {
       border.width: 2
 
       Text {
+        textFormat: Text.PlainText
         x: 14
         anchors.verticalCenter: parent.verticalCenter
         text: drawer.commandsOnly ? "" : drawer.filesOnly ? "\uf07c" : ""
@@ -315,6 +317,7 @@ SlimeKeyboardPanel {
         }
       }
       Text {
+        textFormat: Text.PlainText
         visible: search.text === ""
         x: 38
         anchors.verticalCenter: parent.verticalCenter
@@ -418,6 +421,7 @@ SlimeKeyboardPanel {
                 transform: Translate { y: tile.current && drawer.slime ? Math.sin(drawer.bar.animTime * 3) * 2 : 0 }
               }
               Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: appIcon.y + appIcon.implicitSize + 6
                 width: parent.width - 12
@@ -475,6 +479,7 @@ SlimeKeyboardPanel {
             border.width: 2
             HoverHandler { id: rowHover }
             Text {
+              textFormat: Text.PlainText
               id: cmdIcon
               x: 12
               width: 18
@@ -490,6 +495,7 @@ SlimeKeyboardPanel {
               anchors.verticalCenter: parent.verticalCenter
               clip: true
               Text {
+                textFormat: Text.PlainText
                 visible: row.modelData.path !== ""
                 text: row.modelData.path + " › "
                 color: drawer.ink
@@ -498,6 +504,7 @@ SlimeKeyboardPanel {
                 font.pixelSize: 12
               }
               Text {
+                textFormat: Text.PlainText
                 text: row.modelData.label
                 color: drawer.ink
                 font.family: look.font
@@ -547,6 +554,7 @@ SlimeKeyboardPanel {
             border.width: 2
             HoverHandler { id: fileHover }
             Text {
+              textFormat: Text.PlainText
               id: fileIcon
               x: 12
               width: 18
@@ -571,6 +579,7 @@ SlimeKeyboardPanel {
                 font.bold: true
               }
               Text {
+                textFormat: Text.PlainText
                 width: parent.width
                 elide: Text.ElideMiddle
                 text: fileRow.modelData.dir

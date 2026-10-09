@@ -217,6 +217,7 @@ Panel {
         state3: root.batteryPresent ? "battery" : "mains"
       }
       Text {
+        textFormat: Text.PlainText
         visible: root.batteryPresent && root.showPercentage
         anchors.verticalCenter: parent.verticalCenter
         text: Math.round(root.batteryFraction * 100) + "%"
@@ -370,6 +371,7 @@ Panel {
             spacing: Style.space(2)
 
             Text {
+              textFormat: Text.PlainText
               text: root.batteryPresent ? "Battery" : "Power"
               color: root.bar.foreground
               font.family: root.bar.fontFamily

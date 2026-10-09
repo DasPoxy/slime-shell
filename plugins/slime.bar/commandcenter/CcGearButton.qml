@@ -65,6 +65,7 @@ Item {
   }
 
   Text {
+    textFormat: Text.PlainText
     id: labelText
     visible: button.label !== "" && button.labelSide !== "none"
     x: button.labelSide === "right" ? button.size + 8 : (button.width - width) / 2

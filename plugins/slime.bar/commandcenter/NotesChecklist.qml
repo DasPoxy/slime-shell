@@ -101,6 +101,7 @@ Item {
     width: parent.width
     spacing: 8
     Text {
+      textFormat: Text.PlainText
       visible: !tasks.editingFolder
       width: parent.width - changeButton.width - 8
       anchors.verticalCenter: parent.verticalCenter
@@ -149,6 +150,7 @@ Item {
   }
 
   Text {
+    textFormat: Text.PlainText
     id: emptyNote
     visible: tasks.all.length === 0
     y: folderRow.y + folderRow.height + 12
@@ -186,6 +188,7 @@ Item {
         spacing: 4
 
         Text {
+          textFormat: Text.PlainText
           text: "  " + group.modelData.note
           color: tasks.cc.ink
           font.family: tasks.cc.font
@@ -209,6 +212,7 @@ Item {
               border.color: tasks.cc.ink
               border.width: 2
               Text {
+                textFormat: Text.PlainText
                 anchors.centerIn: parent
                 visible: task.modelData.done
                 text: ""

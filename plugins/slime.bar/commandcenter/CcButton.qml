@@ -29,6 +29,7 @@ Rectangle {
     anchors.centerIn: parent
     spacing: 6
     Text {
+      textFormat: Text.PlainText
       visible: button.icon !== ""
       anchors.verticalCenter: parent.verticalCenter
       text: button.icon
@@ -36,6 +37,7 @@ Rectangle {
       font.family: button.cc.font
       font.pixelSize: Math.round((button.fontSize + 1) * button.fs) }
     Text {
+      textFormat: Text.PlainText
       visible: button.text !== ""
       anchors.verticalCenter: parent.verticalCenter
       text: button.text

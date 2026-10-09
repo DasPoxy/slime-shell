@@ -228,6 +228,7 @@ BarWidget {
         border.color: root.ink; border.width: 1.2
         scale: 0.9 + 0.12 * Math.sin(root.t * 4)
         Text {
+          textFormat: Text.PlainText
           anchors.centerIn: parent
           text: "♪"
           color: root.ink
@@ -415,6 +416,7 @@ BarWidget {
         }
       }
       Text {
+        textFormat: Text.PlainText
         width: parent.width
         wrapMode: Text.Wrap
         text: "Left-click the " + root.casterName + " (or the visualizer) to start or stop the karaoke: the lyrics drip out of the bar line by line. Hover for what's playing (space or middle-click plays/pauses, m mutes); scroll to skip tracks. Lyrics from lrclib.net."
@@ -496,6 +498,7 @@ BarWidget {
             color: look.ink; font.family: look.font; font.pixelSize: 12
           }
           Text {
+            textFormat: Text.PlainText
             width: parent.width
             elide: Text.ElideRight
             visible: text !== ""
@@ -522,10 +525,12 @@ BarWidget {
           Rectangle { width: parent.width * parent.parent.frac; height: parent.height; radius: 3; color: look.ink }
         }
         Text {
+          textFormat: Text.PlainText
           y: 8; text: root.clock(root.player ? root.player.position : 0)
           color: look.ink; font.family: look.font; font.pixelSize: 9; opacity: 0.7
         }
         Text {
+          textFormat: Text.PlainText
           y: 8; anchors.right: parent.right; text: root.clock(root.player ? root.player.length : 0)
           color: look.ink; font.family: look.font; font.pixelSize: 9; opacity: 0.7
         }
@@ -709,6 +714,7 @@ BarWidget {
     contentWidth: hintDrip.fittedContentWidth(hintText.implicitWidth + 2 * hintDrip.padding + 8, 420)
     contentHeight: hintDrip.fittedContentHeight(hintText.implicitHeight)
     Text {
+      textFormat: Text.PlainText
       id: hintText
       anchors.centerIn: parent
       text: root.hint
@@ -800,6 +806,7 @@ BarWidget {
           }
         }
         Text {
+          textFormat: Text.PlainText
           anchors.centerIn: parent
           width: parent.width
           horizontalAlignment: Text.AlignHCenter

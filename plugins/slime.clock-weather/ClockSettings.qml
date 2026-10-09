@@ -51,6 +51,7 @@ SlimeKeyboardPanel {
     HoverHandler { id: choiceHover }
 
     Text {
+      textFormat: Text.PlainText
       id: choiceText
       anchors.centerIn: parent
       text: choice.label
@@ -67,6 +68,7 @@ SlimeKeyboardPanel {
   }
 
   component Heading: Text {
+    textFormat: Text.PlainText
     color: panel.ink
     font.family: panel.fontFamily
     font.pixelSize: 10
@@ -80,6 +82,7 @@ SlimeKeyboardPanel {
     spacing: Style.space(8)
 
     Text {
+      textFormat: Text.PlainText
       text: "Date & Time"
       color: panel.ink
       font.family: panel.displayFamily
@@ -87,6 +90,7 @@ SlimeKeyboardPanel {
       font.weight: panel.bar && panel.bar.slimeFonts ? panel.bar.displayWeight : Font.Black
     }
     Text {
+      textFormat: Text.PlainText
       text: panel.widget.timeText
       color: panel.ink
       font.family: panel.displayFamily

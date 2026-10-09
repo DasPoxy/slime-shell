@@ -52,6 +52,7 @@ Column {
     }
     // fold arrow: points down when open, right when closed
     Text {
+      textFormat: Text.PlainText
       anchors.right: parent.right
       anchors.rightMargin: 14
       anchors.verticalCenter: parent.verticalCenter

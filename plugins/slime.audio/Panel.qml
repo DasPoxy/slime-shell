@@ -768,6 +768,7 @@ Panel {
               spacing: Style.space(2)
 
               Text {
+                textFormat: Text.PlainText
                 text: "Audio"
                 color: root.bar.foreground
                 font.family: root.bar.fontFamily

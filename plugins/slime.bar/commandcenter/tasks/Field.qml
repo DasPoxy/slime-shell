@@ -45,6 +45,7 @@ Rectangle {
     Keys.onEnterPressed: submit()
     Keys.onEscapePressed: { text = ""; tasks.forceActiveFocus() }
     Text {
+      textFormat: Text.PlainText
       visible: fieldInput.text === "" && !fieldInput.activeFocus
       text: field.placeholder
       color: tasks.cc.ink

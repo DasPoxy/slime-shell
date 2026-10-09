@@ -146,6 +146,7 @@ BarWidget {
           Column {
             anchors.verticalCenter: parent.verticalCenter
             Text {
+              textFormat: Text.PlainText
               text: "Treasure chest"
               color: look.ink
               font.family: look.displayFont
@@ -153,6 +154,7 @@ BarWidget {
               font.weight: root.bar ? root.bar.displayWeight : Font.Black
             }
             Text {
+              textFormat: Text.PlainText
               text: root.error !== "" ? root.error : "click to add or remove · right-click a widget that's on the bar for its menu"
               width: column.width - 40
               wrapMode: Text.Wrap
@@ -209,6 +211,7 @@ BarWidget {
                   border.color: look.ink
                   border.width: 2
                   Text {
+                    textFormat: Text.PlainText
                     anchors.centerIn: parent
                     visible: entry.modelData.on
                     text: "\uf00c"
@@ -218,6 +221,7 @@ BarWidget {
                   }
                 }
                 Text {
+                  textFormat: Text.PlainText
                   x: coin.x + coin.width + 10
                   anchors.verticalCenter: parent.verticalCenter
                   width: parent.width - x - stateLabel.implicitWidth - 20
@@ -229,6 +233,7 @@ BarWidget {
                   font.bold: entry.modelData.on
                 }
                 Text {
+                  textFormat: Text.PlainText
                   id: stateLabel
                   anchors.right: parent.right
                   anchors.rightMargin: 12

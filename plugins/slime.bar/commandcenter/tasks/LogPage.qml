@@ -56,10 +56,11 @@ Item {
         Row {
           x: 6 + (logRow.modelData.depth || 0) * 16; spacing: 6
           anchors.verticalCenter: parent.verticalCenter
-          Text { anchors.verticalCenter: parent.verticalCenter; text: logRow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
+          Text { textFormat: Text.PlainText; anchors.verticalCenter: parent.verticalCenter; text: logRow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
           Rectangle { width: 12; height: 12; radius: 6; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(logRow.modelData.name); border.color: tasks.cc.ink; border.width: 1.2; visible: !!logRow.modelData.name }
           CcHeading { cc: tasks.cc; anchors.verticalCenter: parent.verticalCenter; text: !logRow.modelData.name ? "NO GROUP" : logRow.modelData.name.toUpperCase() }
           Text {
+            textFormat: Text.PlainText
             anchors.verticalCenter: parent.verticalCenter
             visible: !!logRow.modelData.collapsed
             text: logRow.modelData.count + (logRow.modelData.count === 1 ? " todo" : " todos")
@@ -93,8 +94,9 @@ Item {
       Column {
         x: 14; anchors.verticalCenter: parent.verticalCenter
         width: parent.width - 22
-        Text { width: parent.width; elide: Text.ElideRight; text: parent.parent.modelData.title; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs); font.bold: true }
+        Text { textFormat: Text.PlainText; width: parent.width; elide: Text.ElideRight; text: parent.parent.modelData.title; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(12 * tasks.fs); font.bold: true }
         Text {
+          textFormat: Text.PlainText
           width: parent.width; elide: Text.ElideRight
           text: (parent.parent.modelData.counts.doing ? " " + parent.parent.modelData.counts.doing + " in progress · " : "") + parent.parent.modelData.logCount + " log entries"
           color: tasks.cc.ink; opacity: 0.65; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs) }
@@ -268,10 +270,11 @@ Item {
           spacing: 8
           anchors.verticalCenter: parent.verticalCenter
           readonly property string what: logItem.modelData.what || ""
-          Text { anchors.verticalCenter: parent.verticalCenter; text: logItem.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
+          Text { textFormat: Text.PlainText; anchors.verticalCenter: parent.verticalCenter; text: logItem.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
           StateBox { tasks: logTab.tasks; anchors.verticalCenter: parent.verticalCenter; visible: !!logItem.modelData.sub; state3: logItem.modelData.sub ? logItem.modelData.sub.state : "todo" }
           // super group / group / todo headings in the "all" views
           Text {
+            textFormat: Text.PlainText
             anchors.verticalCenter: parent.verticalCenter
             visible: headRow.what === "super" || headRow.what === "todo"
             text: headRow.what === "super" ? "\uf247" : "\uf0ae"
@@ -309,6 +312,7 @@ Item {
         border.color: tasks.cc.ink
         border.width: picked ? 2 : 0
         Text {
+          textFormat: Text.PlainText
           x: 10; y: 6
           text: parent.modelData.time + (parent.modelData.by ? "  ·  " + parent.modelData.by : "")
           color: tasks.cc.ink; opacity: 0.7
@@ -337,7 +341,7 @@ Item {
           id: entryText
           x: 10; y: 42
           width: parent.width - 20
-          text: parent.modelData.text
+          text: logTab.tasks ? logTab.tasks.safeMarkdown(parent.modelData.text) : parent.modelData.text
           wrapMode: Text.Wrap
           textFormat: Text.MarkdownText
           color: tasks.cc.ink
@@ -351,6 +355,7 @@ Item {
         }
       }
       Text {
+        textFormat: Text.PlainText
         visible: tasks.logShown.length === 0
         width: parent.width
         wrapMode: Text.Wrap

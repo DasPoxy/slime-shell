@@ -1020,6 +1020,7 @@ Item {
         Repeater {
           model: root.lit ? 2 : 0
           Text {
+            textFormat: Text.PlainText
             required property int index
             readonly property real ph: (root.time * 0.8 + index * 0.5) % 1
             x: 17 + index * 3 + Math.sin(root.time * 3 + index) * 1.2; y: 10 - ph * 9
@@ -1129,6 +1130,7 @@ Item {
         }
         // the emote
         Text {
+          textFormat: Text.PlainText
           visible: root.lit
           x: 16.4; y: 1 - es.hop
           text: "!"

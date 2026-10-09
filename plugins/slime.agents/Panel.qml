@@ -483,6 +483,7 @@ Panel {
           }
 
           Text {
+            textFormat: Text.PlainText
             visible: root.providers.length === 0
             width: parent.width
             topPadding: Style.space(24)
@@ -585,6 +586,7 @@ Panel {
               implicitHeight: Math.max(balanceLabel.implicitHeight, balanceValue.implicitHeight)
 
               Text {
+                textFormat: Text.PlainText
                 id: balanceLabel
                 text: "Prepaid credits"
                 color: root.foreground

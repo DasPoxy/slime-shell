@@ -177,13 +177,15 @@ Item {
         Row {
           spacing: 8
           SlimeGear { kind: "anvil"; bar: sys.cc.bar; size: 22; lit: sys.cpu > 0.25; anchors.verticalCenter: parent.verticalCenter }
-          Text { text: "CPU"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(14 * sys.fs) }
+          Text { textFormat: Text.PlainText; text: "CPU"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(14 * sys.fs) }
         }
         Text {
+          textFormat: Text.PlainText
           text: Math.round(sys.cpu * 100) + "%" + (sys.sample && sys.sample.cpuTemp ? "   " + sys.sample.cpuTemp + "°C" : "")
           color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(26 * sys.fs) }
         Graph { width: parent.width; values: sys.cpuHistory }
         Text {
+          textFormat: Text.PlainText
           text: sys.sample ? "load " + sys.sample.load : ""
           color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: Math.round(11 * sys.fs); opacity: 0.7
         }
@@ -193,13 +195,15 @@ Item {
         Row {
           spacing: 8
           SlimeGear { kind: "book"; bar: sys.cc.bar; size: 22; lit: true; anchors.verticalCenter: parent.verticalCenter }
-          Text { text: "MEMORY"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(14 * sys.fs) }
+          Text { textFormat: Text.PlainText; text: "MEMORY"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(14 * sys.fs) }
         }
         Text {
+          textFormat: Text.PlainText
           text: sys.sample ? sys.cc.formatBytes(sys.sample.memUsed) + " / " + sys.cc.formatBytes(sys.sample.memTotal) : "…"
           color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(20 * sys.fs) }
         Graph { width: parent.width; values: sys.memHistory }
         Text {
+          textFormat: Text.PlainText
           text: sys.sample && sys.sample.swapTotal > 0
             ? "swap " + sys.cc.formatBytes(sys.sample.swapUsed) + " / " + sys.cc.formatBytes(sys.sample.swapTotal) : ""
           color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: Math.round(11 * sys.fs); opacity: 0.7
@@ -212,6 +216,7 @@ Item {
           spacing: 8
           SlimeGear { kind: "orb"; bar: sys.cc.bar; size: 22; net: "ethernet"; anchors.verticalCenter: parent.verticalCenter }
           Text {
+            textFormat: Text.PlainText
             text: sys.sample && sys.sample.gpu ? sys.sample.gpu.name.replace(/^NVIDIA (GeForce )?/, "") : ""
             color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(14 * sys.fs) }
         }
@@ -235,7 +240,7 @@ Item {
         Row {
           spacing: 8
           SlimeGear { kind: "chest"; bar: sys.cc.bar; size: 22; lit: false; anchors.verticalCenter: parent.verticalCenter }
-          Text { text: "DISKS"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(14 * sys.fs) }
+          Text { textFormat: Text.PlainText; text: "DISKS"; color: sys.cc.ink; font.family: sys.cc.displayFont; font.weight: sys.cc.displayWeight; font.pixelSize: Math.round(14 * sys.fs) }
         }
         Repeater {
           // / and /home on one filesystem report identical numbers; show it once.
@@ -276,11 +281,13 @@ Item {
           color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: Math.round(12 * sys.fs); font.bold: true
         }
         Text {
+          textFormat: Text.PlainText
           width: 80
           horizontalAlignment: Text.AlignRight
           text: modelData.cpu.toFixed(1) + "%"
           color: sys.cc.ink; font.family: sys.cc.font; font.pixelSize: Math.round(12 * sys.fs) }
         Text {
+          textFormat: Text.PlainText
           width: 100
           horizontalAlignment: Text.AlignRight
           text: sys.cc.formatBytes(modelData.mem)

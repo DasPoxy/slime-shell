@@ -63,12 +63,14 @@ Rectangle {
           width: (helpGrid.width - (helpGrid.columns - 1) * helpGrid.columnSpacing) / helpGrid.columns
           spacing: 8
           Text {
+            textFormat: Text.PlainText
             width: Math.min(130, parent.width * 0.42)
             wrapMode: Text.Wrap
             text: parent.modelData[0]
             color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs); font.bold: true
           }
           Text {
+            textFormat: Text.PlainText
             width: parent.width - Math.min(130, parent.width * 0.42) - 8
             wrapMode: Text.Wrap
             text: parent.modelData[1]
@@ -79,6 +81,7 @@ Rectangle {
     }
   }
   Text {
+    textFormat: Text.PlainText
     id: helpFoot
     x: 14
     anchors.bottom: parent.bottom; anchors.bottomMargin: 10

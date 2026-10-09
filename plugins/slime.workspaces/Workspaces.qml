@@ -173,6 +173,7 @@ BarWidget {
           border.width: 1.5
         }
         Text {
+          textFormat: Text.PlainText
           visible: wsButton.look === "numbers"
           anchors.centerIn: parent
           text: wsButton.modelData === 10 ? "0" : String(wsButton.modelData)

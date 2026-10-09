@@ -62,6 +62,7 @@ Item {
       x: 4; spacing: 8
       anchors.verticalCenter: parent.verticalCenter
       Text {
+        textFormat: Text.PlainText
         anchors.verticalCenter: parent.verticalCenter
         text: walls.shut(fh.key) ? "\uf054" : "\uf078"
         color: walls.cc.ink; font.family: walls.cc.font; font.pixelSize: Math.round(9 * walls.fs)
@@ -151,6 +152,7 @@ Item {
       color: Qt.rgba(0, 0, 0, 0.55)
       border.color: walls.cc.slime; border.width: 1.5
       Text {
+        textFormat: Text.PlainText
         anchors.centerIn: parent
         text: /\.gif$/i.test(thumb.filePath) ? "GIF" : "\uf04b"
         color: walls.cc.slime
@@ -165,6 +167,7 @@ Item {
       width: 22; height: 22; radius: 11
       color: walls.cc.ink
       Text {
+        textFormat: Text.PlainText
         anchors.centerIn: parent
         text: "\uf00c"
         color: walls.cc.slime
@@ -312,6 +315,7 @@ Item {
       }
     }
     Text {
+      textFormat: Text.PlainText
       visible: mine.count === 0 && !walls.shut("mine")
       width: parent.width
       wrapMode: Text.Wrap

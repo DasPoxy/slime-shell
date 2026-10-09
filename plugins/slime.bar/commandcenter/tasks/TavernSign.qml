@@ -34,6 +34,7 @@ Item {
     Rectangle { x: 6; y: 9; width: parent.width - 12; height: 1; color: tasks.cc.ink; opacity: 0.18 }
     Rectangle { x: 10; y: 21; width: parent.width - 24; height: 1; color: tasks.cc.ink; opacity: 0.14 }
     Text {
+      textFormat: Text.PlainText
       id: signText
       anchors.centerIn: parent
       text: sign.glyph + "  " + sign.label

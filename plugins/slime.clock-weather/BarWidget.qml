@@ -168,6 +168,7 @@ BarWidget {
       readonly property real t: root.bar ? root.bar.animTime : 0
 
       component Piece: Text {
+        textFormat: Text.PlainText
         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
         color: button.foreground
         // the slime display face when one is picked (Settings > Font & clock)
@@ -253,6 +254,7 @@ BarWidget {
       readonly property int weight: root.bar && root.bar.slimeFonts ? root.bar.displayWeight : root.fontWeight
 
       component Small: Text {
+        textFormat: Text.PlainText
         anchors.horizontalCenter: parent.horizontalCenter
         color: button.foreground
         font.family: button.fontFamily
@@ -269,6 +271,7 @@ BarWidget {
       Small { visible: stack.dateFirst; text: root.datePattern === "@initial" ? root.clockDate : Qt.formatDate(clock.date, "ddd") }
       Small { visible: stack.dateFirst && root.datePattern !== "@initial"; text: Qt.formatDate(clock.date, "d MMM") }
       Text {
+        textFormat: Text.PlainText
         anchors.horizontalCenter: parent.horizontalCenter
         text: Qt.formatTime(clock.date, root.hour24 ? "HH" : "h") + "\n" + Qt.formatTime(clock.date, "mm")
         horizontalAlignment: Text.AlignHCenter

@@ -2,6 +2,7 @@ import QtQuick
 
 // Small caps section label.
 Text {
+  textFormat: Text.PlainText
   id: heading
   required property var cc
   readonly property real fs: cc && cc.fontScale ? cc.fontScale : 1

@@ -1395,6 +1395,7 @@ Item {
             visible: displayModel.count === 0 && root.mode !== "input"
 
             Text {
+              textFormat: Text.PlainText
               text: "󰈉"
               color: root.selectedText
               opacity: 0.8

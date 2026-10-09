@@ -219,6 +219,7 @@ Item {
         onClicked: { settings.bar.dockEnabled = true; settings.bar.dockPanelRequest++ }
       }
       Text {
+        textFormat: Text.PlainText
         width: parent.width
         wrapMode: Text.Wrap
         text: "Drag folders or files onto the dock to pin them; right-click an icon to move or remove it. The + on the dock opens the same add-apps panel."
@@ -408,6 +409,7 @@ Item {
         }
       }
       Text {
+        textFormat: Text.PlainText
         visible: !!settings.update
         width: parent.width
         wrapMode: Text.Wrap
@@ -429,6 +431,7 @@ Item {
       Repeater {
         model: settings.update && settings.update.log ? settings.update.log : []
         Text {
+          textFormat: Text.PlainText
           required property string modelData
           width: parent.width
           elide: Text.ElideRight

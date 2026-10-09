@@ -438,6 +438,7 @@ BarWidget {
       spacing: Style.space(8)
 
       Text {
+        textFormat: Text.PlainText
         text: "Who carries the tray"
         color: root.foreground
         font.family: root.fontFamily
@@ -466,6 +467,7 @@ BarWidget {
               open: carrierHover.hovered || carrierChip.picked && root.expanded
             }
             Text {
+              textFormat: Text.PlainText
               anchors.horizontalCenter: parent.horizontalCenter; y: 40
               width: parent.width - 4; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight
               text: carrierChip.modelData[1]
@@ -477,6 +479,7 @@ BarWidget {
       }
 
       Text {
+        textFormat: Text.PlainText
         text: "Tray icons"
         color: root.foreground
         font.family: root.fontFamily
@@ -485,6 +488,7 @@ BarWidget {
       }
 
       Text {
+        textFormat: Text.PlainText
         text: "Pinned icons stay visible. Hidden icons never show."
         color: Qt.darker(root.foreground, 1.4)
         font.family: root.fontFamily
@@ -494,6 +498,7 @@ BarWidget {
       }
 
       Text {
+        textFormat: Text.PlainText
         visible: root.allItems.length === 0
         text: "No tray items reporting."
         color: Qt.darker(root.foreground, 1.5)
@@ -634,6 +639,7 @@ BarWidget {
           }
 
           Text {
+            textFormat: Text.PlainText
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
             width: Style.space(22)
@@ -794,6 +800,7 @@ BarWidget {
               }
 
               Text {
+                textFormat: Text.PlainText
                 id: submenuGlyph
                 visible: !menuRow.modelData.isSeparator && menuRow.modelData.hasChildren
                 anchors.verticalCenter: parent.verticalCenter

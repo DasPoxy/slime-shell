@@ -221,6 +221,7 @@ Item {
             ["", "next"]
           ]
           Text {
+            textFormat: Text.PlainText
             required property var modelData
             text: modelData[0]
             color: monster.ink
@@ -302,6 +303,7 @@ Item {
     }
 
     Text {
+      textFormat: Text.PlainText
       x: mouth.x + 2
       y: mouth.y + mouth.height + 4
       text: monster.player ? monster.clockText(monster.player.position) : ""
@@ -311,6 +313,7 @@ Item {
       font.bold: true
     }
     Text {
+      textFormat: Text.PlainText
       x: mouth.x + mouth.width - implicitWidth - 2
       y: mouth.y + mouth.height + 4
       text: monster.knownLength ? monster.clockText(monster.player.length) : ""

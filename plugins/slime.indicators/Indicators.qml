@@ -77,6 +77,7 @@ BarWidget {
         }
       }
       Text {
+        textFormat: Text.PlainText
         width: parent.width
         wrapMode: Text.Wrap
         text: "Left-click an indicator to switch it; hover the island to see the ones that are off."

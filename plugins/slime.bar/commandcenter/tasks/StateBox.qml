@@ -16,6 +16,7 @@ Rectangle {
   border.color: tasks.cc.ink
   border.width: 2
   Text {
+    textFormat: Text.PlainText
     anchors.centerIn: parent
     text: parent.state3 === "done" ? "" : parent.state3 === "doing" ? "" : ""
     color: parent.state3 === "done" ? tasks.cc.slime : tasks.cc.ink

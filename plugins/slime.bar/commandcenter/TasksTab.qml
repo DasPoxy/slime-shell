@@ -60,6 +60,15 @@ Item {
   property var viewEntry: null                // the entry being read
   property bool viewEditing: false
   property string copiedNote: ""
+  // log entries are shown as Markdown, but nothing in them may reach out:
+  // pictures become plain links (Qt would fetch a remote one) and raw HTML
+  // shows as text; code is left exactly as written
+  function safeMarkdown(t) {
+    return String(t || "").split(/(```[\s\S]*?(?:```|$)|`[^`\n]*`)/).map(function(part, i) {
+      if (i % 2) return part
+      return part.replace(/</g, "&lt;").replace(/!\[([^\]]*)\]\(([^)]*)\)/g, "[$1]($2)")
+    }).join("")
+  }
   function openEntry(e, edit) {
     viewEntry = e
     viewEditing = false
@@ -1333,6 +1342,7 @@ Item {
   Repeater {
     model: 5
     Text {
+      textFormat: Text.PlainText
       required property int index
       readonly property real rise: ((tasks.bar ? tasks.bar.animTime : 0) * 0.09 + index / 5) % 1
       x: 0.08 * tasks.width + 30 + Math.sin(rise * 9 + index) * 14 + index * 6
@@ -1408,6 +1418,7 @@ Item {
     TavernSign { tasks: tasksTab; key: "progress"; label: "Progress"; glyph: "" }
   }
   Text {
+    textFormat: Text.PlainText
     anchors.right: parent.right
     y: 18
     text: tasks.error !== "" ? "  " + tasks.error
@@ -1536,6 +1547,7 @@ Item {
             spacing: 6
             Rectangle { visible: parent.parent.modelData.kind === "group" && parent.parent.modelData.name !== ""; width: 10; height: 10; radius: 5; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(parent.parent.modelData.name) }
             Text {
+              textFormat: Text.PlainText
               text: {
                 var it = parent.parent.modelData
                 if (parent.parent.armedHere) return "\uf1f8  d again: delete " + (it.kind === "deleteSuper" ? "super group " : "group ") + it.name
@@ -1556,6 +1568,7 @@ Item {
         }
       }
       Text {
+        textFormat: Text.PlainText
         visible: menu.headGroup === "" && !menu.archived
         width: menuCol.width
         wrapMode: Text.Wrap
@@ -1718,6 +1731,7 @@ Item {
         width: parent.width
         spacing: 8
         Text {
+          textFormat: Text.PlainText
           width: parent.width - viewButtons.width - 8
           anchors.verticalCenter: parent.verticalCenter
           elide: Text.ElideRight
@@ -1773,7 +1787,7 @@ Item {
       Text {
         id: viewText
         width: viewFlick.width
-        text: viewer.e.text
+        text: tasks.safeMarkdown(viewer.e.text)
         wrapMode: Text.Wrap
         textFormat: Text.MarkdownText
         color: viewer.ink
@@ -1783,6 +1797,7 @@ Item {
       }
       // a sub-todo's pictures: pinned to the sheet
       Text {
+        textFormat: Text.PlainText
         visible: !!viewer.e.isSub
         width: parent.width
         wrapMode: Text.Wrap
@@ -1833,13 +1848,14 @@ Item {
                 visible: pin.picked || pinHover.hovered
                 color: pin.armed ? "#b03020" : Qt.rgba(1, 0.97, 0.88, 0.95)
                 border.color: viewer.ink; border.width: 1.4
-                Text { anchors.centerIn: parent; text: "\uf00d"; color: pin.armed ? "white" : viewer.ink; font.family: tasks.cc.font; font.pixelSize: 11 }
+                Text { textFormat: Text.PlainText; anchors.centerIn: parent; text: "\uf00d"; color: pin.armed ? "white" : viewer.ink; font.family: tasks.cc.font; font.pixelSize: 11 }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                   onClicked: { tasks.picIndex = pin.index; if (tasks.armedPic !== pin.index) { tasks.armedPic = pin.index; disarmPic.restart() } else tasks.removePicture(viewer.e.n, pin.index) } }
               }
             }
             HoverHandler { id: pinHover }
             Text {
+              textFormat: Text.PlainText
               y: frame.height + 4
               width: parent.width
               horizontalAlignment: Text.AlignHCenter
@@ -1869,7 +1885,7 @@ Item {
         radius: 16
         color: Qt.rgba(1, 1, 1, 0.25)
         border.color: viewer.ink; border.width: 3
-        Text { anchors.centerIn: parent; text: "\uf03e  drop to pin it to this sub-todo"; color: viewer.ink; font.family: viewer.font; font.pixelSize: 24 }
+        Text { textFormat: Text.PlainText; anchors.centerIn: parent; text: "\uf03e  drop to pin it to this sub-todo"; color: viewer.ink; font.family: viewer.font; font.pixelSize: 24 }
       }
     }
 
@@ -1988,6 +2004,7 @@ Item {
       asynchronous: true
     }
     Text {
+      textFormat: Text.PlainText
       anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.bottomMargin: 8
       text: "Esc / Enter / click to close"
       color: "white"; opacity: 0.7; font.family: tasks.cc.font; font.pixelSize: 11
@@ -2136,6 +2153,7 @@ Item {
             width: parent.width - 120 - upBtn.width - homeBtn.width - 24; height: 24; radius: 12
             color: tasks.cc.wash; border.color: tasks.cc.ink; border.width: 1
             Text {
+              textFormat: Text.PlainText
               x: 10; width: parent.width - 20; anchors.verticalCenter: parent.verticalCenter
               elide: Text.ElideLeft
               text: picker.dir.replace(picker.home, "~")
@@ -2170,6 +2188,7 @@ Item {
               color: cell.here ? Qt.rgba(1, 1, 1, 0.75) : cellMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(1, 1, 1, 0.22)
               border.color: tasks.cc.ink; border.width: cell.here ? 2.5 : 1
               Text {
+                textFormat: Text.PlainText
                 visible: cell.fileIsDir
                 anchors.horizontalCenter: parent.horizontalCenter; y: 12
                 text: "\uf07b"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: 44
@@ -2183,6 +2202,7 @@ Item {
                 asynchronous: true
               }
               Text {
+                textFormat: Text.PlainText
                 x: 6; y: 80; width: parent.width - 12
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideMiddle
@@ -2213,6 +2233,7 @@ Item {
             event.accepted = true
           }
           Text {
+            textFormat: Text.PlainText
             visible: files.count === 0 && files.status === FolderListModel.Ready
             anchors.centerIn: parent
             text: "No pictures or folders here  (⌫ goes up)"
@@ -2220,6 +2241,7 @@ Item {
           }
         }
         Text {
+          textFormat: Text.PlainText
           text: "arrows / hjkl pick · Enter opens a folder or adds the picture · ⌫ up · ~ home · Esc closes"
           color: tasks.cc.ink; opacity: 0.65; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs)
         }

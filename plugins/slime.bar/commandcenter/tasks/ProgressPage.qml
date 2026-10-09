@@ -52,28 +52,29 @@ Item {
         visible: prow.modelData.kind === "super"
         x: 12; anchors.verticalCenter: parent.verticalCenter
         spacing: 8
-        Text { text: prow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
-        Text { text: "\uf247"; color: tasks.superColor(prow.modelData.name); style: Text.Outline; styleColor: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(14 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
-        Text { text: prow.modelData.kind === "super" ? prow.modelData.name : ""; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: Math.round(16 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
-        Text { text: prow.modelData.kind !== "super" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
+        Text { textFormat: Text.PlainText; text: prow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
+        Text { textFormat: Text.PlainText; text: "\uf247"; color: tasks.superColor(prow.modelData.name); style: Text.Outline; styleColor: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(14 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
+        Text { textFormat: Text.PlainText; text: prow.modelData.kind === "super" ? prow.modelData.name : ""; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: Math.round(16 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
+        Text { textFormat: Text.PlainText; text: prow.modelData.kind !== "super" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
       }
       // group
       Row {
         visible: prow.modelData.kind === "group"
         x: 10; anchors.verticalCenter: parent.verticalCenter
         spacing: 8
-        Text { text: tasks.groupCollapsed(prow.modelData.name, "progress") ? "" : ""; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
+        Text { textFormat: Text.PlainText; text: tasks.groupCollapsed(prow.modelData.name, "progress") ? "" : ""; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(10 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
         Rectangle { width: 12; height: 12; radius: 6; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(prow.modelData.name); border.color: tasks.cc.ink; border.width: 1.2; visible: prow.modelData.name !== "" }
-        Text { text: !prow.modelData.name ? "No group" : prow.modelData.name; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: Math.round(15 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
-        Text { text: prow.modelData.kind !== "group" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
+        Text { textFormat: Text.PlainText; text: !prow.modelData.name ? "No group" : prow.modelData.name; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: Math.round(15 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
+        Text { textFormat: Text.PlainText; text: prow.modelData.kind !== "group" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.cc.ink; opacity: 0.6; font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
       }
       // todo
       Row {
         visible: prow.modelData.kind === "todo"
         x: 10; anchors.verticalCenter: parent.verticalCenter
         spacing: 8
-        Text { text: prow.modelData.kind === "todo" && prow.modelData.t.subs.length ? (tasks.expanded["t:" + prow.modelData.t.id] ? "" : "") : " "; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
+        Text { textFormat: Text.PlainText; text: prow.modelData.kind === "todo" && prow.modelData.t.subs.length ? (tasks.expanded["t:" + prow.modelData.t.id] ? "" : "") : " "; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs); anchors.verticalCenter: parent.verticalCenter }
         Text {
+          textFormat: Text.PlainText
           width: prow.width * 0.4
           elide: Text.ElideRight
           text: prow.modelData.kind === "todo" ? prow.modelData.t.title : ""
@@ -88,6 +89,7 @@ Item {
         spacing: 8
         StateBox { tasks: progressTab.tasks; state3: prow.modelData.kind === "sub" ? prow.modelData.s.state : "todo"; anchors.verticalCenter: parent.verticalCenter; scale: 0.8 }
         Text {
+          textFormat: Text.PlainText
           text: prow.modelData.kind === "sub" ? tasks.brief(prow.modelData.s.text) : ""
           color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(11 * tasks.fs)
           opacity: prow.modelData.kind === "sub" && prow.modelData.s.state === "done" ? 0.55 : 1
@@ -105,6 +107,7 @@ Item {
         fill: prow.modelData.kind === "group" && prow.modelData.name !== "" ? tasks.colorOf(prow.modelData.name) : tasks.cc.ink
       }
       Text {
+        textFormat: Text.PlainText
         id: pctText
         visible: prow.modelData.kind !== "sub"
         anchors.right: archiveBtn.visible ? archiveBtn.left : parent.right
@@ -236,10 +239,11 @@ Item {
           x: (arow.modelData.depth || 0) * 14
           spacing: 6
           anchors.verticalCenter: parent.verticalCenter
-          Text { anchors.verticalCenter: parent.verticalCenter; text: arow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
+          Text { textFormat: Text.PlainText; anchors.verticalCenter: parent.verticalCenter; text: arow.modelData.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
           Rectangle { width: 10; height: 10; radius: 5; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(arow.modelData.name); border.color: tasks.cc.ink; border.width: 1; visible: !!arow.modelData.name }
           CcHeading { cc: tasks.cc; anchors.verticalCenter: parent.verticalCenter; text: arow.modelData.kind !== "head" ? "" : arow.modelData.name ? arow.modelData.name.toUpperCase() : "NO GROUP" }
           Text {
+            textFormat: Text.PlainText
             anchors.verticalCenter: parent.verticalCenter
             visible: !!arow.modelData.collapsed
             text: arow.modelData.count + (arow.modelData.count === 1 ? " todo" : " todos")
@@ -262,6 +266,7 @@ Item {
           }
           Rectangle { x: 6; width: 6; height: 20; radius: 3; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(parent.t.group) }
           Text {
+            textFormat: Text.PlainText
             x: 20; width: parent.width - restoreBtn.width - 30
             anchors.verticalCenter: parent.verticalCenter
             elide: Text.ElideRight

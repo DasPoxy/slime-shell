@@ -127,6 +127,7 @@ Item {
           source: row.entry ? startup.iconOf(row.entry.icon) : ""
         }
         Text {
+          textFormat: Text.PlainText
           x: icon.x + 36
           width: 150
           anchors.verticalCenter: parent.verticalCenter
@@ -152,6 +153,7 @@ Item {
               radius: 10
               color: on ? startup.cc.ink : Qt.rgba(1, 1, 1, 0.5)
               Text {
+                textFormat: Text.PlainText
                 anchors.centerIn: parent
                 text: parent.index === 0 ? "auto" : (parent.index === 10 ? "0" : parent.index)
                 color: parent.on ? startup.cc.slime : startup.cc.ink
@@ -194,6 +196,7 @@ Item {
       border.color: startup.cc.ink
       border.width: 2
       Text {
+        textFormat: Text.PlainText
         x: 14
         anchors.verticalCenter: parent.verticalCenter
         text: ""
@@ -215,6 +218,7 @@ Item {
         Keys.onReturnPressed: if (startup.matches.length) startup.add(startup.matches[0])
       }
       Text {
+        textFormat: Text.PlainText
         visible: search.text === ""
         x: 36
         anchors.verticalCenter: parent.verticalCenter
@@ -241,6 +245,7 @@ Item {
     }
 
     Text {
+      textFormat: Text.PlainText
       visible: !startup.hooked && startup.apps.length > 0
       width: column.width
       wrapMode: Text.Wrap
@@ -260,6 +265,7 @@ Item {
     Repeater {
       model: startup.existing
       Text {
+        textFormat: Text.PlainText
         required property string modelData
         width: column.width
         elide: Text.ElideRight

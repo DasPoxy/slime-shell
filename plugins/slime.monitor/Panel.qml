@@ -568,6 +568,7 @@ Panel {
               spacing: Style.space(2)
 
               Text {
+                textFormat: Text.PlainText
                 text: "Display"
                 color: root.bar.foreground
                 font.family: root.bar.fontFamily
@@ -913,6 +914,7 @@ Panel {
       spacing: Style.space(8)
 
       Text {
+        textFormat: Text.PlainText
         text: "󰍹"
         color: root.bar.foreground
         font.family: root.bar.fontFamily

@@ -25,10 +25,11 @@ Rectangle {
   Row {
     x: 12; spacing: 7
     anchors.verticalCenter: parent.verticalCenter
-    Text { anchors.verticalCenter: parent.verticalCenter; text: sh.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
-    Text { anchors.verticalCenter: parent.verticalCenter; text: "\uf247"; color: tasks.superColor(sh.name); style: Text.Outline; styleColor: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(13 * tasks.fs) }
-    Text { anchors.verticalCenter: parent.verticalCenter; text: sh.name; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: Math.round(14 * tasks.fs) }
+    Text { textFormat: Text.PlainText; anchors.verticalCenter: parent.verticalCenter; text: sh.collapsed ? "\uf054" : "\uf078"; color: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(9 * tasks.fs) }
+    Text { textFormat: Text.PlainText; anchors.verticalCenter: parent.verticalCenter; text: "\uf247"; color: tasks.superColor(sh.name); style: Text.Outline; styleColor: tasks.cc.ink; font.family: tasks.cc.font; font.pixelSize: Math.round(13 * tasks.fs) }
+    Text { textFormat: Text.PlainText; anchors.verticalCenter: parent.verticalCenter; text: sh.name; color: tasks.cc.ink; font.family: tasks.cc.displayFont; font.weight: tasks.cc.displayWeight; font.pixelSize: Math.round(14 * tasks.fs) }
     Text {
+      textFormat: Text.PlainText
       anchors.verticalCenter: parent.verticalCenter
       visible: sh.collapsed
       text: sh.count + (sh.count === 1 ? " todo" : " todos")

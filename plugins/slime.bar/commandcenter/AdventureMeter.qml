@@ -31,6 +31,7 @@ Item {
   height: 56
 
   Text {
+    textFormat: Text.PlainText
     text: meter.label
     color: meter.ink
     font.family: meter.cc.font
@@ -38,6 +39,7 @@ Item {
     font.bold: true
   }
   Text {
+    textFormat: Text.PlainText
     anchors.right: parent.right
     text: meter.value
     color: meter.ink

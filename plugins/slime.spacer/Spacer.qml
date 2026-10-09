@@ -128,6 +128,7 @@ BarWidget {
     border.width: 1.5
     opacity: 0.6
     Text {
+      textFormat: Text.PlainText
       anchors.centerIn: parent
       visible: root.span >= 22
       text: root.span

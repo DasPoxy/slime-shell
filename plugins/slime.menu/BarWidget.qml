@@ -138,6 +138,7 @@ BarWidget {
       spacing: Style.space(8)
 
       Text {
+        textFormat: Text.PlainText
         text: "LAUNCHER ICON"
         color: root.slime ? root.bar.slimeInk : Color.foreground
         font.family: root.bar ? root.bar.fontFamily : Style.font.family
@@ -190,6 +191,7 @@ BarWidget {
               net: "ethernet"
             }
             Text {
+              textFormat: Text.PlainText
               visible: choice.modelData[2] === "omarchy"
               anchors.horizontalCenter: parent.horizontalCenter
               y: 8
@@ -199,6 +201,7 @@ BarWidget {
               color: root.slime ? root.bar.slimeInk : Color.foreground
             }
             Text {
+              textFormat: Text.PlainText
               anchors.horizontalCenter: parent.horizontalCenter
               anchors.bottom: parent.bottom
               anchors.bottomMargin: 4

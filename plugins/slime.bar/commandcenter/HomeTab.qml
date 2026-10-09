@@ -181,6 +181,7 @@ Item {
       spacing: 8
       layoutDirection: home.cc.bar.clockTimeFirst ? Qt.LeftToRight : Qt.RightToLeft
       Text {
+        textFormat: Text.PlainText
         text: home.hour24 ? Qt.formatTime(clock.date, "HH:mm") : Qt.formatTime(clock.date, "h:mm AP").replace(/\s*[AP]M$/i, "")
         color: home.cc.ink
         font.family: home.cc.displayFont
@@ -197,6 +198,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: 0
         Text {
+          textFormat: Text.PlainText
           anchors.right: home.cc.bar.clockTimeFirst ? undefined : parent.right
           text: Qt.formatDate(clock.date, "dddd") + (home.hour24 ? "" : "  " + Qt.formatTime(clock.date, "AP"))
           color: home.cc.ink
@@ -204,6 +206,7 @@ Item {
           font.weight: home.cc.displayWeight
           font.pixelSize: Math.round(15 * home.fs) }
         Text {
+          textFormat: Text.PlainText
           anchors.right: home.cc.bar.clockTimeFirst ? undefined : parent.right
           text: Qt.formatDate(clock.date, "d MMMM yyyy")
           color: home.cc.ink
@@ -317,12 +320,14 @@ Item {
         Row {
           spacing: 12
           Text {
+            textFormat: Text.PlainText
             id: weatherIcon
             text: cloud.icon
             color: home.cc.ink
             font.family: home.cc.font
             font.pixelSize: Math.round(34 * home.fs) }
           Text {
+            textFormat: Text.PlainText
             id: weatherTemp
             anchors.verticalCenter: parent.verticalCenter
             text: home.weather ? home.weather.reportTempNum + home.weather.tempUnit : ""
@@ -336,11 +341,13 @@ Item {
             // what's left of the card (bigger text sizes elide instead of spilling)
             readonly property real room: weatherColumn.width - weatherIcon.width - weatherTemp.width - 24
             Text {
+              textFormat: Text.PlainText
               width: Math.min(implicitWidth, weatherPlace.room); elide: Text.ElideRight
               text: home.weather ? home.weather.reportLocation : ""
               color: home.cc.ink; font.family: home.cc.font; font.pixelSize: Math.round(12 * home.fs); font.bold: true
             }
             Text {
+              textFormat: Text.PlainText
               width: Math.min(implicitWidth, weatherPlace.room); elide: Text.ElideRight
               text: home.weather ? "feels " + home.weather.reportFeels + " · " + home.weather.reportWind + " · " + home.weather.reportHumidity : ""
               color: home.cc.ink; font.family: home.cc.font; font.pixelSize: Math.round(10 * home.fs); opacity: 0.75
@@ -356,15 +363,18 @@ Item {
               width: weatherColumn.width / 3
               spacing: 6
               Text {
+                textFormat: Text.PlainText
                 anchors.verticalCenter: parent.verticalCenter
                 text: home.weather.dayIcon(modelData)
                 color: home.cc.ink; font.family: home.cc.font; font.pixelSize: Math.round(16 * home.fs) }
               Column {
                 Text {
+                  textFormat: Text.PlainText
                   text: home.weather.dayName(modelData.date).toUpperCase()
                   color: home.cc.ink; font.family: home.cc.font; font.pixelSize: Math.round(9 * home.fs); font.bold: true; opacity: 0.7
                 }
                 Text {
+                  textFormat: Text.PlainText
                   text: home.weather.bareTempForDay(modelData, "max") + " " + home.weather.bareTempForDay(modelData, "min")
                   color: home.cc.ink; font.family: home.cc.font; font.pixelSize: Math.round(11 * home.fs); font.bold: true
                 }
@@ -412,6 +422,7 @@ Item {
           onMoved: v => { if (soundRow.audio) soundRow.audio.volume = v }
         }
         Text {
+          textFormat: Text.PlainText
           width: 50
           anchors.verticalCenter: parent.verticalCenter
           horizontalAlignment: Text.AlignRight
@@ -468,6 +479,7 @@ Item {
           onClicked: calendar.month = new Date(calendar.month.getFullYear(), calendar.month.getMonth() - 1, 1)
         }
         Text {
+          textFormat: Text.PlainText
           anchors.centerIn: parent
           text: Qt.formatDate(calendar.month, "MMMM yyyy")
           color: home.cc.ink
@@ -498,6 +510,7 @@ Item {
         Repeater {
           model: 7
           Text {
+            textFormat: Text.PlainText
             required property int index
             width: calGrid.cell
             height: 20
@@ -524,6 +537,7 @@ Item {
               color: parent.today ? home.cc.ink : "transparent"
             }
             Text {
+              textFormat: Text.PlainText
               anchors.centerIn: parent
               text: parent.modelData.getDate()
               color: parent.today ? home.cc.slime : home.cc.ink
@@ -567,6 +581,7 @@ Item {
       }
     }
     Text {
+      textFormat: Text.PlainText
       visible: home.history.length === 0
       text: "All quiet in the ooze."
       color: home.cc.ink
@@ -600,6 +615,7 @@ Item {
               font.bold: true
             }
             Text {
+              textFormat: Text.PlainText
               id: when
               text: home.ago(modelData.timestamp)
               color: home.cc.ink

@@ -158,11 +158,13 @@ BarWidget {
           anchors.verticalCenter: parent.verticalCenter
           width: parent.width - 50
           Text {
+            textFormat: Text.PlainText
             width: parent.width; wrapMode: Text.Wrap
             text: root.checking ? "Checking…" : root.updateAvailable ? "Updates are ready!" : "Omarchy is up to date"
             color: look.ink; font.family: look.displayFont; font.weight: look.displayWeight; font.pixelSize: 16
           }
           Text {
+            textFormat: Text.PlainText
             visible: root.checkedAt !== ""
             text: "checked at " + root.checkedAt
             color: look.ink; opacity: 0.6; font.family: look.font; font.pixelSize: 10
@@ -172,6 +174,7 @@ BarWidget {
       Repeater {
         model: root.pending
         Text {
+          textFormat: Text.PlainText
           required property string modelData
           width: infoCol.width
           wrapMode: Text.Wrap
@@ -232,6 +235,7 @@ BarWidget {
         CcButton { cc: look; text: "only with updates"; on: root.onlyWithUpdates; onClicked: root.setOnlyWithUpdates(true) }
       }
       Text {
+        textFormat: Text.PlainText
         width: parent.width
         wrapMode: Text.Wrap
         text: "It acts up when Omarchy has updates: left-click it to see them and update."

@@ -27,12 +27,14 @@ Rectangle {
     anchors.centerIn: parent
     spacing: 2
     Text {
+      textFormat: Text.PlainText
       anchors.horizontalCenter: parent.horizontalCenter
       text: tile.icon
       color: tile.on ? tile.cc.slime : tile.cc.ink
       font.family: tile.cc.font
       font.pixelSize: Math.round(18 * tile.fs) }
     Text {
+      textFormat: Text.PlainText
       anchors.horizontalCenter: parent.horizontalCenter
       // shrinks to fit the tile at bigger text sizes
       width: Math.min(implicitWidth, tile.width - 4)
