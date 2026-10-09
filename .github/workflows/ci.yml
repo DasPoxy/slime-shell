@@ -38,16 +38,21 @@ jobs:
             python -c "import json,sys,os; m=json.load(open(sys.argv[1])); d=os.path.basename(os.path.dirname(sys.argv[1])); assert m['id']==d and m.get('version') and m.get('kinds'), (d, m)" "$m"
           done
 
-      - name: QML syntax (every file; Quickshell's imports aren't available here, so only syntax errors fail)
+      - name: QML syntax (every file)
         run: |
-          lint=$(command -v qmllint6 || command -v qmllint || ls /usr/lib/qt6/bin/qmllint /usr/lib/qt6/libexec/qmllint 2>/dev/null | head -1 || true)
-          [ -n "$lint" ] || { echo "no qmllint"; exit 1; }
+          # qmlformat parses a file and exits 1 when it can't: a syntax error.
+          # It's fast, but it crashes on a few valid files (its own bug); for
+          # those, qmllint (slow, so with a time limit) has the last word.
+          # Quickshell's imports aren't here, so only syntax errors count.
+          fmt=$(command -v qmlformat6 || command -v qmlformat || echo /usr/lib/qt6/bin/qmlformat)
+          lint=$(command -v qmllint6 || command -v qmllint || echo /usr/lib/qt6/bin/qmllint)
           bad=0
           while IFS= read -r f; do
-            # qmllint exits non-zero on mere warnings (the imports it can't
-            # see): only the syntax errors in its output count
-            rc=0; out=$(timeout 30 "$lint" "$f" 2>&1) || rc=$?
-            if [ $rc -eq 124 ]; then echo "::warning file=$f::qmllint timed out"; continue; fi
+            rc=0; out=$("$fmt" "$f" 2>&1 >/dev/null) || rc=$?
+            if [ $rc -eq 0 ]; then continue; fi
+            if [ $rc -eq 1 ]; then echo "$out"; echo "::error file=$f::QML syntax error"; bad=1; continue; fi
+            rc=0; out=$(timeout 90 "$lint" "$f" 2>&1) || rc=$?
+            if [ $rc -eq 124 ]; then echo "::warning file=$f::couldn't check (qmlformat crashed, qmllint timed out)"; continue; fi
             if echo "$out" | grep -i -E "syntax error|expected token|unexpected token|unterminated"; then
               echo "::error file=$f::QML syntax error"; bad=1
             fi
